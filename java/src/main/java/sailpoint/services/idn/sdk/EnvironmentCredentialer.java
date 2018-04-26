@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Properties;
 
 import org.apache.logging.log4j.LogManager;
@@ -74,10 +73,18 @@ public class EnvironmentCredentialer {
 		creds.setOrgName     (System.getProperty("org",          cfProps.getProperty("org")));
 		creds.setUserIntUrl  (System.getProperty("url",          cfProps.getProperty("url")));
 		creds.setOrgUser     (System.getProperty("user",         cfProps.getProperty("user")));
-		creds.setOrgPass     (System.getProperty("password",     cfProps.getProperty("password")));
 		creds.setOrgPassHash (System.getProperty("passwordHash", cfProps.getProperty("passwordHash")));
 		creds.setClientId    (System.getProperty("clientId",     cfProps.getProperty("clientId")));
 		creds.setClientSecret(System.getProperty("clientSecret", cfProps.getProperty("clientSecret")));
+		
+		// The 'password' property for some reason needs to be treated specially.
+		String sysPassword = System.getProperty("password");
+		String cfgPassword = cfProps.getProperty("password");
+		if ((null != sysPassword) && (0 != sysPassword.length()) && (!sysPassword.trim().isEmpty())) {
+			creds.setOrgPass(sysPassword);
+		} else {
+			creds.setOrgPass(cfgPassword);
+		}
 		
 		// TODO: Sanity check for any missing and/or required properties
 		

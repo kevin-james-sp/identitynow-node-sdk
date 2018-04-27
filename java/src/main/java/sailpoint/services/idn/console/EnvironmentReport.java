@@ -42,7 +42,7 @@ public class EnvironmentReport {
 		System.out.println("password: "     + semiRedactPassword(creds.getOrgPass()));
 		System.out.println("clientId: "     + creds.getClientId());
 		System.out.println("clientSecret: " + semiRedactPassword(creds.getClientSecret()));
-		
+		System.out.println("");
 
 	}
 

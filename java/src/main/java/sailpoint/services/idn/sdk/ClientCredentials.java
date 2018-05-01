@@ -23,7 +23,7 @@ public class ClientCredentials extends HashMap<String,String> {
 	public static final String OAUTH_TOKEN   = "oAuthToken";   // The OAuth token created for the user's session in the UI.
 	public static final String JWT_TOKEN     = "jwtToken";     // The JWT Token created for the client when authenticated.
 	public static final String EXPIRES_IN    = "expiresIn";    // The expiration time for the JWT token.
-	
+	public static final String KBA_DEFAULT   = "kbaDefault";   // The default answer to Knowledge Based Authentication questions for strong auth-n.	
 	/**
 	 * Constructor passing all known properties for an org.
 	 * @param gatewayUrl
@@ -63,6 +63,7 @@ public class ClientCredentials extends HashMap<String,String> {
 	public String getOAuthToken()   { return this.get(OAUTH_TOKEN);   }
 	public String getJWTToken()     { return this.get(JWT_TOKEN);     }
 	public String getExpiresIn()    { return this.get(EXPIRES_IN);    }
+	public String getKbaDefault()   { return this.get(KBA_DEFAULT);   }
 	
 	public void setGatewayUrl(String arg)   { this.put(GATEWAY_URL,   arg); }
 	public void setUserIntUrl(String arg)   { this.put(USERINT_URL,   arg); }
@@ -75,5 +76,6 @@ public class ClientCredentials extends HashMap<String,String> {
 	public void setOAuthToken(String arg)   { this.put(OAUTH_TOKEN,   arg); }
 	public void setJWTToken(String arg)     { this.put(JWT_TOKEN,     arg); }
 	public void setExpiresIn(String arg)    { this.put(EXPIRES_IN,    arg); }
+	public void setKbaDefault(String arg)   { this.put(KBA_DEFAULT,   arg); }
 
 }

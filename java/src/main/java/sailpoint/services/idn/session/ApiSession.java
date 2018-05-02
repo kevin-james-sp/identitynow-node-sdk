@@ -56,6 +56,7 @@ public class ApiSession extends SessionBase {
 		
 		String oAuthUrl = creds.getGatewayUrl() + URL_SUFFIX_OAUTH_TOKEN;
 		
+		// TODO: Hook in here to honor proxy stuff; we're going to need a global clientBuilder.
 		// Construct our OkHttpClient with pro-active Authorization header injection.
 		OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
 		clientBuilder.addInterceptor(new ApiCredentialsBasicAuthInterceptor(creds.getClientId(), creds.getClientSecret()));

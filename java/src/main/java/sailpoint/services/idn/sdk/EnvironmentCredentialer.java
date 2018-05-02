@@ -22,6 +22,9 @@ public class EnvironmentCredentialer {
 	// The static credentials file lives hidden in a directory for the local user.
 	public static final String credentialsFile = "/.idnSdk/sdkClient.conf";
 	
+	// The maximum number of KBA question responses to read from the environment.
+	public static final int MAX_KBA_MAPPINGS = 5;
+	
 	public enum CredentialOrigin {
 		// Credential was found in system environment or JVM property.
 		ORIGIN_ENVIRONEMENT,
@@ -76,6 +79,7 @@ public class EnvironmentCredentialer {
 		creds.setOrgPassHash (System.getProperty("passwordHash", cfProps.getProperty("passwordHash")));
 		creds.setClientId    (System.getProperty("clientId",     cfProps.getProperty("clientId")));
 		creds.setClientSecret(System.getProperty("clientSecret", cfProps.getProperty("clientSecret")));
+		creds.setKbaDefault  (System.getProperty("kbaDefault",   cfProps.getProperty("kbaDefault")));
 		
 		// The 'password' property for some reason needs to be treated specially.
 		String sysPassword = System.getProperty("password");
@@ -84,6 +88,27 @@ public class EnvironmentCredentialer {
 			creds.setOrgPass(sysPassword);
 		} else {
 			creds.setOrgPass(cfgPassword);
+		}
+		
+		// Search for individual KBA questions and answer texts in the environment.
+		for (int i=0; i<MAX_KBA_MAPPINGS; i++) {
+			
+			String qKey = "kbaQ_" + (1+i);
+			String aKey = "kbaA_" + (1+i);
+			
+			String kbaQText = System.getProperty(qKey, cfProps.getProperty(qKey));
+			String kbaAText = System.getProperty(aKey, cfProps.getProperty(aKey));
+			
+			if (null != kbaQText) kbaQText = kbaQText.trim();
+			if (null != kbaAText) kbaAText = kbaAText.trim();
+			
+			// Do we have a valid, populated question and answer text pair?
+			if (	
+					(null != kbaQText) && (0 != kbaQText.length()) &&
+					(null != kbaAText) && (0 != kbaAText.length())
+			) {
+				creds.setKbaAnswer(kbaQText, kbaAText);
+			}			
 		}
 		
 		// TODO: Sanity check for any missing and/or required properties

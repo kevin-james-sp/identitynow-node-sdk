@@ -75,6 +75,7 @@ public class EnvironmentCredentialer {
 		// System properties override config file settings.
 		creds.setOrgName     (System.getProperty("org",          cfProps.getProperty("org")));
 		creds.setUserIntUrl  (System.getProperty("url",          cfProps.getProperty("url")));
+		creds.setGatewayUrl  (System.getProperty("gwy",          cfProps.getProperty("gwy")));
 		creds.setOrgUser     (System.getProperty("user",         cfProps.getProperty("user")));
 		creds.setOrgPassHash (System.getProperty("passwordHash", cfProps.getProperty("passwordHash")));
 		creds.setClientId    (System.getProperty("clientId",     cfProps.getProperty("clientId")));

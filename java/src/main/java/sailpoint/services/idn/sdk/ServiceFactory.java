@@ -1,19 +1,17 @@
 package sailpoint.services.idn.sdk;
 
-
 import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 import sailpoint.services.idn.sdk.interceptor.BearerAuthInterceptor;
-import sailpoint.services.idn.sdk.object.Session;
-import sailpoint.services.idn.sdk.object.Tenant;
+import sailpoint.services.idn.session.SessionBase;
 
 public class ServiceFactory {
 
-	public static <S> S getService ( Class<S> serviceClass, Tenant tenant, Session session ) {
+	public static <S> S getService ( Class<S> serviceClass, ClientCredentials creds, SessionBase session ) {
 		return getService( 
 				serviceClass, 
-				tenant.getUrl(), 
+				creds.getUserIntUrl(),
 				session.getAccessToken() );	
 	}
 	

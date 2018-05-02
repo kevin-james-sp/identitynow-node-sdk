@@ -1,6 +1,8 @@
 package sailpoint.services.idn.sdk;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * A container for all of the relevant strings and credentials information required 
@@ -31,6 +33,8 @@ public class ClientCredentials extends HashMap<String,String> {
 	*/
 	
 	// Maintain a mapping of Knowledge Based Authentication question substring to answer text.
+	// Environment parameters like: kbaQ_1, kbaA_1, kbaQ_2, kbaA_2, etc.
+	private ArrayList<String> kbaQTextList = new ArrayList<String>();
 	private HashMap<String,String> kbaQtoAMap = new HashMap<String,String>();
 	
 	/**
@@ -74,18 +78,18 @@ public class ClientCredentials extends HashMap<String,String> {
 	public String getExpiresIn()    { return this.get(EXPIRES_IN);    }
 	public String getKbaDefault()   { return this.get(KBA_DEFAULT);   }
 	
-	public void setGatewayUrl(String arg)   { this.put(GATEWAY_URL,   arg.trim()); }
-	public void setUserIntUrl(String arg)   { this.put(USERINT_URL,   arg.trim()); }
-	public void setOrgName(String arg)      { this.put(ORG_NAME,      arg.trim()); }
-	public void setOrgUser(String arg)      { this.put(ORG_USER,      arg.trim()); }
-	public void setOrgPass(String arg)      { this.put(ORG_PASS,      arg.trim()); }
-	public void setOrgPassHash(String arg)  { this.put(ORG_PASS_HASH, arg.trim()); }
-	public void setClientId(String arg)     { this.put(CLIENT_ID,     arg.trim()); }
-	public void setClientSecret(String arg) { this.put(CLIENT_SECRET, arg.trim()); }
-	public void setOAuthToken(String arg)   { this.put(OAUTH_TOKEN,   arg.trim()); }
-	public void setJWTToken(String arg)     { this.put(JWT_TOKEN,     arg.trim()); }
-	public void setExpiresIn(String arg)    { this.put(EXPIRES_IN,    arg.trim()); }
-	public void setKbaDefault(String arg)   { this.put(KBA_DEFAULT,   arg.trim()); }
+	public void setGatewayUrl(String arg)   { this.put(GATEWAY_URL,   (null != arg ? arg.trim() : null) ); }
+	public void setUserIntUrl(String arg)   { this.put(USERINT_URL,   (null != arg ? arg.trim() : null) ); }
+	public void setOrgName(String arg)      { this.put(ORG_NAME,      (null != arg ? arg.trim() : null) ); }
+	public void setOrgUser(String arg)      { this.put(ORG_USER,      (null != arg ? arg.trim() : null) ); }
+	public void setOrgPass(String arg)      { this.put(ORG_PASS,      (null != arg ? arg.trim() : null) ); }
+	public void setOrgPassHash(String arg)  { this.put(ORG_PASS_HASH, (null != arg ? arg.trim() : null) ); }
+	public void setClientId(String arg)     { this.put(CLIENT_ID,     (null != arg ? arg.trim() : null) ); }
+	public void setClientSecret(String arg) { this.put(CLIENT_SECRET, (null != arg ? arg.trim() : null) ); }
+	public void setOAuthToken(String arg)   { this.put(OAUTH_TOKEN,   (null != arg ? arg.trim() : null) ); }
+	public void setJWTToken(String arg)     { this.put(JWT_TOKEN,     (null != arg ? arg.trim() : null) ); }
+	public void setExpiresIn(String arg)    { this.put(EXPIRES_IN,    (null != arg ? arg.trim() : null) ); }
+	public void setKbaDefault(String arg)   { this.put(KBA_DEFAULT,   (null != arg ? arg.trim() : null) ); }
 	
 	/**
 	 * Retrieve the answer for a given KBA question.  Checks the hash map first,
@@ -124,7 +128,19 @@ public class ClientCredentials extends HashMap<String,String> {
 	 * @param answerText
 	 */
 	public void setKbaAnswer (String questionText, String answerText) {
+		if (!kbaQTextList.contains(questionText)) {
+			kbaQTextList.add(questionText);
+		}
 		kbaQtoAMap.put(questionText.trim(), answerText.trim());
+	}
+	
+	/**
+	 * Return the list of populated KBA questions for the credentials set. 
+	 * Note: This list _may_ be empty, but it should always be initialized.
+	 * @return
+	 */
+	public List<String> getKbaQuestionTexts() {
+		return kbaQTextList;
 	}
 
 }

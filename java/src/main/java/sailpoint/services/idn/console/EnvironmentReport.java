@@ -1,5 +1,7 @@
 package sailpoint.services.idn.console;
 
+import java.util.List;
+
 import org.apache.logging.log4j.Level;
 
 import sailpoint.services.idn.sdk.ClientCredentials;
@@ -43,6 +45,14 @@ public class EnvironmentReport {
 		System.out.println("clientId: "     + creds.getClientId());
 		System.out.println("clientSecret: " + semiRedactPassword(creds.getClientSecret()));
 		System.out.println("kbaDefault:   " + semiRedactPassword(creds.getKbaDefault()));
+		
+		List<String> qTexts = creds.getKbaQuestionTexts();
+		for (int i=0; i< qTexts.size(); i++) {
+			String qValue = qTexts.get(i);
+			String aValue = creds.getKbaAnswer(qValue);
+			System.out.println("kba question: [" + qValue + "] ==> [" + semiRedactPassword(aValue) + "]");
+		}
+		
 		System.out.println("");
 
 	}

@@ -37,5 +37,26 @@ public class TestClientCredentials {
 		assertNotNull("The default should work after setting.", aDefault);
 		assertTrue("The default shoudl match what was assigned.", dfaText.equals(aDefault));
 	}
+	
+	@Test
+	public void testTrimEverything() {
+		
+		ClientCredentials ccFromArgs = new ClientCredentials(
+				" userIntUrl ", // Spaces on both sides.
+				"      orgName", // Spaces on left side.
+				"orgUser     ", // Spaces on right side. 
+				"orgPass",      // No spaces at all!
+				"		clientId		", // Tab characters!
+				"	clientSecret  " // Tabs and spaces.
+		);
+		
+		assertTrue("Leading and trailing spaces must be removed", "userIntUrl".length()   == ccFromArgs.getUserIntUrl().length());
+		assertTrue("Multiple leading spaces must be removed",     "orgName".length()      == ccFromArgs.getOrgName().length());
+		assertTrue("Multiple trailing spaces must be removed",    "orgUser".length()      == ccFromArgs.getOrgUser().length());
+		assertTrue("Lack of spaces must be ratined removed",      "orgPass".length()      == ccFromArgs.getOrgPass().length());
+		assertTrue("Leading and trailing tabs must be removed",   "clientId".length()     == ccFromArgs.getClientId().length());
+		assertTrue("Mixed tabs and spaces must be removed",       "clientSecret".length() == ccFromArgs.getClientSecret().length());
+		
+	}
 
 }

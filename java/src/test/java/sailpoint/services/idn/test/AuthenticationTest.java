@@ -8,8 +8,6 @@ import org.apache.commons.io.FileUtils;
 import com.google.gson.Gson;
 
 import sailpoint.services.idn.sdk.IdentityNowService;
-import sailpoint.services.idn.sdk.object.Tenant;
-
 
 public final class AuthenticationTest {
 
@@ -21,11 +19,13 @@ public final class AuthenticationTest {
 
 		config = gson.fromJson( FileUtils.readFileToString( new File( "src/test/resources/config.json" ) ), Map.class );
 
+		/*
 		Tenant tenant = new sailpoint.services.idn.sdk.object.Tenant( (Map<String,String>) config.get( "tenant" ) );
 
 		IdentityNowService idnService = new IdentityNowService( tenant );
 		
 		System.out.println( gson.toJson( idnService.createSession() ) );
+		*/
 		
 	}
 

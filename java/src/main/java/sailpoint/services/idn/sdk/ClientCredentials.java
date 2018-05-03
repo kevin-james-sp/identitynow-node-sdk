@@ -15,7 +15,7 @@ public class ClientCredentials extends HashMap<String,String> {
 	private static final long serialVersionUID = -1L;
 	
 	public static final String GATEWAY_URL   = "gatewayUrl";   // API Gateway URL for the Org.
-	public static final String USERINT_URL   = "gatewayUrl";   // User interface URL for the Org.
+	public static final String USERINT_URL   = "userIntUrl";   // User interface URL for the Org.
 	public static final String ORG_NAME      = "orgName";      // The script name of the Org.
 	public static final String ORG_USER      = "orgUser";      // The user account to authenticate with.
 	public static final String ORG_PASS      = "orgPass";      // The password of the user account to authenticate with.
@@ -27,11 +27,6 @@ public class ClientCredentials extends HashMap<String,String> {
 	public static final String EXPIRES_IN    = "expiresIn";    // The expiration time for the JWT token.
 	public static final String KBA_DEFAULT   = "kbaDefault";   // The default answer to Knowledge Based Authentication questions for strong auth-n.
 	
-	/*
-	public static final String KBA_QTEXT_1   = "kbaQText1";    // The full question or unique substring of text from a KBA question.
-	public static final String KBA_ATEXT_1   = "kbaAText1";    // The answer to a KBA question.
-	*/
-	
 	// Maintain a mapping of Knowledge Based Authentication question substring to answer text.
 	// Environment parameters like: kbaQ_1, kbaA_1, kbaQ_2, kbaA_2, etc.
 	private ArrayList<String> kbaQTextList = new ArrayList<String>();
@@ -39,23 +34,23 @@ public class ClientCredentials extends HashMap<String,String> {
 	
 	/**
 	 * Constructor passing all known properties for an org.
-	 * @param gatewayUrl
-	 * @param orgName
-	 * @param orgUser
-	 * @param orgPass
-	 * @param clientId
-	 * @param clientSecret
+	 * @param userIntUrl    - The user interface URL.  Specifiable to support vanity URLs.
+	 * @param orgName       - The script name of the organization.
+	 * @param orgUser       - A user to login to the interface of the organization.
+	 * @param orgPass       - A password to login to the interface of the organization.
+	 * @param clientId      - A Client ID for API based interactions to the org.
+	 * @param clientSecret  - A Client Secret for API based interactions to the org.
 	 */
 	public ClientCredentials (
-			String gatewayUrl, String orgName, String orgUser, 
+			String userIntUrl, String orgName, String orgUser, 
 			String orgPass, String clientId, String clientSecret) {
 		super();
-		this.put(GATEWAY_URL, gatewayUrl);
-		this.put(ORG_NAME, orgName);
-		this.put(ORG_USER, orgUser);
-		this.put(ORG_PASS, orgPass);
-		this.put(CLIENT_ID, clientId);
-		this.put(CLIENT_SECRET, clientSecret);		
+		this.put(USERINT_URL,    (null != userIntUrl)   ? userIntUrl.trim()   : null);
+		this.put(ORG_NAME,       (null != orgName)      ? orgName.trim()      : null);
+		this.put(ORG_USER,       (null != orgUser)      ? orgUser.trim()      : null);
+		this.put(ORG_PASS,       (null != orgPass)      ? orgPass.trim()      : null);
+		this.put(CLIENT_ID,      (null != clientId)     ? clientId.trim()     : null);
+		this.put(CLIENT_SECRET,  (null != clientSecret) ? clientSecret.trim() : null);
 	}
 	
 	/**
@@ -65,7 +60,6 @@ public class ClientCredentials extends HashMap<String,String> {
 		super();
 	}
 	
-	public String getGatewayUrl()   { return this.get(GATEWAY_URL);   }
 	public String getUserIntUrl()   { return this.get(USERINT_URL);   }
 	public String getOrgName()      { return this.get(ORG_NAME);      }
 	public String getOrgUser()      { return this.get(ORG_USER);      }
@@ -90,6 +84,16 @@ public class ClientCredentials extends HashMap<String,String> {
 	public void setJWTToken(String arg)     { this.put(JWT_TOKEN,     (null != arg ? arg.trim() : null) ); }
 	public void setExpiresIn(String arg)    { this.put(EXPIRES_IN,    (null != arg ? arg.trim() : null) ); }
 	public void setKbaDefault(String arg)   { this.put(KBA_DEFAULT,   (null != arg ? arg.trim() : null) ); }
+	
+	/** 
+	 * The API Gateway URL for IdentityNow organizations is strictly derived 
+	 * from the script name for the organization.  This is different from the UI
+	 * URL, which can be configured with vanity URLs for specific Orgs.
+	 */
+	public String getGatewayUrl()   {
+		return "https://" + getOrgName() + ".api.cloud.sailpoint.com";
+	}
+	
 	
 	/**
 	 * Retrieve the answer for a given KBA question.  Checks the hash map first,
@@ -141,6 +145,46 @@ public class ClientCredentials extends HashMap<String,String> {
 	 */
 	public List<String> getKbaQuestionTexts() {
 		return kbaQTextList;
+	}
+	
+	/**
+	 * Tell the caller if the credentials set has a user's name and password.
+	 * This allows the credentials to be used for creating a UI session. 
+	 * @return
+	 */
+	public boolean hasUserCredentials() {
+		if (null == getOrgUser()) return false;
+		if (null == getOrgPass()) return false;
+		return true;
+	}
+	
+	/**
+	 * Tell the caller if the credentials set has a user's name and password and
+	 * the credentials set has at least a default KBA populated or some answers.
+	 * This allows the credentials to be used for creating a UI session that has
+	 * strongly authenticated to the user interface to do high-privilege actions.
+	 * @return
+	 */
+	public boolean hasUserStrongCredentials() {
+		if (!hasUserCredentials()) return false;
+		if (null == getKbaDefault() && kbaQTextList.isEmpty()) {
+			return false;
+		}
+		return true;
+	}
+	
+	/**
+	 * Tell the caller if the credentials set has API credentials in the form
+	 * of a Client ID and Client Secret.  
+	 * This allows the credentials to be used to interact with the API gateway
+	 * as an administrator type interface, free of user context.
+	 * @return
+	 */
+	public boolean hasApiCredentials() {
+		if (null == getClientId()) return false;
+		if (null == getClientSecret()) return false;
+		return true;
+		
 	}
 
 }

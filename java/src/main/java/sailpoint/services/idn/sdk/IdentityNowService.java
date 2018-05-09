@@ -32,6 +32,10 @@ public final class IdentityNowService {
      */
     public IdentityNowService( String url, String username, String password, String apiUser, String apiKey ) throws Exception {
     	this.creds = new ClientCredentials();
+    	
+    	// String userIntUrl, String orgName, String orgUser, 
+		// String orgPass, String clientId, String clientSecret
+		
     	creds.setUserIntUrl(url);
     	creds.setOrgUser(username);
     	creds.setOrgPass(password);

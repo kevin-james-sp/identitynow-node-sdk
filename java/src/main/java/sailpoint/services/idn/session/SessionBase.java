@@ -19,6 +19,7 @@ public class SessionBase implements java.lang.AutoCloseable {
 	
 	protected String accessToken = null;
 	protected int expiresIn = -1;
+	protected boolean isAthenticated = false;
 	
 	public SessionBase (ClientCredentials clientCredentials) {
 		if (null == clientCredentials.getOrgName()) {
@@ -76,6 +77,22 @@ public class SessionBase implements java.lang.AutoCloseable {
 	@Override
 	public void close() throws Exception {
 		throw new IllegalArgumentException("Session sub-classes must implement their own close() methods.");
+	}
+	
+	public boolean isAuthenticated() {
+		return isAthenticated;
+	}
+	
+	protected ClientCredentials getCredentials() {
+		return creds;
+	}
+	
+	public String getApiGatewayUrl() {
+		return creds.getGatewayUrl();
+	}
+	
+	public String getUserInterfaceUrl() {
+		return creds.getUserIntUrl();
 	}
 
 }

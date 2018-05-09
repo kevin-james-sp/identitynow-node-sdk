@@ -84,13 +84,17 @@ public class ApiSession extends SessionBase {
 		
 		// Parse the response json that comes back.
 		Gson gson = new Gson();
+		
 		ApiClientAuthorization aca = gson.fromJson(responseJson, ApiClientAuthorization.class);
 		log.info("Successfully Authenticated to API for Org [" + aca.getOrg() + "], access token: " + aca.getAccessToken());
+		this.isAthenticated = true;
 		
 		// TODO: Why not only have the API Session reference the ApiClientAuthorization directly?
+		
 		this.apiClientAuth = aca;
 		this.setAccessToken(aca.getAccessToken());
 		this.setExpiresIn(aca.getExpiresIn());
+		creds.setJWTToken(aca.accessToken);
 		
 		return this; 
 		

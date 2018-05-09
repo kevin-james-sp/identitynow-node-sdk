@@ -3,6 +3,8 @@ package sailpoint.services.idn.sdk;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * A container for all of the relevant strings and credentials information required 
@@ -35,22 +37,22 @@ public class ClientCredentials extends HashMap<String,String> {
 	/**
 	 * Constructor passing all known properties for an org.
 	 * @param userIntUrl    - The user interface URL.  Specifiable to support vanity URLs.
-	 * @param orgName       - The script name of the organization.
+	 * @param ScriptName    - The script name of the organization.  A 16 or fewer character unique string for the Org
 	 * @param orgUser       - A user to login to the interface of the organization.
 	 * @param orgPass       - A password to login to the interface of the organization.
 	 * @param clientId      - A Client ID for API based interactions to the org.
 	 * @param clientSecret  - A Client Secret for API based interactions to the org.
 	 */
 	public ClientCredentials (
-			String userIntUrl, String orgName, String orgUser, 
+			String userIntUrl, String orgScriptName, String orgUser, 
 			String orgPass, String clientId, String clientSecret) {
 		super();
-		this.put(USERINT_URL,    (null != userIntUrl)   ? userIntUrl.trim()   : null);
-		this.put(ORG_NAME,       (null != orgName)      ? orgName.trim()      : null);
-		this.put(ORG_USER,       (null != orgUser)      ? orgUser.trim()      : null);
-		this.put(ORG_PASS,       (null != orgPass)      ? orgPass.trim()      : null);
-		this.put(CLIENT_ID,      (null != clientId)     ? clientId.trim()     : null);
-		this.put(CLIENT_SECRET,  (null != clientSecret) ? clientSecret.trim() : null);
+		this.put(USERINT_URL,    (null != userIntUrl)    ? userIntUrl.trim()    : null);
+		this.put(ORG_NAME,       (null != orgScriptName) ? orgScriptName.trim() : null);
+		this.put(ORG_USER,       (null != orgUser)       ? orgUser.trim()       : null);
+		this.put(ORG_PASS,       (null != orgPass)       ? orgPass.trim()       : null);
+		this.put(CLIENT_ID,      (null != clientId)      ? clientId.trim()      : null);
+		this.put(CLIENT_SECRET,  (null != clientSecret)  ? clientSecret.trim()  : null);
 	}
 	
 	/**
@@ -60,8 +62,9 @@ public class ClientCredentials extends HashMap<String,String> {
 		super();
 	}
 	
+	// Cookie-cutter get()-ers that all pass the field through verbatim. 
+	
 	public String getUserIntUrl()   { return this.get(USERINT_URL);   }
-	public String getOrgName()      { return this.get(ORG_NAME);      }
 	public String getOrgUser()      { return this.get(ORG_USER);      }
 	public String getOrgPass()      { return this.get(ORG_PASS);      }
 	public String getOrgPassHash()  { return this.get(ORG_PASS_HASH); }
@@ -71,6 +74,34 @@ public class ClientCredentials extends HashMap<String,String> {
 	public String getJWTToken()     { return this.get(JWT_TOKEN);     }
 	public String getExpiresIn()    { return this.get(EXPIRES_IN);    }
 	public String getKbaDefault()   { return this.get(KBA_DEFAULT);   }
+	
+	/**
+	 * Returns the org's script name to the caller.  
+	 * This is a 16 or fewer character string that uniquely describes the Org.
+	 * If not passed in by at the time of ClientCredentials construction then 
+	 * this can be derived by a number of methods, including:
+	 *  - Parsing the API Gateway URL for any kind of org.
+	 *  - Parsing the user interface URL for non-vanity orgs.
+	 * This get()-er attempts to derive it of no orgName (aka org script name)
+	 * is provided at the time of credentials construction.
+	 * @return
+	 */
+	public String getOrgName() {
+		String orgName = this.get(ORG_NAME);
+		if ((null != orgName) && (0 != orgName.length())) return orgName;
+		if (null != getGatewayUrl()) {
+			// Gateway URLs are of the format:
+			// "https://${orgScriptName}.api.cloud.sailpoint.com"
+			Pattern p = Pattern.compile("https:\\/\\/(\\S+).");
+			Matcher m = p.matcher(getGatewayUrl());
+			if (m.find()) {
+				return m.group(1);
+			}
+		}
+		return null;
+	}
+	
+	// Cookie-cutter set()-ers that all trim any strings passed in.
 	
 	public void setGatewayUrl(String arg)   { this.put(GATEWAY_URL,   (null != arg ? arg.trim() : null) ); }
 	public void setUserIntUrl(String arg)   { this.put(USERINT_URL,   (null != arg ? arg.trim() : null) ); }
@@ -89,9 +120,18 @@ public class ClientCredentials extends HashMap<String,String> {
 	 * The API Gateway URL for IdentityNow organizations is strictly derived 
 	 * from the script name for the organization.  This is different from the UI
 	 * URL, which can be configured with vanity URLs for specific Orgs.
+	 * We allow the client to specify it for testing purposes, but it is not strictly 
+	 * necessary that we specify it in the environment.  UI Sessions can derive it
+	 * as well based on the interactions with the post 2018Q2 user interface releases.
 	 */
 	public String getGatewayUrl()   {
-		return "https://" + getOrgName() + ".api.cloud.sailpoint.com";
+		if (null != this.get(GATEWAY_URL)) {
+			return this.get(GATEWAY_URL);
+		}
+		if (null != getOrgName()) {
+			return "https://" + getOrgName() + ".api.cloud.sailpoint.com";
+		}
+		return null;
 	}
 	
 	

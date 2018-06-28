@@ -4,6 +4,8 @@ import java.io.IOException;
 
 import okhttp3.OkHttpClient;
 import sailpoint.services.idn.sdk.ClientCredentials;
+import okhttp3.MediaType;
+import okhttp3.Response;
 
 /**
  * The top level class from which all other Session types derive. 
@@ -12,7 +14,9 @@ import sailpoint.services.idn.sdk.ClientCredentials;
  *
  */
 public class SessionBase implements java.lang.AutoCloseable {
-	
+
+	public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+
 	protected ClientCredentials creds = null;
 	
 	// Default to API Only session types for SDK use.
@@ -109,6 +113,16 @@ public class SessionBase implements java.lang.AutoCloseable {
 	
 	public OkHttpClient getClient() {
 		throw new IllegalArgumentException("Session sub-classes must implement their own getClient() methods.");
+	}
+
+	protected Response doPost(String url, String json, OkHttpClient client){
+		RequestBody body = RequestBody.create(JSON, json);
+		Request request = new Request.Builder()
+				.url(url)
+				.post(body)
+				.build();
+		Response response = client.newCall(request).execute();
+		return response;
 	}
 	
 	// Whatever comes back from the UI can override the API Gateway URL setting.

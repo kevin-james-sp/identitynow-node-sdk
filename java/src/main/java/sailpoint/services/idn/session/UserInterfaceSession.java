@@ -30,6 +30,7 @@ public class UserInterfaceSession extends SessionBase {
 	public final static Logger log = LogManager.getLogger(UserInterfaceSession.class);
 	
 	public static final String URL_LOGIN_LOGIN = "login/login";
+	public static final String URL_LOGIN_GET = "login/get";
 	
 	public String ccSessionId = null;
 	public String csrfToken = null;
@@ -136,11 +137,14 @@ public class UserInterfaceSession extends SessionBase {
 	
 		// STEP 2: Make a POST to /login/get to get the properties for the user.
 		String jsonContent = "{username=" + getCredentials().getOrgUser() + "}";
-		
+
+		uiUrl = getUserInterfaceUrl() + URL_LOGIN_GET;
+		response = doPost(uiUrl, jsonContent, client);
+		String responseBody = response.body().string();
+		log.debug(responseBody);
+
 		return null;
 	}
-	
-
 	
 	@Override
 	public void close() {

@@ -2,6 +2,7 @@ package sailpoint.services.idn.session;
 
 import java.io.IOException;
 
+import okhttp3.OkHttpClient;
 import sailpoint.services.idn.sdk.ClientCredentials;
 
 /**
@@ -91,8 +92,20 @@ public class SessionBase implements java.lang.AutoCloseable {
 		return creds.getGatewayUrl();
 	}
 	
+	/**
+	 * Returns the user interface URL for the org in question.  This may look like:
+	 *  - https://dev02-useast1.cloud.sailpoint.com/perflab-05121107
+	 *  - TODO: Add staging url example:
+	 *  - https://neil-test.identitynow.com/
+	 *  - https://sailpoint.identitynow.com/
+	 * @return
+	 */
 	public String getUserInterfaceUrl() {
 		return creds.getUserIntUrl();
+	}
+	
+	public OkHttpClient getClient() {
+		throw new IllegalArgumentException("Session sub-classes must implement their own getClient() methods.");
 	}
 
 }

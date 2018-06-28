@@ -27,6 +27,7 @@ public class CredentialsValidator {
 		
 		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
 		
+		/* This works fine. */
 		if (envCreds.hasApiCredentials()) {
 			try (SessionBase session = SessionFactory.createSession(SessionType.SESSION_TYPE_API_ONLY) ){
 				session.open();
@@ -43,7 +44,6 @@ public class CredentialsValidator {
 		}
 		
 		
-		/* TODO: Implement this.
 		if (envCreds.hasUserCredentials()) {
 			try (SessionBase session = SessionFactory.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC) ){
 				session.open();
@@ -58,7 +58,7 @@ public class CredentialsValidator {
 				exitVal = 1;
 			} 
 		}
-		*/
+		
 		
 		System.exit(exitVal);
 

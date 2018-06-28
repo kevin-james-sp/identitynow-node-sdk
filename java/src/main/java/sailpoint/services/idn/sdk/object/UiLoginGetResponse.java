@@ -2,7 +2,7 @@ package sailpoint.services.idn.sdk.object;
 
 import com.google.gson.annotations.SerializedName;
 
-public class ApiLoginGetResponse {
+public class UiLoginGetResponse {
 
 	@SerializedName("ssoServerUrl")
 	String ssoServerUrl;
@@ -11,15 +11,15 @@ public class ApiLoginGetResponse {
 	String goToOnFailUrl;
 
 	@SerializedName("auth")
-	ApiAuth apiAuth;
+	UiAuthData apiAuth;
 
 	@SerializedName("org")
-	ApiOrg apiOrg;
+	UiOrgData apiOrg;
 
-	public ApiLoginGetResponse() {
+	public UiLoginGetResponse() {
 	}
 
-	public ApiLoginGetResponse(String ssoServerUrl, String goToOnFailUrl, ApiAuth apiAuth, ApiOrg apiOrg) {
+	public UiLoginGetResponse(String ssoServerUrl, String goToOnFailUrl, UiAuthData apiAuth, UiOrgData apiOrg) {
 
 		this.ssoServerUrl = ssoServerUrl;
 		this.goToOnFailUrl = goToOnFailUrl;
@@ -35,19 +35,19 @@ public class ApiLoginGetResponse {
 		this.goToOnFailUrl = goToOnFailUrl;
 	}
 
-	public ApiAuth getApiAuth() {
+	public UiAuthData getApiAuth() {
 		return apiAuth;
 	}
 
-	public void setApiAuth(ApiAuth apiAuth) {
+	public void setApiAuth(UiAuthData apiAuth) {
 		this.apiAuth = apiAuth;
 	}
 
-	public ApiOrg getApiOrg() {
+	public UiOrgData getApiOrg() {
 		return apiOrg;
 	}
 
-	public void setApiOrg(ApiOrg apiOrg) {
+	public void setApiOrg(UiOrgData apiOrg) {
 		this.apiOrg = apiOrg;
 	}
 

@@ -2,15 +2,15 @@ package sailpoint.services.idn.sdk.object;
 
 import com.google.gson.annotations.SerializedName;
 
-public class ApiOrg {
+public class UiOrgData {
 
 	@SerializedName("authErrorText")
 	String authErrorText;
 
-	public ApiOrg() {
+	public UiOrgData() {
 	}
 
-	public ApiOrg(String authErrorText) {
+	public UiOrgData(String authErrorText) {
 		this.authErrorText = authErrorText;
 	}
 

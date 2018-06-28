@@ -2,15 +2,15 @@ package sailpoint.services.idn.sdk.object;
 
 import com.google.gson.annotations.SerializedName;
 
-public class ApiAuth {
+public class UiAuthData {
 
 	@SerializedName("encryption")
 	String encryptionType;
 
-	public ApiAuth() {
+	public UiAuthData() {
 	}
 
-	public ApiAuth(String encryptionType, String service) {
+	public UiAuthData(String encryptionType, String service) {
 
 		this.encryptionType = encryptionType;
 		this.service = service;

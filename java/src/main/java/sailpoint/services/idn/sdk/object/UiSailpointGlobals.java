@@ -2,7 +2,7 @@ package sailpoint.services.idn.sdk.object;
 
 import com.google.gson.annotations.SerializedName;
 
-public class ApiSailpointGlobals {
+public class UiSailpointGlobals {
 	
 	// Example JSON:
 	/*
@@ -38,7 +38,7 @@ public class ApiSailpointGlobals {
 	 */
 	
 	@SerializedName("api")
-	public ApiSailpointApiData api;
+	public UiApiGatewayData api;
 	
 	@SerializedName("baseUrl")
 	public String baseUrl;
@@ -55,11 +55,11 @@ public class ApiSailpointGlobals {
 	@SerializedName("sso")
 	public boolean sso;
 
-	public ApiSailpointApiData getApi() {
+	public UiApiGatewayData getApi() {
 		return api;
 	}
 
-	public void setApi(ApiSailpointApiData api) {
+	public void setApi(UiApiGatewayData api) {
 		this.api = api;
 	}
 

@@ -2,7 +2,7 @@ package sailpoint.services.idn.sdk.object;
 
 import com.google.gson.annotations.SerializedName;
 
-public class ApiSailpointApiData {
+public class UiApiGatewayData {
 	
 	// Exmample JSON:
 	/*

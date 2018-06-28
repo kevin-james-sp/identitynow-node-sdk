@@ -1,13 +1,10 @@
 package sailpoint.services.idn.sdk;
 
 import static org.junit.Assert.fail;
-import static org.junit.jupiter.api.Assertions.*;
-
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.logging.log4j.Level;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import sailpoint.services.idn.console.Log4jUtils;
 import sailpoint.services.idn.internal.FrequentlyUsedCredentials;

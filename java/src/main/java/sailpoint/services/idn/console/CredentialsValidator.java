@@ -23,11 +23,11 @@ public class CredentialsValidator {
 		System.out.println("All Rights Reserved.");
 		System.out.println("");
 		
-		Log4jUtils.boostrapLog4j(Level.INFO);
+		Log4jUtils.boostrapLog4j(Level.DEBUG);
 		
 		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
 		
-		/* This works fine. */
+		/* This works fine. 
 		if (envCreds.hasApiCredentials()) {
 			try (SessionBase session = SessionFactory.createSession(SessionType.SESSION_TYPE_API_ONLY) ){
 				session.open();
@@ -42,7 +42,7 @@ public class CredentialsValidator {
 				exitVal = 1;
 			} 
 		}
-		
+		*/
 		
 		if (envCreds.hasUserCredentials()) {
 			try (SessionBase session = SessionFactory.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC) ){

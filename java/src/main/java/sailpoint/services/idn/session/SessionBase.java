@@ -101,11 +101,19 @@ public class SessionBase implements java.lang.AutoCloseable {
 	 * @return
 	 */
 	public String getUserInterfaceUrl() {
+		if (!creds.getUserIntUrl().endsWith("/")) {
+			return creds.getUserIntUrl() + "/";
+		}
 		return creds.getUserIntUrl();
 	}
 	
 	public OkHttpClient getClient() {
 		throw new IllegalArgumentException("Session sub-classes must implement their own getClient() methods.");
+	}
+	
+	// Whatever comes back from the UI can override the API Gateway URL setting.
+	protected void setApiGatewayUrl(String newGwUrl) {
+		creds.setGatewayUrl(newGwUrl);
 	}
 
 }

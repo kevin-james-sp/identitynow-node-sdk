@@ -1,14 +1,23 @@
 package sailpoint.services.idn.session;
 
 import java.io.IOException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
+
+import com.google.gson.Gson;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Request.Builder;
 import okhttp3.Response;
 import sailpoint.services.idn.sdk.ClientCredentials;
+import sailpoint.services.idn.sdk.object.ApiSailpointGlobals;
 
 /**
  * A model of a Session based on a user interface session for a specific user.
@@ -20,7 +29,7 @@ public class UserInterfaceSession extends SessionBase {
 	
 	public final static Logger log = LogManager.getLogger(UserInterfaceSession.class);
 	
-	public static final String URL_LOGIN_LOGIN = "/login/login";
+	public static final String URL_LOGIN_LOGIN = "login/login";
 	
 	public String ccSessionId = null;
 	public String csrfToken = null;
@@ -69,7 +78,7 @@ public class UserInterfaceSession extends SessionBase {
 	@Override 
 	public UserInterfaceSession open() {
 		
-		// The sequence looks like the following:
+		// The old (pre-oauth) sequence looks like the following:
 		// 1. GET  /login/login -- pulls back the org login parameters.
 		// 2. POST /login/get   -- pulls back specific properties for the user logging in (hash vs. key password, etc).
 		// 3. POST ${SSO Path}  -- makes a POST to the SSO (OpenAM/etc) login service with credentials.
@@ -77,26 +86,61 @@ public class UserInterfaceSession extends SessionBase {
 		// 5. Check for KBA map and if present do strong Auth-N.
 		// 6. Check for API credentials and if present then do OAuth token for session.
 		
+		// The new (with oauth) sequence looks like:
+		// 1. GET  /login/login -- pulls back the org login parameters and API Gateway URL.
+		// 2. POST /login/get   -- pulls back specific properties for the user logging in (hash vs. key password, etc).
+		// 3. POST ${SSO Path}  -- makes a POST to the SSO (OpenAM/etc) login service with credentials.
+		// 4. Follow the redirects from the SSO login.  
+		//    This usually takes the browser through /ui/ then to /oauth/authorize? and /oauth/callback?
+		//    Then finally to /ui and then /main
+		// 5. Check for KBA map and if present do strong Auth-N.
+		// 6. Check for API credentials and if present then do OAuth token for session.
+		
 		OkHttpClient client = new OkHttpClient();
 		
+		// STEP 1: Call /login/login and extract the API Gateway URL for the org and other data.
 		Builder reqBuilder = new Request.Builder();
-		reqBuilder.url(getUserInterfaceUrl() + URL_LOGIN_LOGIN);
+		String uiUrl = getUserInterfaceUrl() + URL_LOGIN_LOGIN;
+		log.debug("Attempting to login to: " + uiUrl);
+		reqBuilder.url(uiUrl);
+		
 		Request request = reqBuilder.build();
-
 		Response response;
 		try {
 			response = client.newCall(request).execute();
-			String respString = response.body().string();
-			log.debug("respString: " + respString);
+			String respHtml = response.body().string();
+			log.trace("respString: " + respHtml);
+			
+			// Note: we parse out the several fields from a JSON field that comes back in HTTP.
+			Document doc = Jsoup.parse(respHtml);
+			
+			String selectorString = "script[id='slpt-globals-json']";
+			Elements slptScript = doc.select(selectorString);
+			if (null == slptScript) {
+				log.error("Failure extracting slpt-globals-json with selector: " + selectorString);
+				return null;
+			}
+			
+			String jsonBody = slptScript.html();
+			log.debug("slptScript:" + jsonBody);
+			
+			Gson gson = new Gson();
+			ApiSailpointGlobals apiSlptGlobals = gson.fromJson(jsonBody, ApiSailpointGlobals.class);
+			this.setApiGatewayUrl(apiSlptGlobals.getApi().getBaseUrl());
+			log.debug("API URL:" + this.getApiGatewayUrl());
+			
+			
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error("Failure GET'ing login/login page", e);
 		}
 	
+		// STEP 2: Make a POST to /login/get to get the properties for the user.
 		String jsonContent = "{username=" + getCredentials().getOrgUser() + "}";
 		
 		return null;
 	}
+	
+
 	
 	@Override
 	public void close() {

@@ -8,7 +8,7 @@ public class UiLoginGetResponse {
 	String ssoServerUrl;
 
 	@SerializedName("goToOnFail")
-	String goToOnFailUrl;
+	String goToOnFail;
 
 	@SerializedName("auth")
 	UiAuthData apiAuth;
@@ -19,20 +19,20 @@ public class UiLoginGetResponse {
 	public UiLoginGetResponse() {
 	}
 
-	public UiLoginGetResponse(String ssoServerUrl, String goToOnFailUrl, UiAuthData apiAuth, UiOrgData apiOrg) {
+	public UiLoginGetResponse(String ssoServerUrl, String goToOnFail, UiAuthData apiAuth, UiOrgData apiOrg) {
 
 		this.ssoServerUrl = ssoServerUrl;
-		this.goToOnFailUrl = goToOnFailUrl;
+		this.goToOnFail = goToOnFail;
 		this.apiAuth = apiAuth;
 		this.apiOrg = apiOrg;
 	}
 
-	public String getGoToOnFailUrl() {
-		return goToOnFailUrl;
+	public String getGoToOnFail() {
+		return goToOnFail;
 	}
 
-	public void setGoToOnFailUrl(String goToOnFailUrl) {
-		this.goToOnFailUrl = goToOnFailUrl;
+	public void setGoToOnFailUrl(String goToOnFail) {
+		this.goToOnFail = goToOnFail;
 	}
 
 	public UiAuthData getApiAuth() {

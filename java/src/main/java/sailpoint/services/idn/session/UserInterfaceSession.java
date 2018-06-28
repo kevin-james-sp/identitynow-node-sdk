@@ -1,6 +1,10 @@
 package sailpoint.services.idn.session;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -12,11 +16,16 @@ import org.jsoup.select.Elements;
 
 import com.google.gson.Gson;
 
+import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Request.Builder;
+import okhttp3.RequestBody;
 import okhttp3.Response;
 import sailpoint.services.idn.sdk.ClientCredentials;
+import sailpoint.services.idn.sdk.interceptor.ApiCredentialsBasicAuthInterceptor;
+import sailpoint.services.idn.sdk.interceptor.JwtBearerAuthInterceptor;
+import sailpoint.services.idn.sdk.interceptor.LoggingInterceptor;
 import sailpoint.services.idn.sdk.object.UiSailpointGlobals;
 import sailpoint.services.idn.sdk.object.UiAuthData;
 import sailpoint.services.idn.sdk.object.UiLoginGetResponse;
@@ -33,8 +42,10 @@ public class UserInterfaceSession extends SessionBase {
 	public final static Logger log = LogManager.getLogger(UserInterfaceSession.class);
 	
 	public static final String URL_LOGIN_LOGIN = "login/login";
-	public static final String URL_LOGIN_GET = "login/get";
+	public static final String URL_LOGIN_GET   = "login/get";
+	public static final String URL_UI          = "ui";
 	
+	public String ssoUrl = null;
 	public String ccSessionId = null;
 	public String csrfToken = null;
 	public String oauthToken = null;
@@ -66,6 +77,51 @@ public class UserInterfaceSession extends SessionBase {
 	}
 	
 	/**
+	 * This routine applies an SHA-256 has to the given string.
+	 * SHA-256 hashing is applied in at least two places in the IdentityNow 
+	 * user interface.  When a user initially logs in a sequence of hashing
+	 * is applied and when a user Strong-Authenticates to the Administrative
+	 * user interface their "KBA" (knowledge-based-authentication) answers
+	 * are toLowerCase()-ed and hashed before sending up to the server.
+	 * @param argString
+	 * @return
+	 */	
+	public static String sha256Hash(String argString) {
+		MessageDigest digest;
+		try {
+			digest = MessageDigest.getInstance("SHA-256");
+			byte[] hash = digest.digest(argString.getBytes(StandardCharsets.UTF_8));
+			StringBuffer hexString = new StringBuffer();
+			for (int i = 0; i < hash.length; i++) {
+				String hex = Integer.toHexString(0xff & hash[i]);
+				if (hex.length() == 1) hexString.append('0');
+				hexString.append(hex);
+			}
+			return hexString.toString();
+		} catch (NoSuchAlgorithmException e1) {
+			log.error("Failure SHA-256 hashing a string", e1);
+		}
+		return "";
+	}
+	
+	/**
+	 * IdentityNow uses a hash of the the user's name to salt the hash of a 
+	 * user's password or strong-authentication-question result.  This function
+	 * applies that salting algorithm to the value passed in. 
+	 * @param user
+	 * @param valueToHash
+	 * @param doDebug
+	 * @return
+	 */	
+	public static String applySaltedHash(String user, String valueToHash) {
+		String preHashPayload = valueToHash + sha256Hash(user.toLowerCase());
+		log.debug("preHashPayload: " + preHashPayload);
+		String completeHashPayload = sha256Hash(preHashPayload);
+		log.debug("completeHashPayload: " + completeHashPayload);
+		return completeHashPayload;		
+	}
+	
+	/**
 	 * Connect to the IdentityNow service and establish the session.  This "logs in"
 	 * using whatever means the session has at its disposal to connect to the service.
 	 * 
@@ -78,6 +134,9 @@ public class UserInterfaceSession extends SessionBase {
 	 * an OAuth token is generated for the user's session.
 	 * 
 	 * Returns a self-reference for chain-able operations.
+	 */
+	/* (non-Javadoc)
+	 * @see sailpoint.services.idn.session.SessionBase#open()
 	 */
 	@Override 
 	public UserInterfaceSession open() throws IOException{
@@ -100,7 +159,13 @@ public class UserInterfaceSession extends SessionBase {
 		// 5. Check for KBA map and if present do strong Auth-N.
 		// 6. Check for API credentials and if present then do OAuth token for session.
 		
-		OkHttpClient client = new OkHttpClient();
+		OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
+		// if (log.isDebugEnabled()) {
+			clientBuilder.addInterceptor(new LoggingInterceptor());
+		// }
+		OkHttpClient client = clientBuilder.build();
+		
+		// OkHttpClient client = new OkHttpClient();
 		
 		// STEP 1: Call /login/login and extract the API Gateway URL for the org and other data.
 		Builder reqBuilder = new Request.Builder();
@@ -111,6 +176,7 @@ public class UserInterfaceSession extends SessionBase {
 		Request request = reqBuilder.build();
 		Response response;
 		Gson gson = new Gson();
+		UiSailpointGlobals apiSlptGlobals = null;
 
 		try {
 			response = client.newCall(request).execute();
@@ -130,7 +196,7 @@ public class UserInterfaceSession extends SessionBase {
 			String jsonBody = slptScript.html();
 			log.debug("slptScript:" + jsonBody);
 			
-			UiSailpointGlobals apiSlptGlobals = gson.fromJson(jsonBody, UiSailpointGlobals.class);
+			apiSlptGlobals = gson.fromJson(jsonBody, UiSailpointGlobals.class);
 			this.setApiGatewayUrl(apiSlptGlobals.getApi().getBaseUrl());
 			log.debug("API URL:" + this.getApiGatewayUrl());
 			
@@ -148,8 +214,51 @@ public class UserInterfaceSession extends SessionBase {
 		log.debug(responseBody);
 		UiLoginGetResponse apiLoginGetResponse = gson.fromJson(responseBody, UiLoginGetResponse.class);
 		log.debug("encryption type = " + apiLoginGetResponse.getApiAuth().getEncryptionType());
-		log.debug("ssoUrl = " + apiLoginGetResponse.getSsoServerUrl());
-
+		
+		this.ssoUrl = apiLoginGetResponse.getSsoServerUrl();
+		log.debug("ssoUrl = " + ssoUrl);
+		
+		String onFailUrl = apiLoginGetResponse.getGoToOnFail();
+		if (null == onFailUrl) {
+			onFailUrl = apiSlptGlobals.getGotoOnFail();
+		}
+		
+		// STEP 3: Make a POST to the SSO path for the org.
+		// This makes a POST to the SSO login service which at one point was implemented on OpenAM.  
+		// This requires Form formatted inputs and some obtuse-ly named fields like "IDToken2".
+		RequestBody formBody = new FormBody.Builder()
+				.add("encryption", apiLoginGetResponse.getApiAuth().getEncryptionType())
+				.add("service",    apiLoginGetResponse.getApiAuth().getService())
+				.add("IDToken1",   creds.getOrgUser())
+				.add("IDToken2",   applySaltedHash(creds.getOrgUser(), creds.getOrgPass()))
+				.add("realm",      apiSlptGlobals.getOrgScriptName())
+				.add("goto",       creds.getUserIntUrl() + URL_UI)
+				.add("gotoOnFail", onFailUrl) 
+				.add("openam.session.persist_am_cookie", "true")
+				.build();
+		
+		RequestBody test = new FormBody.Builder(Charset.forName("UTF-8"))
+				.add("foo", "bar")
+				.add("baz", "bat")
+				.build();
+		
+		FormBody.Builder formBuilder = new FormBody.Builder()
+		        .add("key", "123");
+		formBuilder.addEncoded("baz", "bat");
+		
+	      
+		
+		log.debug("formBody: " + formBody.contentLength() + " " + formBody.contentType());
+		log.debug("formBody: " + test.contentLength() + " " + test.contentType());
+		
+		// response = doPost(ssoUrl, formBody, client);
+		response = doPost(ssoUrl, formBuilder.build(), client);
+		String ssoResponse = response.body().string();
+		
+		log.debug("response code: " + response.code() + " .isRedirect():" + response.isRedirect());
+		
+		log.debug("SSO Response Body:" + ssoResponse);
+		
 		return null;
 	}
 	

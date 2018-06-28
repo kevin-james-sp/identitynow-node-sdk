@@ -117,14 +117,40 @@ public class SessionBase implements java.lang.AutoCloseable {
 		throw new IllegalArgumentException("Session sub-classes must implement their own getClient() methods.");
 	}
 
-	protected Response doPost(String url, String json, OkHttpClient client) throws IOException{
+	/**
+	 * Make a JSON based POST to the given URL.
+	 * 
+	 * @param url
+	 * @param json
+	 * @param client
+	 * @return
+	 * @throws IOException
+	 */
+	protected Response doPost(String url, String json, OkHttpClient client) throws IOException {
 		RequestBody body = RequestBody.create(JSON, json);
 		Request request = new Request.Builder()
 				.url(url)
 				.post(body)
 				.build();
-		Response response = client.newCall(request).execute();
-		return response;
+		return client.newCall(request).execute();
+	}
+	
+	/**
+	 * Make an FormBody type POST to the given URL.
+	 * @param url
+	 * @param formBody
+	 * @param client
+	 * @return
+	 * @throws IOException
+	 */
+	protected Response doPost(String url, RequestBody formBody, OkHttpClient client) throws IOException {
+		Request request = new Request.Builder()
+				.url(url)
+				.addHeader("Content-Type", "application/x-www-form-urlencoded")
+				.post(formBody)
+				.build();
+		System.err.println("cl:" + request.body().contentLength());
+		return client.newCall(request).execute();
 	}
 	
 	// Whatever comes back from the UI can override the API Gateway URL setting.

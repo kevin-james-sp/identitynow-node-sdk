@@ -54,6 +54,9 @@ public class UiSailpointGlobals {
 	
 	@SerializedName("sso")
 	public boolean sso;
+	
+	@SerializedName("gotoOnFail")
+	public String gotoOnFail;
 
 	public UiApiGatewayData getApi() {
 		return api;
@@ -101,6 +104,14 @@ public class UiSailpointGlobals {
 
 	public void setSso(boolean sso) {
 		this.sso = sso;
+	}
+
+	public String getGotoOnFail() {
+		return gotoOnFail;
+	}
+
+	public void setGotoOnFail(String gotoOnFail) {
+		this.gotoOnFail = gotoOnFail;
 	}
 	
 }

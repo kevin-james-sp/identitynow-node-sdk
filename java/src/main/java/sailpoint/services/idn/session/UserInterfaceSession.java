@@ -18,6 +18,9 @@ import okhttp3.Request.Builder;
 import okhttp3.Response;
 import sailpoint.services.idn.sdk.ClientCredentials;
 import sailpoint.services.idn.sdk.object.ApiSailpointGlobals;
+import sailpoint.services.idn.sdk.object.ApiAuth;
+import sailpoint.services.idn.sdk.object.ApiLoginGetResponse;
+import sailpoint.services.idn.sdk.object.ApiOrg;
 
 /**
  * A model of a Session based on a user interface session for a specific user.
@@ -77,7 +80,7 @@ public class UserInterfaceSession extends SessionBase {
 	 * Returns a self-reference for chain-able operations.
 	 */
 	@Override 
-	public UserInterfaceSession open() {
+	public UserInterfaceSession open() throws IOException{
 		
 		// The old (pre-oauth) sequence looks like the following:
 		// 1. GET  /login/login -- pulls back the org login parameters.
@@ -107,6 +110,8 @@ public class UserInterfaceSession extends SessionBase {
 		
 		Request request = reqBuilder.build();
 		Response response;
+		Gson gson = new Gson();
+
 		try {
 			response = client.newCall(request).execute();
 			String respHtml = response.body().string();
@@ -125,7 +130,6 @@ public class UserInterfaceSession extends SessionBase {
 			String jsonBody = slptScript.html();
 			log.debug("slptScript:" + jsonBody);
 			
-			Gson gson = new Gson();
 			ApiSailpointGlobals apiSlptGlobals = gson.fromJson(jsonBody, ApiSailpointGlobals.class);
 			this.setApiGatewayUrl(apiSlptGlobals.getApi().getBaseUrl());
 			log.debug("API URL:" + this.getApiGatewayUrl());
@@ -142,6 +146,9 @@ public class UserInterfaceSession extends SessionBase {
 		response = doPost(uiUrl, jsonContent, client);
 		String responseBody = response.body().string();
 		log.debug(responseBody);
+		ApiLoginGetResponse apiLoginGetResponse = gson.fromJson(responseBody, ApiLoginGetResponse.class);
+		log.debug("encryption type = " + apiLoginGetResponse.getApiAuth().getEncryptionType());
+		log.debug("ssoUrl = " + apiLoginGetResponse.getSsoServerUrl());
 
 		return null;
 	}

@@ -6,6 +6,8 @@ import okhttp3.OkHttpClient;
 import sailpoint.services.idn.sdk.ClientCredentials;
 import okhttp3.MediaType;
 import okhttp3.Response;
+import okhttp3.RequestBody;
+import okhttp3.Request;
 
 /**
  * The top level class from which all other Session types derive. 
@@ -115,7 +117,7 @@ public class SessionBase implements java.lang.AutoCloseable {
 		throw new IllegalArgumentException("Session sub-classes must implement their own getClient() methods.");
 	}
 
-	protected Response doPost(String url, String json, OkHttpClient client){
+	protected Response doPost(String url, String json, OkHttpClient client) throws IOException{
 		RequestBody body = RequestBody.create(JSON, json);
 		Request request = new Request.Builder()
 				.url(url)

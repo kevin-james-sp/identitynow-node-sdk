@@ -117,6 +117,13 @@ public class SessionBase implements java.lang.AutoCloseable {
 	public OkHttpClient getClient() {
 		throw new IllegalArgumentException("Session sub-classes must implement their own getClient() methods.");
 	}
+	
+	protected Response doGet (String url, OkHttpClient client) throws IOException {
+		Request request = new Request.Builder()
+				.url(url)
+				.build();
+		return client.newCall(request).execute();
+	}
 
 	/**
 	 * Make a JSON based POST to the given URL.

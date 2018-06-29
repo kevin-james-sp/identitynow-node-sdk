@@ -185,16 +185,14 @@ public class UserInterfaceSession extends SessionBase {
 		OkHttpClient client = clientBuilder.build();
 		
 		// STEP 1: Call /login/login and extract the API Gateway URL for the org and other data.
-		Builder reqBuilder = new Request.Builder();
+		
 		String uiUrl = getUserInterfaceUrl() + URL_LOGIN_LOGIN;
 		log.debug("Attempting to login to: " + uiUrl);
-		reqBuilder.url(uiUrl);
+		Response response = doGet(uiUrl, client);
 		
-		Request request = reqBuilder.build();
 		Gson gson = new Gson();
 		UiSailpointGlobals apiSlptGlobals = null;
-
-		Response response = client.newCall(request).execute();
+		
 		String respHtml = response.body().string();
 		log.trace("respString: " + respHtml);
 		
@@ -227,7 +225,8 @@ public class UserInterfaceSession extends SessionBase {
 		// STEP 2: Make a POST to /login/get to get the properties for the user.
 		String jsonContent = "{username=" + getCredentials().getOrgUser() + "}";
 
-		uiUrl = getUserInterfaceUrl() + URL_LOGIN_GET;
+		// uiUrl = getUserInterfaceUrl() + URL_LOGIN_GET;
+		uiUrl = getApiGatewayUrl() + "/cc/" + URL_LOGIN_GET;
 		response = doPost(uiUrl, jsonContent, client);
 		String responseBody = response.body().string();
 		log.debug(responseBody);

@@ -43,6 +43,8 @@ public class LoggingInterceptor implements Interceptor {
 		
 		Request request = chain.request();
 		
+		// TODO: Add logging for cookies here!  Put the cookies in the log string.
+		
 		// log.debug(String.format("Sending request %s on %s%n%s", request.url(), chain.connection(), request.headers()));
 		String logMsg;
 		String headersStr = request.headers().toString();
@@ -74,7 +76,8 @@ public class LoggingInterceptor implements Interceptor {
 			responseBody = response.body().string();
 		}
 		
-		logMsg = String.format("<< %s in %.1fms headers:%s body:%s", 
+		logMsg = String.format("<< %03d %s in %.1fms headers:%s body:%s",
+				response.code(),
 				response.request().url(), 
 				(t2 - t1) / 1e6d, 
 				responseHeadsers,

@@ -139,7 +139,7 @@ public class UserInterfaceSession extends SessionBase {
 	 * @see sailpoint.services.idn.session.SessionBase#open()
 	 */
 	@Override 
-	public UserInterfaceSession open() throws IOException{
+	public UserInterfaceSession open() throws IOException {
 		
 		// The old (pre-oauth) sequence looks like the following:
 		// 1. GET  /login/login -- pulls back the org login parameters.
@@ -159,6 +159,7 @@ public class UserInterfaceSession extends SessionBase {
 		// 5. Check for KBA map and if present do strong Auth-N.
 		// 6. Check for API credentials and if present then do OAuth token for session.
 		
+		// TODO: Use a common client builder that includes user-agents, etc.
 		OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
 		// if (log.isDebugEnabled()) {
 			clientBuilder.addInterceptor(new LoggingInterceptor());
@@ -174,36 +175,38 @@ public class UserInterfaceSession extends SessionBase {
 		reqBuilder.url(uiUrl);
 		
 		Request request = reqBuilder.build();
-		Response response;
 		Gson gson = new Gson();
 		UiSailpointGlobals apiSlptGlobals = null;
 
-		try {
-			response = client.newCall(request).execute();
-			String respHtml = response.body().string();
-			log.trace("respString: " + respHtml);
-			
-			// Note: we parse out the several fields from a JSON field that comes back in HTTP.
-			Document doc = Jsoup.parse(respHtml);
-			
-			String selectorString = "script[id='slpt-globals-json']";
-			Elements slptScript = doc.select(selectorString);
-			if (null == slptScript) {
-				log.error("Failure extracting slpt-globals-json with selector: " + selectorString);
-				return null;
-			}
-			
-			String jsonBody = slptScript.html();
-			log.debug("slptScript:" + jsonBody);
-			
-			apiSlptGlobals = gson.fromJson(jsonBody, UiSailpointGlobals.class);
-			this.setApiGatewayUrl(apiSlptGlobals.getApi().getBaseUrl());
-			log.debug("API URL:" + this.getApiGatewayUrl());
-			
-			
-		} catch (IOException e) {
-			log.error("Failure GET'ing login/login page", e);
+		Response response = client.newCall(request).execute();
+		String respHtml = response.body().string();
+		log.trace("respString: " + respHtml);
+		
+		// Handle various response / error conditions.
+		switch (response.code()) {
+		case 403:
+			String errMsg = "403 while GET'ing " + uiUrl + " - Invalid client regional IP or VPN disconnected?"; 
+			log.error(errMsg);
+			throw new IOException(errMsg);
 		}
+		
+		// Note: we parse out the several fields from a JSON field that comes back in HTTP.
+		Document doc = Jsoup.parse(respHtml);
+		
+		String selectorString = "script[id='slpt-globals-json']";
+		Elements slptScript = doc.select(selectorString);
+		if (null == slptScript) {
+			log.error("Failure extracting slpt-globals-json with selector: " + selectorString);
+			return null;
+		}
+		
+		String jsonBody = slptScript.html();
+		log.debug("slptScript:" + jsonBody);
+		
+		apiSlptGlobals = gson.fromJson(jsonBody, UiSailpointGlobals.class);
+		this.setApiGatewayUrl(apiSlptGlobals.getApi().getBaseUrl());
+		log.debug("API URL:" + this.getApiGatewayUrl());
+			
 	
 		// STEP 2: Make a POST to /login/get to get the properties for the user.
 		String jsonContent = "{username=" + getCredentials().getOrgUser() + "}";

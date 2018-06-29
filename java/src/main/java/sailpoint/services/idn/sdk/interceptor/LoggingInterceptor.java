@@ -9,6 +9,7 @@ import okhttp3.Interceptor;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
 import okio.Buffer;
 
 /** 
@@ -29,34 +30,62 @@ public class LoggingInterceptor implements Interceptor {
 			final RequestBody copy = request;
 			final Buffer buffer = new Buffer();
 			copy.writeTo(buffer);
+			
 			return buffer.readUtf8();
 		} catch (final IOException e) {
 			log.error("Failure converting RequestBody to string", e);
 		}
-		return null;
+		return "FAILED TO CONVERT BODY TO STRING";
 	}
 
 	@Override
 	public Response intercept(Interceptor.Chain chain) throws IOException {
 		
 		Request request = chain.request();
+		
+		// log.debug(String.format("Sending request %s on %s%n%s", request.url(), chain.connection(), request.headers()));
+		String logMsg;
+		String headersStr = request.headers().toString();
+		headersStr = headersStr.replaceAll("\\n", " ");
+		if (null != request.body()) {
+			String bodyStr = bodyToString(request.body());
+			
+			logMsg = String.format(">> %s %s headers:%s bytes:%d body:%s",
+					request.method(),  request.url(), headersStr,
+					request.body().contentLength(), bodyStr	
+			); 
+			
+		} else {
+			logMsg = String.format(">> %s %s headers:%s ",
+					request.method(), request.url(), headersStr
+			);
+		}
+		log.debug(logMsg);
 
 		long t1 = System.nanoTime();
-		// log.debug(String.format("Sending request %s on %s%n%s", request.url(), chain.connection(), request.headers()));
+		Response response = chain.proceed(request);
+		long t2 = System.nanoTime();
 		
-		if (null != request.body()) {
-			log.debug(String.format("Sending request %s on %s%n%s body: ", request.url(), chain.connection(), request.headers()), bodyToString(request.body()));
-		} else {
-			log.debug(String.format("Sending request %s on %s%n%s", request.url(), chain.connection(), request.headers()));
+		String responseHeadsers = response.headers().toString();
+		responseHeadsers = responseHeadsers.replaceAll("\\n", " ");
+		
+		String responseBody = "";
+		if (response.body() != null) {
+			responseBody = response.body().string();
 		}
 		
+		logMsg = String.format("<< %s in %.1fms headers:%s body:%s", 
+				response.request().url(), 
+				(t2 - t1) / 1e6d, 
+				responseHeadsers,
+				responseBody
+			);
+		log.debug(logMsg);
 
-		Response response = chain.proceed(request);
+		// Rebuild the 1-shot response body.
+		ResponseBody body = ResponseBody.create(response.body().contentType(), responseBody);
+		return response.newBuilder().body(body).build();
 
-		long t2 = System.nanoTime();
-		log.debug(String.format("Received response for %s in %.1fms%n%s", response.request().url(), (t2 - t1) / 1e6d, response.headers()));
-
-		return response;
 	}
 
 }

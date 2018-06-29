@@ -46,7 +46,7 @@ public class LoggingInterceptor implements Interceptor {
 		// log.debug(String.format("Sending request %s on %s%n%s", request.url(), chain.connection(), request.headers()));
 		String logMsg;
 		String headersStr = request.headers().toString();
-		headersStr = headersStr.replaceAll("\\n", " ");
+		headersStr = headersStr.replaceAll("\\n", "  ");
 		if (null != request.body()) {
 			String bodyStr = bodyToString(request.body());
 			
@@ -67,7 +67,7 @@ public class LoggingInterceptor implements Interceptor {
 		long t2 = System.nanoTime();
 		
 		String responseHeadsers = response.headers().toString();
-		responseHeadsers = responseHeadsers.replaceAll("\\n", " ");
+		responseHeadsers = responseHeadsers.replaceAll("\\n", "  ");
 		
 		String responseBody = "";
 		if (response.body() != null) {

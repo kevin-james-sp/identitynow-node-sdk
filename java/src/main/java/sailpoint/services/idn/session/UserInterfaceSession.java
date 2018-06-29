@@ -1,11 +1,15 @@
 package sailpoint.services.idn.session;
 
 import java.io.IOException;
+import java.net.CookieHandler;
+import java.net.CookieManager;
+import java.net.CookiePolicy;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -17,7 +21,9 @@ import org.jsoup.select.Elements;
 
 import com.google.gson.Gson;
 
+import okhttp3.CookieJar;
 import okhttp3.FormBody;
+import okhttp3.JavaNetCookieJar;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Request.Builder;
@@ -51,9 +57,13 @@ public class UserInterfaceSession extends SessionBase {
 	public String csrfToken = null;
 	public String oauthToken = null;
 	
+	CookieManager cookieManager = new CookieManager();
+	
 	public UserInterfaceSession (ClientCredentials clientCredentials) {
 		
 		super (clientCredentials);
+		
+		cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
 		
 		// Sanity check the arguments passed in.
 		String orgUser = clientCredentials.getOrgUser(); 
@@ -160,14 +170,19 @@ public class UserInterfaceSession extends SessionBase {
 		// 5. Check for KBA map and if present do strong Auth-N.
 		// 6. Check for API credentials and if present then do OAuth token for session.
 		
+		
 		// TODO: Use a common client builder that includes user-agents, etc.
 		OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
+		clientBuilder.connectTimeout(10, TimeUnit.SECONDS);
+		clientBuilder.writeTimeout(10, TimeUnit.SECONDS);
+		clientBuilder.readTimeout(60, TimeUnit.SECONDS);
+		clientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
+		
 		// if (log.isDebugEnabled()) {
 			clientBuilder.addInterceptor(new LoggingInterceptor());
 		// }
+			
 		OkHttpClient client = clientBuilder.build();
-		
-		// OkHttpClient client = new OkHttpClient();
 		
 		// STEP 1: Call /login/login and extract the API Gateway URL for the org and other data.
 		Builder reqBuilder = new Request.Builder();
@@ -234,6 +249,12 @@ public class UserInterfaceSession extends SessionBase {
 			hostHeader = hostHeader.split("\\/")[0];
 		}
 		
+		String originHeader = creds.getUserIntUrl();
+		String originSuffix = "/" + apiSlptGlobals.getOrgScriptName() + "/";
+		if (originHeader.endsWith(originSuffix)) {
+			originHeader = originHeader.replace(originSuffix, "");
+		}
+		
 		// STEP 3: Make a POST to the SSO path for the org.
 		// This makes a POST to the SSO login service which at one point was implemented on OpenAM.  
 		// This requires Form formatted inputs and some obtuse-ly named fields like "IDToken2".
@@ -244,10 +265,11 @@ public class UserInterfaceSession extends SessionBase {
 		HashMap<String, String> headers = OkHttpUtils.getDefaultHeaders();		
 		headers.put("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
 		headers.put("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
-		headers.put("Accept-Encoding", "gzip, deflate, br");
+		// headers.put("Accept-Encoding", "gzip, deflate, br");
+		headers.put("Accept-Encoding", "identity");
 		headers.put("Cache-Control", "no-cache");
 		headers.put("Host", hostHeader);
-		headers.put("Origin", creds.getUserIntUrl());
+		headers.put("Origin", originHeader);
 		headers.put("Pragma", "no-cache");
 		headers.put("Referer", creds.getUserIntUrl() + "login/login?prompt=true");
 		headers.put("DNT", "1");

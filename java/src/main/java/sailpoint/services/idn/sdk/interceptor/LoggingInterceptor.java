@@ -51,7 +51,7 @@ public class LoggingInterceptor implements Interceptor {
 			String bodyStr = bodyToString(request.body());
 			
 			logMsg = String.format(">> %s %s headers:%s bytes:%d body:%s",
-					request.method(),  request.url(), headersStr,
+					request.method(), request.url(), headersStr,
 					request.body().contentLength(), bodyStr	
 			); 
 			

@@ -1,6 +1,7 @@
 package sailpoint.services.idn.session;
 
 import java.io.IOException;
+import java.util.Map;
 
 import okhttp3.OkHttpClient;
 import sailpoint.services.idn.sdk.ClientCredentials;
@@ -138,18 +139,21 @@ public class SessionBase implements java.lang.AutoCloseable {
 	/**
 	 * Make an FormBody type POST to the given URL.
 	 * @param url
-	 * @param formBody
+	 * @param formBody - the payload and it's content type to deliver to the server 
 	 * @param client
+	 * @param headers
 	 * @return
 	 * @throws IOException
 	 */
-	protected Response doPost(String url, RequestBody formBody, OkHttpClient client) throws IOException {
-		Request request = new Request.Builder()
-				.url(url)
-				.addHeader("Content-Type", "application/x-www-form-urlencoded")
-				.post(formBody)
-				.build();
-		System.err.println("cl:" + request.body().contentLength());
+	protected Response doPost(String url, RequestBody formBody, OkHttpClient client, Map<String,String> headers) throws IOException {
+		Request.Builder builder = new Request.Builder();
+		OkHttpUtils.appendHeaders(builder, OkHttpUtils.getDefaultHeaders());
+		if ((null != headers) && (!headers.isEmpty())) {
+			OkHttpUtils.appendHeaders(builder, headers);
+		}
+		builder.url(url);
+		builder.post(formBody);
+		Request request = builder.build();
 		return client.newCall(request).execute();
 	}
 	

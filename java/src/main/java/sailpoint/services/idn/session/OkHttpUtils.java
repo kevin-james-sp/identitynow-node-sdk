@@ -1,10 +1,14 @@
 package sailpoint.services.idn.session;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import okhttp3.Headers;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -95,6 +99,47 @@ public class OkHttpUtils {
 		reqBuilder.url(url);
 		reqBuilder.addHeader("User-Agent", USER_AGENT);
 		return reqBuilder;
+	}
+	
+	/**
+	 * Returns the default map of HTTP headers used by OkHttp clients.
+	 * @return
+	 */
+	public static HashMap<String, String> getDefaultHeaders() {
+		HashMap<String,String> map = new HashMap<String,String>();
+		map.put("User-Agent", USER_AGENT);
+		// Required so we don't blow up older Pendo integrations.
+		map.put("Accept-Language",  "en-US,en;q=0.5");
+		return map;
+	}
+	
+	/**
+	 * Append header information from the provided map to the given request builder.
+	 * @param builder
+	 * @param headers
+	 */
+	public static void appendHeaders (Request.Builder builder, Map<String, String> headers) {
+		Objects.requireNonNull(builder);
+		Headers.Builder headerBuilder = new Headers.Builder();
+		if (headers == null || headers.isEmpty())
+			return;
+		for (String key : headers.keySet()) {
+			headerBuilder.add(key, headers.get(key));
+		}
+		builder.headers(headerBuilder.build());
+	}
+	
+	/**
+	 * Append a single header to a request builder. 
+	 * WARNING: this is relatively inefficient; call the Map<> based version instead.
+	 * @param builder
+	 * @param headerName
+	 * @param headerValue
+	 */
+	public static void appendHeader (Request.Builder builder, String headerName, String headerValue) {
+		HashMap<String,String> map = new HashMap<String,String>();
+		map.put(headerName, headerValue);
+		appendHeaders(builder, map);
 	}
 
 	/**

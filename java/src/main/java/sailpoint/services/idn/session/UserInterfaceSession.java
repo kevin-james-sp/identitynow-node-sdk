@@ -5,6 +5,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -218,17 +219,40 @@ public class UserInterfaceSession extends SessionBase {
 		UiLoginGetResponse apiLoginGetResponse = gson.fromJson(responseBody, UiLoginGetResponse.class);
 		log.debug("encryption type = " + apiLoginGetResponse.getApiAuth().getEncryptionType());
 		
-		this.ssoUrl = apiLoginGetResponse.getSsoServerUrl();
-		log.debug("ssoUrl = " + ssoUrl);
+		this.ssoUrl = apiLoginGetResponse.getSsoServerUrl() + "/login";
+		log.debug("ssoUrl = " + ssoUrl );
 		
 		String onFailUrl = apiLoginGetResponse.getGoToOnFail();
 		if (null == onFailUrl) {
 			onFailUrl = apiSlptGlobals.getGotoOnFail();
 		}
 		
+		// Host header should be the SSO server's host name to make CloudFront happy.
+		String hostHeader = apiLoginGetResponse.getSsoServerUrl();
+		if (hostHeader.contains("//")) {
+			hostHeader = hostHeader.split("\\/\\/")[1];
+			hostHeader = hostHeader.split("\\/")[0];
+		}
+		
 		// STEP 3: Make a POST to the SSO path for the org.
 		// This makes a POST to the SSO login service which at one point was implemented on OpenAM.  
 		// This requires Form formatted inputs and some obtuse-ly named fields like "IDToken2".
+
+		// Emulate the request properties that Firefox or Chrome post the the server.
+		// OkHttpUtils okUtils = new OkHttpUtils(this);
+		
+		HashMap<String, String> headers = OkHttpUtils.getDefaultHeaders();		
+		headers.put("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+		headers.put("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+		headers.put("Accept-Encoding", "gzip, deflate, br");
+		headers.put("Cache-Control", "no-cache");
+		headers.put("Host", hostHeader);
+		headers.put("Origin", creds.getUserIntUrl());
+		headers.put("Pragma", "no-cache");
+		headers.put("Referer", creds.getUserIntUrl() + "login/login?prompt=true");
+		headers.put("DNT", "1");
+		headers.put("Upgrade-Insecure-Requests", "1");
+		
 		RequestBody formBody = new FormBody.Builder()
 				.add("encryption", apiLoginGetResponse.getApiAuth().getEncryptionType())
 				.add("service",    apiLoginGetResponse.getApiAuth().getService())
@@ -240,22 +264,8 @@ public class UserInterfaceSession extends SessionBase {
 				.add("openam.session.persist_am_cookie", "true")
 				.build();
 		
-		RequestBody test = new FormBody.Builder(Charset.forName("UTF-8"))
-				.add("foo", "bar")
-				.add("baz", "bat")
-				.build();
-		
-		FormBody.Builder formBuilder = new FormBody.Builder()
-		        .add("key", "123");
-		formBuilder.addEncoded("baz", "bat");
-		
-	      
-		
 		log.debug("formBody: " + formBody.contentLength() + " " + formBody.contentType());
-		log.debug("formBody: " + test.contentLength() + " " + test.contentType());
-		
-		// response = doPost(ssoUrl, formBody, client);
-		response = doPost(ssoUrl, formBuilder.build(), client);
+		response = doPost(ssoUrl, formBody, client, headers);
 		String ssoResponse = response.body().string();
 		
 		log.debug("response code: " + response.code() + " .isRedirect():" + response.isRedirect());

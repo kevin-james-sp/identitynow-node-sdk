@@ -67,7 +67,7 @@ public class ApiSession extends SessionBase {
 		
 		Request.Builder reqBuilder = new Request.Builder();
 		reqBuilder.url(oAuthUrl);
-		reqBuilder.addHeader("User-Agent", "Mozilla/5.0 (IdentityNow Services Chandlery SDK Client)");
+		reqBuilder.addHeader("User-Agent", OkHttpUtils.getUserAgent());
 		reqBuilder.addHeader("Accept", "*/*");
 		reqBuilder.post(requestBody);
 				

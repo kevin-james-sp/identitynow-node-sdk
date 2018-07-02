@@ -38,8 +38,9 @@ public class OkHttpUtils {
 
 	// Build out the user agent string once per JVM session.
 	public final static String USER_AGENT = 
-			"Mozilla/5.0 (IdentityNow Services Chandlery SDK Client from java "
-			+ System.getProperty("java.version") + ")";
+			"Mozilla/5.0 (IdentityNow Services Chandlery SDK Client on "
+			+ System.getProperty("os.name") + System.getProperty("os.version") 
+			+ "java:" + System.getProperty("java.version") + ")";
 
 	// IdentityNow's API gateway can send 429s with a recommendation for how
 	// long to delay the retry in the 'Retry-After' header. The value is
@@ -52,8 +53,13 @@ public class OkHttpUtils {
 
 	// How many milliseconds will we wait before re-submitting our request to API.
 	public static final int RETRY_429_DELAY_MS_DEFAULT = 3000;
-
+	
 	SessionBase session;
+	
+	// Return the Chandlery user agent for other HTTP clients to use.
+	public static String getUserAgent() {
+		return USER_AGENT;
+	}
 
 	public OkHttpUtils(SessionBase session) {
 		this.session = session;

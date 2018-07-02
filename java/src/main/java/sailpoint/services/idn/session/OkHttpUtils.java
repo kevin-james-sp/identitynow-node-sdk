@@ -14,6 +14,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import okhttp3.logging.HttpLoggingInterceptor;
 import sailpoint.services.idn.sdk.ClientCredentials;
 import sailpoint.services.idn.sdk.interceptor.ApiCredentialsBasicAuthInterceptor;
 import sailpoint.services.idn.sdk.interceptor.JwtBearerAuthInterceptor;
@@ -97,7 +98,11 @@ public class OkHttpUtils {
 			break;
 		}
 		
-		clientBuilder.addInterceptor(new LoggingInterceptor());
+		// This is our custom logging interceptor, let's try a stock one:
+		// clientBuilder.addInterceptor(new LoggingInterceptor());
+		clientBuilder.addInterceptor(
+				new HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY)
+		);
 		
 		return clientBuilder;
 

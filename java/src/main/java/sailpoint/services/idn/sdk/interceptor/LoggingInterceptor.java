@@ -15,11 +15,14 @@ import okio.Buffer;
 /** 
  * A "textbook" (i.e. https://github.com/square/okhttp/wiki/Interceptors) 
  * implementation of a logging intercepter.  This one logs the http transaction
- * when DEBUG level logging is enabled on the LoggingInterceptor class. 
+ * when DEBUG level logging is enabled on the LoggingInterceptor class.
+ * 
+ *  TODO: Note this is deprecated.  Why roll our own when we can use "HttpLoggingInterceptor"?
  * 
  * @author adam.hampton
  *
  */
+@Deprecated
 public class LoggingInterceptor implements Interceptor {
 
 	public final static Logger log = LogManager.getLogger(LoggingInterceptor.class);

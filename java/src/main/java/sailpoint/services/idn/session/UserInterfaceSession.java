@@ -27,6 +27,7 @@ import okhttp3.JavaNetCookieJar;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Request.Builder;
+import okhttp3.logging.HttpLoggingInterceptor;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import sailpoint.services.idn.sdk.ClientCredentials;
@@ -179,7 +180,12 @@ public class UserInterfaceSession extends SessionBase {
 		clientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
 		
 		// if (log.isDebugEnabled()) {
-			clientBuilder.addInterceptor(new LoggingInterceptor());
+		//	clientBuilder.addInterceptor(new LoggingInterceptor());
+			clientBuilder.addInterceptor(
+				new HttpLoggingInterceptor((msg) -> {
+					log.debug(msg);
+				}).setLevel(HttpLoggingInterceptor.Level.BODY)
+			);
 		// }
 			
 		OkHttpClient client = clientBuilder.build();

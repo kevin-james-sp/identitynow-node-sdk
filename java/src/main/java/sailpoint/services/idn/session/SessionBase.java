@@ -121,6 +121,7 @@ public class SessionBase implements java.lang.AutoCloseable {
 	protected Response doGet (String url, OkHttpClient client) throws IOException {
 		Request request = new Request.Builder()
 				.url(url)
+				.addHeader("User-Agent", OkHttpUtils.getUserAgent())
 				.build();
 		return client.newCall(request).execute();
 	}
@@ -138,6 +139,7 @@ public class SessionBase implements java.lang.AutoCloseable {
 		RequestBody body = RequestBody.create(JSON, json);
 		Request request = new Request.Builder()
 				.url(url)
+				.addHeader("User-Agent", OkHttpUtils.getUserAgent())
 				.post(body)
 				.build();
 		return client.newCall(request).execute();

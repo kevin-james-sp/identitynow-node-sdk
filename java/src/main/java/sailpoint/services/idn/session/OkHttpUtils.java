@@ -1,6 +1,7 @@
 package sailpoint.services.idn.session;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -39,8 +40,10 @@ public class OkHttpUtils {
 	// Build out the user agent string once per JVM session.
 	public final static String USER_AGENT = 
 			"Mozilla/5.0 (IdentityNow Services Chandlery SDK Client on "
-			+ System.getProperty("os.name") + System.getProperty("os.version") 
-			+ "java:" + System.getProperty("java.version") + ")";
+			+ System.getProperty("os.name") + " " + System.getProperty("os.version") 
+			+ " java:" + System.getProperty("java.version")
+			// + " host:" + InetAddress.getLocalHost().getHostName() // <-- Debate-able
+			+ ")";
 
 	// IdentityNow's API gateway can send 429s with a recommendation for how
 	// long to delay the retry in the 'Retry-After' header. The value is

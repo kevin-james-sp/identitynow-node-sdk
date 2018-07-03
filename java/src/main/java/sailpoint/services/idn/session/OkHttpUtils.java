@@ -2,9 +2,11 @@ package sailpoint.services.idn.session;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -12,13 +14,11 @@ import org.apache.logging.log4j.Logger;
 import okhttp3.Headers;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
-import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.logging.HttpLoggingInterceptor;
 import sailpoint.services.idn.sdk.ClientCredentials;
 import sailpoint.services.idn.sdk.interceptor.ApiCredentialsBasicAuthInterceptor;
 import sailpoint.services.idn.sdk.interceptor.JwtBearerAuthInterceptor;
-import sailpoint.services.idn.sdk.interceptor.LoggingInterceptor;
 
 /**
  * Convenience methods for repeatedly constructing OkHttp infrastructure to call
@@ -38,13 +38,18 @@ public class OkHttpUtils {
 
 	public final static Logger log = LogManager.getLogger(OkHttpUtils.class);
 
-	// Build out the user agent string once per JVM session.
-	public final static String USER_AGENT = 
-			"Mozilla/5.0 (IdentityNow Services Chandlery SDK Client on "
-			+ System.getProperty("os.name") + " " + System.getProperty("os.version") 
-			+ " java:" + System.getProperty("java.version")
-			// + " host:" + InetAddress.getLocalHost().getHostName() // <-- Debate-able
-			+ ")";
+	// Configurable option for exposing client host name in User-Agent strings.
+	public static AtomicBoolean exposeHostName = new AtomicBoolean(
+			Boolean.parseBoolean((System.getProperty("exposeHostName", "true")))
+	);
+	
+	// Configurable option for exposing client host user in User-Agent strings.
+	public static AtomicBoolean exposeHostUser = new AtomicBoolean(
+			Boolean.parseBoolean((System.getProperty("exposeHostUser", "true")))
+	);
+	
+	// Calculated 1 time and then re-used for the remainder of calls.
+	private static String userAgent = null;
 
 	// IdentityNow's API gateway can send 429s with a recommendation for how
 	// long to delay the retry in the 'Retry-After' header. The value is
@@ -62,7 +67,31 @@ public class OkHttpUtils {
 	
 	// Return the Chandlery user agent for other HTTP clients to use.
 	public static String getUserAgent() {
-		return USER_AGENT;
+		
+		// Short circuit if we have already calculated the User-Agent string.
+		if (null != userAgent) return userAgent;
+		
+		StringBuilder sb = new StringBuilder();		
+		sb.append("Mozilla/5.0 (IdentityNow Services Chandlery SDK Client on ");
+		sb.append(System.getProperty("os.name") + " " + System.getProperty("os.version"));
+		sb.append(" java:" + System.getProperty("java.version"));
+		if (exposeHostName.get()) {
+			String hostName = "unspecified";
+			try {
+				hostName = InetAddress.getLocalHost().getHostName();
+			} catch (UnknownHostException e) {
+				// swallow Exception; who runs on hosts with no networking?
+			}
+			sb.append(" host:" + hostName);
+		}
+		if (exposeHostUser.get()) {
+			sb.append(" user:" + System.getProperty("user.name"));
+		}
+		sb.append(")");
+		
+		userAgent = sb.toString();
+		
+		return userAgent;
 	}
 
 	public OkHttpUtils(SessionBase session) {
@@ -104,6 +133,13 @@ public class OkHttpUtils {
 				new HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY)
 		);
 		
+		// TODO: Add support for Dispatcher configuration here.
+		// See: https://square.github.io/okhttp/3.x/okhttp/okhttp3/Dispatcher.html#setMaxRequestsPerHost-int-
+		/*
+		Dispatcher dispatcher = new Dispatcher();
+        dispatcher.setMaxRequestsPerHost(15);
+		 */
+		
 		return clientBuilder;
 
 	}
@@ -111,7 +147,7 @@ public class OkHttpUtils {
 	public Request.Builder getRequestBuilder(String url) {
 		Request.Builder reqBuilder = new Request.Builder();
 		reqBuilder.url(url);
-		reqBuilder.addHeader("User-Agent", USER_AGENT);
+		reqBuilder.addHeader("User-Agent", getUserAgent());		
 		return reqBuilder;
 	}
 	
@@ -121,7 +157,7 @@ public class OkHttpUtils {
 	 */
 	public static HashMap<String, String> getDefaultHeaders() {
 		HashMap<String,String> map = new HashMap<String,String>();
-		map.put("User-Agent", USER_AGENT);
+		map.put("User-Agent", getUserAgent());
 		// Required so we don't blow up older Pendo integrations.
 		map.put("Accept-Language",  "en-US,en;q=0.5");
 		return map;

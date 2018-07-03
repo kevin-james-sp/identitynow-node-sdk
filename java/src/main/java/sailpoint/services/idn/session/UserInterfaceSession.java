@@ -214,12 +214,13 @@ public class UserInterfaceSession extends SessionBase {
 		}
 		
 		// Pull out the CCSESSIONID cookie, we need to pass this to the SSO server.
-		HttpCookie ccSessionId = null;
+		HttpCookie ccSessionCookie = null;
 		for (HttpCookie cookie : cookieManager.getCookieStore().getCookies()) {
 			if ( !"CCSESSIONID".equals(cookie.getName())) continue;
-			ccSessionId = cookie;
+			ccSessionCookie = cookie;
 		}
-		log.debug("ccSessionId: " + ccSessionId.toString());
+		ccSessionId = ccSessionCookie.getValue();
+		log.debug("ccSessionId: " + ccSessionCookie.toString());
 		
 		// Parse out the several fields from a JSON field that comes back in HTTP.
 		Document doc = Jsoup.parse(respHtml);
@@ -328,6 +329,9 @@ public class UserInterfaceSession extends SessionBase {
 		OkHttpClient manual302Client = clientBuilder.followRedirects(false).build();
 		response = doPost(ssoUrl, formBody, manual302Client, headers, cookieManager.getCookieStore().getCookies());
 		
+		// TODO: Support encryption types other than "hash".
+		// TODO: Check for basic success/failure of the authentication.
+		
 		// Extract the cookies from the SSO call.
 		Map<String, List<String>> cookieHdrs = new HashMap<String, List<String>>();
 		cookieHdrs.put("Cookie", new ArrayList<String>(response.headers("Set-Cookie")));
@@ -347,19 +351,58 @@ public class UserInterfaceSession extends SessionBase {
 			case 302:
 				nextUrl = response.header("Location");
 				break;
+			case 403:
+				String errMsg = "Failure while following redirects from SSO; unable to login";
+				log.error(errMsg);
+				throw new IOException(errMsg);
 			default:
 				redirectsDone = true;
 				break;
 			}
+			if (nextUrl.contains("oauth/callback?code=")) {
+				String [] parts = nextUrl.split("callback?code=");
+				String oAuthCode = parts[1];
+				oauthToken = oAuthCode;
+				log.debug("oauthToken: " + oauthToken);
+			}
+				
 			
 		} while (!redirectsDone);
 		
-		String ssoResponse = response.body().string();
+		String loginResponse = response.body().string();
+		log.debug("Login Response Body:" + loginResponse);
 		
-		log.debug("response code: " + response.code() + " .isRedirect():" + response.isRedirect());
+		// TODO: Parse the /ui/main page to get the CSRF Token.
+		Document uiMainDoc = Jsoup.parse(loginResponse);
 		
-		log.debug("SSO Response Body:" + ssoResponse);
+		String globalContextSelector = "script[contains(., 'SLPT.globalContext.api')]/text()]";
+		Elements globalContextScript = uiMainDoc.select(globalContextSelector);
+		if (null == globalContextScript) {
+			log.error("Failure extracting SLPT.globalContext.api with selector: " + globalContextSelector);
+			return null;
+		}
 		
+		String gcJsonBody = globalContextScript.html();
+		log.debug("gcJsonBody:" + gcJsonBody);
+		
+		// TODO: Implement a class for this:
+//		apiSlptGlobals = gson.fromJson(jsonBody, UiSailpointGlobals.class);
+//		this.setApiGatewayUrl(apiSlptGlobals.getApi().getBaseUrl());
+//		log.debug("API URL:" + this.getApiGatewayUrl());
+
+		
+		
+		
+		// TODO Parse out user interface version information from the HTTP:
+		// This might be useful for internal debugging later.
+		/**
+	Built on: 2018/07/03 10:34:37
+	Built by: Jenkins Pipeline
+	Built Number: build103
+	Built Target: prod
+	Git branch: master
+	Git commit: cd3c37a34516c35254e5eb13d37f8b93e6260480 
+		 */
 		return null;
 	}
 	

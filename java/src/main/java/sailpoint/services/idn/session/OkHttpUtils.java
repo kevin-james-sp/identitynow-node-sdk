@@ -6,6 +6,7 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.logging.log4j.LogManager;
@@ -92,6 +93,20 @@ public class OkHttpUtils {
 		userAgent = sb.toString();
 		
 		return userAgent;
+	}
+	
+	public static void applyTimeoutSettings (OkHttpClient.Builder builder) {
+		builder.connectTimeout(10, TimeUnit.SECONDS);
+		builder.writeTimeout(10, TimeUnit.SECONDS);
+		builder.readTimeout(60, TimeUnit.SECONDS);
+	}
+	
+	public static void applyLoggingInterceptors (OkHttpClient.Builder builder) {
+		builder.addInterceptor(
+			new HttpLoggingInterceptor((msg) -> {
+				log.debug(msg);
+			}).setLevel(HttpLoggingInterceptor.Level.BODY)
+		);
 	}
 
 	public OkHttpUtils(SessionBase session) {

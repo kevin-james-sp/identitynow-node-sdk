@@ -4,11 +4,18 @@ import java.io.IOException;
 import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
+import java.net.HttpCookie;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -171,22 +178,11 @@ public class UserInterfaceSession extends SessionBase {
 		// 5. Check for KBA map and if present do strong Auth-N.
 		// 6. Check for API credentials and if present then do OAuth token for session.
 		
-		
 		// TODO: Use a common client builder that includes user-agents, etc.
 		OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
-		clientBuilder.connectTimeout(10, TimeUnit.SECONDS);
-		clientBuilder.writeTimeout(10, TimeUnit.SECONDS);
-		clientBuilder.readTimeout(60, TimeUnit.SECONDS);
+		OkHttpUtils.applyTimeoutSettings(clientBuilder);
+		OkHttpUtils.applyLoggingInterceptors(clientBuilder);
 		clientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
-		
-		// if (log.isDebugEnabled()) {
-		//	clientBuilder.addInterceptor(new LoggingInterceptor());
-			clientBuilder.addInterceptor(
-				new HttpLoggingInterceptor((msg) -> {
-					log.debug(msg);
-				}).setLevel(HttpLoggingInterceptor.Level.BODY)
-			);
-		// }
 			
 		OkHttpClient client = clientBuilder.build();
 		
@@ -194,7 +190,7 @@ public class UserInterfaceSession extends SessionBase {
 		
 		String uiUrl = getUserInterfaceUrl() + URL_LOGIN_LOGIN;
 		log.debug("Attempting to login to: " + uiUrl);
-		Response response = doGet(uiUrl, client);
+		Response response = doGet(uiUrl, client, null, null);
 		
 		Gson gson = new Gson();
 		UiSailpointGlobals apiSlptGlobals = null;
@@ -204,13 +200,28 @@ public class UserInterfaceSession extends SessionBase {
 		
 		// Handle various response / error conditions.
 		switch (response.code()) {
+		default:
+			String defMsg = response.code() + " while GET'ing " + uiUrl + " - HTTP communication error."; 
+			log.error(defMsg);
+			throw new IOException(defMsg);
 		case 403:
 			String errMsg = "403 while GET'ing " + uiUrl + " - Invalid client regional IP or VPN disconnected?"; 
 			log.error(errMsg);
 			throw new IOException(errMsg);
+		case 200:
+			// fall through to logic below.
+			break;
 		}
 		
-		// Note: we parse out the several fields from a JSON field that comes back in HTTP.
+		// Pull out the CCSESSIONID cookie, we need to pass this to the SSO server.
+		HttpCookie ccSessionId = null;
+		for (HttpCookie cookie : cookieManager.getCookieStore().getCookies()) {
+			if ( !"CCSESSIONID".equals(cookie.getName())) continue;
+			ccSessionId = cookie;
+		}
+		log.debug("ccSessionId: " + ccSessionId.toString());
+		
+		// Parse out the several fields from a JSON field that comes back in HTTP.
 		Document doc = Jsoup.parse(respHtml);
 		
 		String selectorString = "script[id='slpt-globals-json']";
@@ -227,15 +238,32 @@ public class UserInterfaceSession extends SessionBase {
 		this.setApiGatewayUrl(apiSlptGlobals.getApi().getBaseUrl());
 		log.debug("API URL:" + this.getApiGatewayUrl());
 			
-	
 		// STEP 2: Make a POST to /login/get to get the properties for the user.
+		// The API Gateway is a _different_ URL that the browser uses a CORS 
+		// request to access. In this code we will use a second, different,
+		// client object.  Here's why:
+		// When calling CC via the API gateway the gateway drops all cookies. 
+		// So when CC gets the request it's like oh, cool I've never seen you 
+		// before lets create a session together and it creates an new CCSESSIONID.		
+		// You can safely ignore ccsessionid returned by all the API GW CC calls.
+		// You can ignore any cookie from: 
+		//     *.api.identitynow.com/cc/* 
+		//  or *.api.identitynow.com/v2/*
+		// So we build a new cookie manager here:
+		OkHttpClient.Builder apiGwClientBuilder = new OkHttpClient.Builder();
+		OkHttpUtils.applyTimeoutSettings(apiGwClientBuilder);
+		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
+		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
+		OkHttpClient apiGwClient = apiGwClientBuilder.build(); 
+		
 		String jsonContent = "{username=" + getCredentials().getOrgUser() + "}";
 
-		// uiUrl = getUserInterfaceUrl() + URL_LOGIN_GET;
 		uiUrl = getApiGatewayUrl() + "/cc/" + URL_LOGIN_GET;
-		response = doPost(uiUrl, jsonContent, client);
+		
+		response = doPost(uiUrl, jsonContent, apiGwClient, null, null);
 		String responseBody = response.body().string();
 		log.debug(responseBody);
+		
 		UiLoginGetResponse apiLoginGetResponse = gson.fromJson(responseBody, UiLoginGetResponse.class);
 		log.debug("encryption type = " + apiLoginGetResponse.getApiAuth().getEncryptionType());
 		
@@ -292,7 +320,40 @@ public class UserInterfaceSession extends SessionBase {
 				.build();
 		
 		log.debug("formBody: " + formBody.contentLength() + " " + formBody.contentType());
-		response = doPost(ssoUrl, formBody, client, headers);
+		
+		// Add the ccSessionId cookie to the POST request to the SSO server.
+		// This is "interesting" in OkHttp3 due to the 302s that follow.
+		// For more info: https://github.com/request/request/issues/1502
+		// Instead we roll our own redirect handler here.
+		OkHttpClient manual302Client = clientBuilder.followRedirects(false).build();
+		response = doPost(ssoUrl, formBody, manual302Client, headers, cookieManager.getCookieStore().getCookies());
+		
+		// Extract the cookies from the SSO call.
+		Map<String, List<String>> cookieHdrs = new HashMap<String, List<String>>();
+		cookieHdrs.put("Cookie", new ArrayList<String>(response.headers("Set-Cookie")));
+		try {
+			cookieManager.put(new URI(ssoUrl), cookieHdrs);
+		} catch (URISyntaxException e) {
+			log.error("cookie error", e);
+		}
+		
+		// Follow 302s from the user interface to the Launchpad / Dashboard screen.
+		// Parse out various useful bits of OAuth information along the way.
+		boolean redirectsDone = false;
+		String nextUrl = response.header("Location");
+		do {
+			response = doGet(nextUrl, manual302Client, null, cookieManager.getCookieStore().getCookies());
+			switch (response.code()) {
+			case 302:
+				nextUrl = response.header("Location");
+				break;
+			default:
+				redirectsDone = true;
+				break;
+			}
+			
+		} while (!redirectsDone);
+		
 		String ssoResponse = response.body().string();
 		
 		log.debug("response code: " + response.code() + " .isRedirect():" + response.isRedirect());

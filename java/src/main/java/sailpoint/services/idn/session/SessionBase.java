@@ -1,6 +1,8 @@
 package sailpoint.services.idn.session;
 
 import java.io.IOException;
+import java.net.HttpCookie;
+import java.util.List;
 import java.util.Map;
 
 import okhttp3.OkHttpClient;
@@ -118,12 +120,35 @@ public class SessionBase implements java.lang.AutoCloseable {
 		throw new IllegalArgumentException("Session sub-classes must implement their own getClient() methods.");
 	}
 	
-	protected Response doGet (String url, OkHttpClient client) throws IOException {
-		Request request = new Request.Builder()
-				.url(url)
-				.addHeader("User-Agent", OkHttpUtils.getUserAgent())
-				.build();
+	protected Response doGet (String url, OkHttpClient client, Map<String,String> optionalHeaders, List<HttpCookie> optionalCookies) throws IOException {
+		Request.Builder builder = new Request.Builder();
+		builder.url(url);
+		builder.addHeader("User-Agent", OkHttpUtils.getUserAgent());
+		if ((null != optionalHeaders) && (!optionalHeaders.isEmpty())) {
+			OkHttpUtils.appendHeaders(builder, optionalHeaders);
+		}
+		if ((null != optionalCookies) && (!optionalCookies.isEmpty())) {
+			for (HttpCookie cookie: optionalCookies) {
+				builder.addHeader("Cookie", getCookieString(cookie));
+			}
+		}
+		Request request = builder.build();
 		return client.newCall(request).execute();
+	}
+	
+	public static String getCookieString (HttpCookie cookie) {
+		StringBuilder sb = new StringBuilder();
+		sb.append(cookie.toString());
+		if (null != cookie.getPath()) {
+			sb.append("; Path:" + cookie.getPath());
+		}
+		if (cookie.getSecure()) {
+			sb.append("; Secure");
+		}
+		if (cookie.isHttpOnly()) {
+			sb.append("; HttpOnly");
+		}
+		return sb.toString();
 	}
 
 	/**
@@ -135,13 +160,21 @@ public class SessionBase implements java.lang.AutoCloseable {
 	 * @return
 	 * @throws IOException
 	 */
-	protected Response doPost(String url, String json, OkHttpClient client) throws IOException {
+	protected Response doPost(String url, String json, OkHttpClient client, Map<String,String> optionalHeaders, List<HttpCookie> optionalCookies) throws IOException {
 		RequestBody body = RequestBody.create(JSON, json);
-		Request request = new Request.Builder()
-				.url(url)
-				.addHeader("User-Agent", OkHttpUtils.getUserAgent())
-				.post(body)
-				.build();
+		Request.Builder builder = new Request.Builder();		
+		OkHttpUtils.appendHeaders(builder, OkHttpUtils.getDefaultHeaders());
+		if ((null != optionalHeaders) && (!optionalHeaders.isEmpty())) {
+			OkHttpUtils.appendHeaders(builder, optionalHeaders);
+		}
+		if ((null != optionalCookies) && (!optionalCookies.isEmpty())) {
+			for (HttpCookie cookie: optionalCookies) {
+				builder.addHeader("Cookie", getCookieString(cookie));
+			}
+		}
+		builder.url(url);
+		builder.post(body);
+		Request request = builder.build();
 		return client.newCall(request).execute();
 	}
 	
@@ -154,11 +187,16 @@ public class SessionBase implements java.lang.AutoCloseable {
 	 * @return
 	 * @throws IOException
 	 */
-	protected Response doPost(String url, RequestBody formBody, OkHttpClient client, Map<String,String> headers) throws IOException {
+	protected Response doPost(String url, RequestBody formBody, OkHttpClient client, Map<String,String> headers, List<HttpCookie> optionalCookies) throws IOException {
 		Request.Builder builder = new Request.Builder();
 		OkHttpUtils.appendHeaders(builder, OkHttpUtils.getDefaultHeaders());
 		if ((null != headers) && (!headers.isEmpty())) {
 			OkHttpUtils.appendHeaders(builder, headers);
+		}
+		if ((null != optionalCookies) && (!optionalCookies.isEmpty())) {
+			for (HttpCookie cookie: optionalCookies) {
+				builder.addHeader("Cookie", getCookieString(cookie));
+			}
 		}
 		builder.url(url);
 		builder.post(formBody);

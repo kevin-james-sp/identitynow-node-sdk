@@ -41,6 +41,15 @@ public enum SessionType {
 	 * getting an SMS text or keying in Knowledge Based Authentication security 
 	 * question answers.
 	 */
-	SESSION_TYPE_UI_USER_STRONG_AUTHN
+	SESSION_TYPE_UI_USER_STRONG_AUTHN,
+	
+	/**
+	 * A user session that has super-user administrative privileges to the org. 
+	 * This session comes with: 
+	 * 1) A super user who strong-authn's into IdentityNow.
+	 * 2) Either a given 'CLI' type Client ID and Client Secret or
+	 * 3) Uses the strong auth-n'd user to generate one.
+	 */
+	SESSION_TYPE_ADMIN_API_STRONG_AUTHN
 	
 }

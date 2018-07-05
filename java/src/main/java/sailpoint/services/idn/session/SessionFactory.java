@@ -15,6 +15,13 @@ import sailpoint.services.idn.sdk.services.AuthorizationService;
 /**
  * Factory for creating various types of IdentityNow sessions.
  * 
+ * TODO: Think this out. 
+ * There are multiple session types that can be used concurrently.
+ *  - An API session can exist with no user session or user in context at all.
+ *  - A simple auth UI session can exist with no API credentials in context.
+ *  - A strong auth UI session can exist with no API credentials in context.
+ *  - An oAuthToken CC API session must have an API key and users basic creds.
+ * 
  * @author adam.hampton
  *
  */
@@ -51,6 +58,8 @@ public class SessionFactory {
 	 */
 	public static SessionBase createSession (ClientCredentials clientCreds, SessionType sessionType) {
 		switch (sessionType) {
+//		case SESSION_TYPE_ADMIN_API_STRONG_AUTHN:
+//			break;
 		case SESSION_TYPE_UI_USER_BASIC:
 			return new UserInterfaceSession(clientCreds);
 		default:

@@ -23,7 +23,7 @@ public class CredentialsValidator {
 		System.out.println("All Rights Reserved.");
 		System.out.println("");
 		
-		Log4jUtils.boostrapLog4j(Level.DEBUG);
+		Log4jUtils.boostrapLog4j(Level.INFO);
 		
 		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
 		
@@ -58,7 +58,6 @@ public class CredentialsValidator {
 				exitVal = 1;
 			} 
 		}
-		
 		
 		System.exit(exitVal);
 

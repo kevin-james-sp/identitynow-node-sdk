@@ -1,25 +1,18 @@
 package sailpoint.services.idn.session;
 
 import java.io.IOException;
-import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.HttpCookie;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jsoup.Jsoup;
@@ -28,23 +21,15 @@ import org.jsoup.select.Elements;
 
 import com.google.gson.Gson;
 
-import okhttp3.CookieJar;
 import okhttp3.FormBody;
 import okhttp3.JavaNetCookieJar;
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Request.Builder;
-import okhttp3.logging.HttpLoggingInterceptor;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+
 import sailpoint.services.idn.sdk.ClientCredentials;
-import sailpoint.services.idn.sdk.interceptor.ApiCredentialsBasicAuthInterceptor;
-import sailpoint.services.idn.sdk.interceptor.JwtBearerAuthInterceptor;
-import sailpoint.services.idn.sdk.interceptor.LoggingInterceptor;
 import sailpoint.services.idn.sdk.object.UiSailpointGlobals;
-import sailpoint.services.idn.sdk.object.UiAuthData;
 import sailpoint.services.idn.sdk.object.UiLoginGetResponse;
-import sailpoint.services.idn.sdk.object.UiOrgData;
 
 /**
  * A model of a Session based on a user interface session for a specific user.
@@ -59,11 +44,16 @@ public class UserInterfaceSession extends SessionBase {
 	public static final String URL_LOGIN_LOGIN = "login/login";
 	public static final String URL_LOGIN_GET   = "login/get";
 	public static final String URL_UI          = "ui";
+	public static final String URL_LOGOUT      = "logout";
 	
 	public String ssoUrl = null;
 	public String ccSessionId = null;
 	public String csrfToken = null;
 	public String oauthToken = null;
+	
+	// Durations for performance analysis.
+	public long loginSequenceDuration = 0;
+	public long logoutSequenceDuration = 0; 
 	
 	CookieManager cookieManager = new CookieManager();
 	
@@ -190,6 +180,9 @@ public class UserInterfaceSession extends SessionBase {
 		
 		String uiUrl = getUserInterfaceUrl() + URL_LOGIN_LOGIN;
 		log.debug("Attempting to login to: " + uiUrl);
+		
+		long loginSequenceStartTime = System.currentTimeMillis();
+		
 		Response response = doGet(uiUrl, client, null, null);
 		
 		Gson gson = new Gson();
@@ -359,10 +352,9 @@ public class UserInterfaceSession extends SessionBase {
 				redirectsDone = true;
 				break;
 			}
-			if (nextUrl.contains("oauth/callback?code=")) {
-				String [] parts = nextUrl.split("callback?code=");
-				String oAuthCode = parts[1];
-				oauthToken = oAuthCode;
+			final String callbackToken = "oauth/callback?code="; 
+			if (nextUrl.contains(callbackToken)) {
+				oauthToken  = nextUrl.substring(nextUrl.lastIndexOf(callbackToken) + 1);
 				log.debug("oauthToken: " + oauthToken);
 			}
 				
@@ -372,10 +364,9 @@ public class UserInterfaceSession extends SessionBase {
 		String loginResponse = response.body().string();
 		log.debug("Login Response Body:" + loginResponse);
 		
-		// TODO: Parse the /ui/main page to get the CSRF Token.
+		// TODO: FIX THIS. Parse the /ui/main page to get the CSRF Token.
 		Document uiMainDoc = Jsoup.parse(loginResponse);
-		
-		String globalContextSelector = "script[contains(., 'SLPT.globalContext.api')]/text()]";
+		String globalContextSelector = "script[contains(., 'SLPT.globalContext.api')]";
 		Elements globalContextScript = uiMainDoc.select(globalContextSelector);
 		if (null == globalContextScript) {
 			log.error("Failure extracting SLPT.globalContext.api with selector: " + globalContextSelector);
@@ -389,9 +380,9 @@ public class UserInterfaceSession extends SessionBase {
 //		apiSlptGlobals = gson.fromJson(jsonBody, UiSailpointGlobals.class);
 //		this.setApiGatewayUrl(apiSlptGlobals.getApi().getBaseUrl());
 //		log.debug("API URL:" + this.getApiGatewayUrl());
-
 		
-		
+		loginSequenceDuration = System.currentTimeMillis() - loginSequenceStartTime;
+		log.debug("Login sequence completed in " + loginSequenceDuration + " msecs.");
 		
 		// TODO Parse out user interface version information from the HTTP:
 		// This might be useful for internal debugging later.
@@ -403,12 +394,55 @@ public class UserInterfaceSession extends SessionBase {
 	Git branch: master
 	Git commit: cd3c37a34516c35254e5eb13d37f8b93e6260480 
 		 */
-		return null;
+		return this;
 	}
 	
 	@Override
 	public void close() {
-		log.warn("TODO: Implement close() for user interface type sessions!");
+		
+		// TODO: Use a common client builder that includes user-agents, etc.
+		OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
+		OkHttpUtils.applyTimeoutSettings(clientBuilder);
+		OkHttpUtils.applyLoggingInterceptors(clientBuilder);
+		clientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
+			
+		OkHttpClient client = clientBuilder.build();
+		
+		long logoutStart = 0;
+		long logoutEnd = 0;
+		String uiUrl = getUserInterfaceUrl() + URL_LOGOUT;
+		Response response;
+		try {
+			logoutStart = System.currentTimeMillis();
+			response = doGet(uiUrl, client, null, null);
+			logoutEnd = System.currentTimeMillis();
+			if (log.isTraceEnabled()) {
+				String respHtml = response.body().string();
+				log.trace("respString: " + respHtml);
+			}
+		} catch (IOException e) {
+			log.error("Failure while calling " + uiUrl, e);
+			return;
+		}
+		
+		// Handle or swallow various response / error conditions.
+		switch (response.code()) {
+		default:
+			String defMsg = response.code() + " while GET'ing " + uiUrl + " - HTTP communication error."; 
+			log.error(defMsg);			
+		case 403:
+			String errMsg = "403 while GET'ing " + uiUrl + " - Invalid client regional IP or VPN disconnected?"; 
+			log.error(errMsg);
+		case 200:
+			// Successful base case.
+			break;
+		}
+		
+		logoutSequenceDuration = logoutEnd - logoutStart;
+		log.debug("Logout processed in " + logoutSequenceDuration  + " msecs.");
+
+		return;
+		
 	}
 
 }

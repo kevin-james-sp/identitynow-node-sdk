@@ -1,35 +1,45 @@
 package sailpoint.services.idn.session;
 
+import com.google.gson.Gson;
+import okhttp3.FormBody;
+import okhttp3.JavaNetCookieJar;
+import okhttp3.OkHttpClient;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import org.apache.commons.codec.binary.Hex;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
+import sailpoint.services.idn.sdk.ClientCredentials;
+import sailpoint.services.idn.sdk.object.UiLoginGetResponse;
+import sailpoint.services.idn.sdk.object.UiSailpointGlobals;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.HttpCookie;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.select.Elements;
-
-import com.google.gson.Gson;
-
-import okhttp3.FormBody;
-import okhttp3.JavaNetCookieJar;
-import okhttp3.OkHttpClient;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-
-import sailpoint.services.idn.sdk.ClientCredentials;
-import sailpoint.services.idn.sdk.object.UiSailpointGlobals;
-import sailpoint.services.idn.sdk.object.UiLoginGetResponse;
 
 /**
  * A model of a Session based on a user interface session for a specific user.
@@ -119,7 +129,6 @@ public class UserInterfaceSession extends SessionBase {
 	 * applies that salting algorithm to the value passed in. 
 	 * @param user
 	 * @param valueToHash
-	 * @param doDebug
 	 * @return
 	 */	
 	public static String applySaltedHash(String user, String valueToHash) {
@@ -129,7 +138,78 @@ public class UserInterfaceSession extends SessionBase {
 		log.debug("completeHashPayload: " + completeHashPayload);
 		return completeHashPayload;		
 	}
-	
+
+	private static String encryptPayload(String username, String password, String givenPublicKey) {
+
+		String encPassword = password;
+
+		if ( (null == givenPublicKey) || (0 == givenPublicKey.length()) ) {
+			encPassword = encodeSHA256String( encPassword + encodeSHA256String(username) );
+		} else {
+
+			String cert = givenPublicKey;
+			cert = cert.replace("-----BEGIN PUBLIC KEY-----", "").replace("-----END PUBLIC KEY-----", "");//.replace("\r","").replace("\n","")
+			byte[] decodedBytes;
+			try {
+				decodedBytes = Base64.getDecoder().decode(cert.getBytes("UTF-8"));
+				X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(decodedBytes);
+				KeyFactory kf = KeyFactory.getInstance("RSA");
+				PublicKey pk = kf.generatePublic(publicKeySpec);
+
+				Cipher cipher = Cipher.getInstance("RSA");
+				cipher.init(Cipher.ENCRYPT_MODE, pk);
+				encPassword = new String(Base64.getEncoder().encode(cipher.doFinal(encPassword.getBytes())), "UTF-8");
+
+			} catch (UnsupportedEncodingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (NoSuchAlgorithmException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (InvalidKeySpecException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (NoSuchPaddingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (InvalidKeyException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IllegalBlockSizeException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (BadPaddingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+		}
+
+		return encPassword;
+
+	}
+
+	public static String encodeSHA256String(String string) {
+		return encodeSHA256String(string, null);
+	}
+
+	public static String encodeSHA256String(String string, String salt) {
+		String combinedStr = string;
+		if (null != salt) {
+			combinedStr = combinedStr + salt;
+		}
+		String returnString = "";
+		try {
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+			md.update(combinedStr.getBytes("UTF-8"));
+			returnString = Hex.encodeHexString(md.digest()).toLowerCase();
+		} catch (Exception ex) {
+			System.out.println("An error occurred encoding password." + ex.getMessage());
+			ex.printStackTrace();
+		}
+		return returnString;
+	}
+
 	/**
 	 * Connect to the IdentityNow service and establish the session.  This "logs in"
 	 * using whatever means the session has at its disposal to connect to the service.
@@ -301,17 +381,47 @@ public class UserInterfaceSession extends SessionBase {
 		headers.put("Referer", creds.getUserIntUrl() + "login/login?prompt=true");
 		headers.put("DNT", "1");
 		headers.put("Upgrade-Insecure-Requests", "1");
-		
-		RequestBody formBody = new FormBody.Builder()
-				.add("encryption", apiLoginGetResponse.getApiAuth().getEncryptionType())
-				.add("service",    apiLoginGetResponse.getApiAuth().getService())
-				.add("IDToken1",   creds.getOrgUser())
-				.add("IDToken2",   applySaltedHash(creds.getOrgUser(), creds.getOrgPass()))
-				.add("realm",      apiSlptGlobals.getOrgScriptName())
-				.add("goto",       creds.getUserIntUrl() + URL_UI)
-				.add("gotoOnFail", onFailUrl) 
-				.add("openam.session.persist_am_cookie", "true")
-				.build();
+
+		RequestBody formBody = null;
+		if(apiLoginGetResponse.getApiAuth().getEncryptionType().equals("pki")){
+			if (apiLoginGetResponse.getApiAuth().getPublicKey() != null) {
+				formBody = new FormBody.Builder()
+						.add("encryption", apiLoginGetResponse.getApiAuth().getEncryptionType())
+						.add("service", apiLoginGetResponse.getApiAuth().getService())
+						.add("IDToken1", creds.getOrgUser())
+						.add("IDToken2", encryptPayload(creds.getOrgUser(), creds.getOrgPass(), apiLoginGetResponse.getApiAuth().getPublicKey()))
+						.add("publicKey", apiLoginGetResponse.getApiAuth().getPublicKey())
+						.add("realm", apiSlptGlobals.getOrgScriptName())
+						.add("goto", creds.getUserIntUrl() + URL_UI)
+						.add("gotoOnFail", onFailUrl)
+						.add("openam.session.persist_am_cookie", "true")
+						.build();
+			}
+			else{
+				formBody = new FormBody.Builder()
+						.add("encryption", apiLoginGetResponse.getApiAuth().getEncryptionType())
+						.add("service", apiLoginGetResponse.getApiAuth().getService())
+						.add("IDToken1", creds.getOrgUser())
+						.add("IDToken2", encryptPayload(creds.getOrgUser(), creds.getOrgPass(), apiLoginGetResponse.getApiAuth().getPublicKey()))
+						.add("realm", apiSlptGlobals.getOrgScriptName())
+						.add("goto", creds.getUserIntUrl() + URL_UI)
+						.add("gotoOnFail", onFailUrl)
+						.add("openam.session.persist_am_cookie", "true")
+						.build();
+			}
+		}
+		else{
+			 formBody = new FormBody.Builder()
+					.add("encryption", apiLoginGetResponse.getApiAuth().getEncryptionType())
+					.add("service",    apiLoginGetResponse.getApiAuth().getService())
+					.add("IDToken1",   creds.getOrgUser())
+					.add("IDToken2",   applySaltedHash(creds.getOrgUser(), creds.getOrgPass()))
+					.add("realm",      apiSlptGlobals.getOrgScriptName())
+					.add("goto",       creds.getUserIntUrl() + URL_UI)
+					.add("gotoOnFail", onFailUrl)
+					.add("openam.session.persist_am_cookie", "true")
+					.build();
+		}
 		
 		log.debug("formBody: " + formBody.contentLength() + " " + formBody.contentType());
 		

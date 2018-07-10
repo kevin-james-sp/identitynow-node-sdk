@@ -6,7 +6,6 @@ import okhttp3.JavaNetCookieJar;
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-import org.apache.commons.codec.binary.Hex;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jsoup.Jsoup;
@@ -20,6 +19,7 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.CookieManager;
@@ -161,26 +161,19 @@ public class UserInterfaceSession extends SessionBase {
 				encPassword = new String(Base64.getEncoder().encode(cipher.doFinal(encPassword.getBytes())), "UTF-8");
 
 			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				log.error("An UnsupportedEncodingException has occurred.", e);
 			} catch (NoSuchAlgorithmException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				log.error("An NoSuchAlgorithmException has occurred.", e);
 			} catch (InvalidKeySpecException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				log.error("An InvalidKeySpecException has occurred.", e);
 			} catch (NoSuchPaddingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				log.error("An NoSuchPaddingException has occurred.", e);
 			} catch (InvalidKeyException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				log.error("An InvalidKeyException has occurred.", e);
 			} catch (IllegalBlockSizeException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				log.error("An IllegalBlockSizeException has occurred.", e);
 			} catch (BadPaddingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				log.error("An BadPaddingException has occurred.", e);
 			}
 
 		}
@@ -202,10 +195,10 @@ public class UserInterfaceSession extends SessionBase {
 		try {
 			MessageDigest md = MessageDigest.getInstance("SHA-256");
 			md.update(combinedStr.getBytes("UTF-8"));
-			returnString = Hex.encodeHexString(md.digest()).toLowerCase();
+			returnString = DatatypeConverter.printHexBinary((md).digest()).toLowerCase();
+
 		} catch (Exception ex) {
-			System.out.println("An error occurred encoding password." + ex.getMessage());
-			ex.printStackTrace();
+			log.error("An error has occurred encoding password.", ex);
 		}
 		return returnString;
 	}
@@ -383,45 +376,26 @@ public class UserInterfaceSession extends SessionBase {
 		headers.put("Upgrade-Insecure-Requests", "1");
 
 		RequestBody formBody = null;
+		String IDToken2 = null;
+		String publicKey = null;
 		if(apiLoginGetResponse.getApiAuth().getEncryptionType().equals("pki")){
-			if (apiLoginGetResponse.getApiAuth().getPublicKey() != null) {
-				formBody = new FormBody.Builder()
-						.add("encryption", apiLoginGetResponse.getApiAuth().getEncryptionType())
-						.add("service", apiLoginGetResponse.getApiAuth().getService())
-						.add("IDToken1", creds.getOrgUser())
-						.add("IDToken2", encryptPayload(creds.getOrgUser(), creds.getOrgPass(), apiLoginGetResponse.getApiAuth().getPublicKey()))
-						.add("publicKey", apiLoginGetResponse.getApiAuth().getPublicKey())
-						.add("realm", apiSlptGlobals.getOrgScriptName())
-						.add("goto", creds.getUserIntUrl() + URL_UI)
-						.add("gotoOnFail", onFailUrl)
-						.add("openam.session.persist_am_cookie", "true")
-						.build();
-			}
-			else{
-				formBody = new FormBody.Builder()
-						.add("encryption", apiLoginGetResponse.getApiAuth().getEncryptionType())
-						.add("service", apiLoginGetResponse.getApiAuth().getService())
-						.add("IDToken1", creds.getOrgUser())
-						.add("IDToken2", encryptPayload(creds.getOrgUser(), creds.getOrgPass(), apiLoginGetResponse.getApiAuth().getPublicKey()))
-						.add("realm", apiSlptGlobals.getOrgScriptName())
-						.add("goto", creds.getUserIntUrl() + URL_UI)
-						.add("gotoOnFail", onFailUrl)
-						.add("openam.session.persist_am_cookie", "true")
-						.build();
-			}
+			IDToken2 = encryptPayload(creds.getOrgUser(), creds.getOrgPass(), apiLoginGetResponse.getApiAuth().getPublicKey());
+			publicKey = apiLoginGetResponse.getApiAuth().getPublicKey();
 		}
 		else{
-			 formBody = new FormBody.Builder()
-					.add("encryption", apiLoginGetResponse.getApiAuth().getEncryptionType())
-					.add("service",    apiLoginGetResponse.getApiAuth().getService())
-					.add("IDToken1",   creds.getOrgUser())
-					.add("IDToken2",   applySaltedHash(creds.getOrgUser(), creds.getOrgPass()))
-					.add("realm",      apiSlptGlobals.getOrgScriptName())
-					.add("goto",       creds.getUserIntUrl() + URL_UI)
-					.add("gotoOnFail", onFailUrl)
-					.add("openam.session.persist_am_cookie", "true")
-					.build();
+			IDToken2 = applySaltedHash(creds.getOrgUser(), creds.getOrgPass());
 		}
+		formBody = new FormBody.Builder()
+				.add("encryption", apiLoginGetResponse.getApiAuth().getEncryptionType())
+				.add("service",    apiLoginGetResponse.getApiAuth().getService())
+				.add("IDToken1",   creds.getOrgUser())
+				.add("IDToken2",   IDToken2)
+				.add("publicKey", publicKey)
+				.add("realm",      apiSlptGlobals.getOrgScriptName())
+				.add("goto",       creds.getUserIntUrl() + URL_UI)
+				.add("gotoOnFail", onFailUrl)
+				.add("openam.session.persist_am_cookie", "true")
+				.build();
 		
 		log.debug("formBody: " + formBody.contentLength() + " " + formBody.contentType());
 		

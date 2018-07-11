@@ -7,6 +7,9 @@ public class UiAuthData {
 	@SerializedName("encryption")
 	String encryptionType;
 
+	@SerializedName("publicKey")
+	String publicKey;
+
 	public UiAuthData() {
 	}
 
@@ -34,6 +37,10 @@ public class UiAuthData {
 	public void setService(String service) {
 		this.service = service;
 	}
+
+	public String getPublicKey() { return publicKey; }
+
+	public void setPublicKey(String publicKey) { this.publicKey = publicKey; }
 
 }
 

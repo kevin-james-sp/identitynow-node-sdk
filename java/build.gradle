@@ -31,13 +31,13 @@ repositories {
 publishing {
 	publications{
 		identitynowServicesSdk(MavenPublication){
-
+			from components.java
 		}
 	}
 	repositories {
 		maven {
 			name "snapshot"
-			url "http://sptcbu-mvn-repo.s3-website-us-east-1.amazonaws.com/snapshot/com/"
+			url "s3://sptcbu-mvn-repo.s3-website-us-east-1.amazonaws.com/"
 			credentials(AwsCredentials) {
 				accessKey = System.getenv("AWS_ACCESS_KEY_ID")
 				secretKey = System.getenv("AWS_SECRET_KEY")

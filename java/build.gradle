@@ -1,5 +1,6 @@
 apply plugin: 'java'
 apply plugin: 'maven'
+apply plugin: 'maven-publish'
 
 group = 'sailpoint.services'
 version = '0.0.2'
@@ -22,7 +23,27 @@ targetCompatibility = 1.8
 
 repositories { 
 	jcenter()
-	maven { url "http://repo.maven.apache.org/maven2" }
+	maven {
+		url "http://repo.maven.apache.org/maven2"
+	}
+}
+
+publishing {
+	publications{
+		identitynowServicesSdk(MavenPublication){
+
+		}
+	}
+	repositories {
+		maven {
+			name "snapshot"
+			url "http://sptcbu-mvn-repo.s3-website-us-east-1.amazonaws.com/snapshot/com/"
+			credentials(AwsCredentials) {
+				accessKey = System.getenv("AWS_ACCESS_KEY_ID")
+				secretKey = System.getenv("AWS_SECRET_KEY")
+			}
+		}
+	}
 }
 
 dependencies {

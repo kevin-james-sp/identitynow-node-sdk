@@ -1,52 +1,76 @@
 apply plugin: 'java'
 apply plugin: 'maven'
 
-group = 'sailpoint.services'
+group = 'com.sailpoint.idn-services'
 version = '0.0.2'
 
-description = """identitynow-services-sdk"""
+description = "identitynow-services-sdk"
+
+configurations{
+	deployer
+}
+
+project.uploadArchives{
+	repositories {
+		mavenDeployer{
+			configuration = configurations.deployer
+			repository(url: "s3://sptcbu-mvn-repo/snapshot")
+		}
+	}
+}
 
 jar {
 	manifest {
 		attributes 'Main-Class': 'sailpoint.services.idn.console.EnvironmentReport'
 	}
-    // Include the dependy jars in our .jar file output.  This is building
-    // a 'fat jar' per se; carrying all its dependencies with it.
+	// Include the dependy jars in our .jar file output.  This is building
+	// a 'fat jar' per se; carrying all its dependencies with it.
 	from {
-    	configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
-	}	
+		configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+	}
 }
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+	sourceCompatibility = 1.8
+	targetCompatibility = 1.8
 
-repositories { 
-	jcenter()
-	maven { url "http://repo.maven.apache.org/maven2" }
-}
+	repositories {
+		jcenter()
 
-dependencies {
+		maven {
+			url "http://repo.maven.apache.org/maven2"
+		}
 
-    compile group: 'com.squareup.okhttp3',     name: 'okhttp',               version:'3.10.0'
-    compile group: 'com.squareup.okhttp3',     name: 'okhttp-urlconnection', version: '3.10.0'
-    compile group: 'com.squareup.okhttp3',     name: 'logging-interceptor',  version: '3.10.0'
-    
-    compile group: 'com.squareup.retrofit2',   name: 'retrofit',       version:'2.4.0'
-    compile group: 'com.squareup.retrofit2',   name: 'converter-gson', version:'2.4.0'
-    
-    compile group: 'com.google.code.gson',     name: 'gson',           version:'2.8.0'
+		maven{
+			name "snapshot"
+			url "http://sptchu-mvn-repo.s3-website-us-east-1.amazonaws.com/snapshot"
+		}
+	}
 
-    compile group: 'org.apache.commons',       name: 'commons-io',     version:'1.3.2'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-api',      version:'2.11.0'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-core',     version:'2.11.0'
+	dependencies {
 
-    compile group: 'org.jsoup',                name: 'jsoup',          version: '1.11.3'
+		compile group: 'com.squareup.okhttp3',     name: 'okhttp',               version:'3.10.0'
+		compile group: 'com.squareup.okhttp3',     name: 'okhttp-urlconnection', version: '3.10.0'
+		compile group: 'com.squareup.okhttp3',     name: 'logging-interceptor',  version: '3.10.0'
 
-	testCompile group: 'junit', name: 'junit', version: '4.12'
-    
-}
+		compile group: 'com.squareup.retrofit2',   name: 'retrofit',       version:'2.4.0'
+		compile group: 'com.squareup.retrofit2',   name: 'converter-gson', version:'2.4.0'
 
-test {
-	// Output test logging through the log4j 2 logging manager; for some reason this doesn't work.
-	// systemProperty 'java.util.logging.manager', 'org.apache.logging.log4j.jul.LogManager'
-}
+		compile group: 'com.google.code.gson',     name: 'gson',           version:'2.8.0'
+
+		compile group: 'org.apache.commons',       name: 'commons-io',     version:'1.3.2'
+		compile group: 'org.apache.logging.log4j', name: 'log4j-api',      version:'2.11.0'
+		compile group: 'org.apache.logging.log4j', name: 'log4j-core',     version:'2.11.0'
+
+		compile group: 'org.jsoup',                name: 'jsoup',          version: '1.11.3'
+
+		testCompile group: 'junit', name: 'junit', version: '4.12'
+
+		deployer 'org.kuali.maven.wagons:maven-s3-wagon:1.2.1'
+
+	}
+
+	test {
+		// Output test logging through the log4j 2 logging manager; for some reason this doesn't work.
+		// systemProperty 'java.util.logging.manager', 'org.apache.logging.log4j.jul.LogManager'
+
+	}

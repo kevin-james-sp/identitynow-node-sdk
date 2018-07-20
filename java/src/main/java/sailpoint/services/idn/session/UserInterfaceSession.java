@@ -2,8 +2,10 @@ package sailpoint.services.idn.session;
 
 import com.google.gson.Gson;
 import okhttp3.FormBody;
+import okhttp3.Headers;
 import okhttp3.JavaNetCookieJar;
 import okhttp3.OkHttpClient;
+import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.apache.logging.log4j.LogManager;
@@ -233,13 +235,14 @@ public class UserInterfaceSession extends SessionBase {
 		
 		// The new (with oauth) sequence looks like:
 		// 1. GET  /login/login -- pulls back the org login parameters and API Gateway URL.
-		// 2. POST /login/get   -- pulls back specific properties for the user logging in (hash vs. key password, etc).
-		// 3. POST ${SSO Path}  -- makes a POST to the SSO (OpenAM/etc) login service with credentials.
-		// 4. Follow the redirects from the SSO login.  
+		// 2. OPTIONS to API Gateway host to /cc/login/get URL suffix.
+		// 3. POST API Gateway host /login/get   -- pulls back specific properties for the user logging in (hash vs. key password, etc).
+		// 4. POST ${SSO Path}  -- makes a POST to the SSO (OpenAM/etc) login service with credentials.
+		// 5. Follow the redirects from the SSO login.  
 		//    This usually takes the browser through /ui/ then to /oauth/authorize? and /oauth/callback?
 		//    Then finally to /ui and then /main
-		// 5. Check for KBA map and if present do strong Auth-N.
-		// 6. Check for API credentials and if present then do OAuth token for session.
+		// 6. Check for KBA map and if present do strong Auth-N.
+		// 7. Check for API credentials and if present then do OAuth token for session.
 		
 		// TODO: Use a common client builder that includes user-agents, etc.
 		OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
@@ -304,8 +307,8 @@ public class UserInterfaceSession extends SessionBase {
 		apiSlptGlobals = gson.fromJson(jsonBody, UiSailpointGlobals.class);
 		this.setApiGatewayUrl(apiSlptGlobals.getApi().getBaseUrl());
 		log.debug("API URL:" + this.getApiGatewayUrl());
-			
-		// STEP 2: Make a POST to /login/get to get the properties for the user.
+		
+		// STEP 2: Make an OPTIONS call to the API Gateway URL.
 		// The API Gateway is a _different_ URL that the browser uses a CORS 
 		// request to access. In this code we will use a second, different,
 		// client object.  Here's why:
@@ -321,10 +324,48 @@ public class UserInterfaceSession extends SessionBase {
 		OkHttpUtils.applyTimeoutSettings(apiGwClientBuilder);
 		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
 		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
-		OkHttpClient apiGwClient = apiGwClientBuilder.build(); 
+		OkHttpClient apiGwClient = apiGwClientBuilder.build();
 		
+		// STEP 3: Make a POST to /login/get to get the properties for the user.
+		String optionsUrl = getApiGatewayUrl() + "/cc/" + URL_LOGIN_GET;
+		
+		String apiGwHostHeader = getApiGatewayUrl();
+		if (apiGwHostHeader.contains("//")) {
+			apiGwHostHeader = apiGwHostHeader.split("\\/\\/")[1];
+			apiGwHostHeader = apiGwHostHeader.split("\\/")[0];
+		}
+		
+		Headers optionsRequestHeaders = new Headers.Builder()
+			.add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+			.add("Accept-Encodign", "identity")
+			.add("Accept-Language", "en-US,en;q=0.5")
+			.add("Access-Control-Request-Headers", "content-type")
+			.add("Access-Control-Request-Method", "POST")
+			.add("Host", apiGwHostHeader)
+			.add("Origin", getUserInterfaceUrl())
+			.add("User-Agent", OkHttpUtils.getUserAgent())
+			.build();
+		
+		Request optionsRequest = new Request.Builder()
+			.url(optionsUrl)
+			.headers(optionsRequestHeaders)
+			.method("OPTIONS", null)
+			.build();
+		
+		Response optionsResponse = apiGwClient.newCall(optionsRequest).execute();
+		if (!optionsResponse.isSuccessful()) {
+			String errMsg = optionsResponse.code() + " in OPTIONS call to " + optionsUrl + " - Wrong API Gateway URL?"; 
+			log.error(errMsg);
+			throw new IOException(errMsg);
+		}
+		
+		if (log.isDebugEnabled()) {
+			String acam = optionsResponse.header("access-control-allow-methods").toString();
+			log.debug("access-control-allow-methods: " + acam);
+		}
+		
+		// STEP 4: Make a POST to /login/get to get the properties for the user.
 		String jsonContent = "{username=" + getCredentials().getOrgUser() + "}";
-
 		uiUrl = getApiGatewayUrl() + "/cc/" + URL_LOGIN_GET;
 		
 		response = doPost(uiUrl, jsonContent, apiGwClient, null, null);
@@ -355,7 +396,7 @@ public class UserInterfaceSession extends SessionBase {
 			originHeader = originHeader.replace(originSuffix, "");
 		}
 		
-		// STEP 3: Make a POST to the SSO path for the org.
+		// STEP 5: Make a POST to the SSO path for the org.
 		// This makes a POST to the SSO login service which at one point was implemented on OpenAM.  
 		// This requires Form formatted inputs and some obtuse-ly named fields like "IDToken2".
 
@@ -381,21 +422,25 @@ public class UserInterfaceSession extends SessionBase {
 		if(apiLoginGetResponse.getApiAuth().getEncryptionType().equals("pki")){
 			IDToken2 = encryptPayload(creds.getOrgUser(), creds.getOrgPass(), apiLoginGetResponse.getApiAuth().getPublicKey());
 			publicKey = apiLoginGetResponse.getApiAuth().getPublicKey();
-		}
-		else{
+		} else{
 			IDToken2 = applySaltedHash(creds.getOrgUser(), creds.getOrgPass());
 		}
-		formBody = new FormBody.Builder()
+		
+		FormBody.Builder formBodyBuilder = new FormBody.Builder()
 				.add("encryption", apiLoginGetResponse.getApiAuth().getEncryptionType())
 				.add("service",    apiLoginGetResponse.getApiAuth().getService())
 				.add("IDToken1",   creds.getOrgUser())
 				.add("IDToken2",   IDToken2)
-				.add("publicKey", publicKey)
 				.add("realm",      apiSlptGlobals.getOrgScriptName())
 				.add("goto",       creds.getUserIntUrl() + URL_UI)
 				.add("gotoOnFail", onFailUrl)
-				.add("openam.session.persist_am_cookie", "true")
-				.build();
+				.add("openam.session.persist_am_cookie", "true");
+		
+		if (null != publicKey) { 
+			formBodyBuilder.add("publicKey",  publicKey);
+		}
+		
+		formBody = formBodyBuilder.build();
 		
 		log.debug("formBody: " + formBody.contentLength() + " " + formBody.contentType());
 		
@@ -478,6 +523,8 @@ public class UserInterfaceSession extends SessionBase {
 	Git branch: master
 	Git commit: cd3c37a34516c35254e5eb13d37f8b93e6260480 
 		 */
+		
+		// TODO: Make an API Gateway call to CC's api/user/get interface.  
 		return this;
 	}
 	

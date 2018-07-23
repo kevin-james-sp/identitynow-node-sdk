@@ -325,8 +325,8 @@ public class UserInterfaceSession extends SessionBase {
 		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
 		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
 		OkHttpClient apiGwClient = apiGwClientBuilder.build();
-		
-		// STEP 3: Make a POST to /login/get to get the properties for the user.
+
+		//Build the options URLw
 		String optionsUrl = getApiGatewayUrl() + "/cc/" + URL_LOGIN_GET;
 		
 		String apiGwHostHeader = getApiGatewayUrl();
@@ -364,7 +364,7 @@ public class UserInterfaceSession extends SessionBase {
 			log.debug("access-control-allow-methods: " + acam);
 		}
 		
-		// STEP 4: Make a POST to /login/get to get the properties for the user.
+		// STEP 3: Make a POST to /login/get to get the properties for the user.
 		String jsonContent = "{username=" + getCredentials().getOrgUser() + "}";
 		uiUrl = getApiGatewayUrl() + "/cc/" + URL_LOGIN_GET;
 		
@@ -396,7 +396,7 @@ public class UserInterfaceSession extends SessionBase {
 			originHeader = originHeader.replace(originSuffix, "");
 		}
 		
-		// STEP 5: Make a POST to the SSO path for the org.
+		// STEP 4: Make a POST to the SSO path for the org.
 		// This makes a POST to the SSO login service which at one point was implemented on OpenAM.  
 		// This requires Form formatted inputs and some obtuse-ly named fields like "IDToken2".
 

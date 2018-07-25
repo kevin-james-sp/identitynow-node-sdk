@@ -217,6 +217,41 @@ public class UserInterfaceSession extends SessionBase {
 	}
 
 	/**
+	 * Return an OkHttpClient for use in calling into the API Gateway.
+	 * The UI makes some (nay most?) of its API lookups via the API Gateway now.
+	 * The API Gateway clients do _not_ utilize cookies the way the UI clients do.
+	 * @return
+	 */
+	public OkHttpClient getApiGatewayOkClient () {
+		OkHttpClient.Builder apiGwClientBuilder = new OkHttpClient.Builder();
+		OkHttpUtils.applyTimeoutSettings(apiGwClientBuilder);
+		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
+		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
+		OkHttpClient apiGwClient = apiGwClientBuilder.build();
+		return apiGwClient;
+	}
+	
+	/**
+	 * Return an OkHttpClient for use in calling into the IdentityNow user interface.
+	 * This supports traditional "v0" and "v1" API calls based on cookies, CSRF token
+	 * and CCSESSIONID.   The cookie store is declared at the UserInterfaceSession 
+	 * class instance and is shared by all calls made to the UI.
+	 * @return
+	 */
+	public OkHttpClient getUserInterfaceOkClient () {
+		OkHttpClient.Builder uiClientBuilder = new OkHttpClient.Builder();
+		OkHttpUtils.applyTimeoutSettings(uiClientBuilder);
+		OkHttpUtils.applyLoggingInterceptors(uiClientBuilder);
+		uiClientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
+		OkHttpClient uiClient = uiClientBuilder.build();
+		return uiClient;
+	}
+	
+	
+	
+
+
+	/**
 	 * Connect to the IdentityNow service and establish the session.  This "logs in"
 	 * using whatever means the session has at its disposal to connect to the service.
 	 * 
@@ -604,12 +639,7 @@ public class UserInterfaceSession extends SessionBase {
 	 */
 	public String stronglyAuthenticate() {
 		
-		// TODO: Cleanup / standardize this.
-		OkHttpClient.Builder apiGwClientBuilder = new OkHttpClient.Builder();
-		OkHttpUtils.applyTimeoutSettings(apiGwClientBuilder);
-		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
-		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
-		OkHttpClient apiGwClient = apiGwClientBuilder.build();
+		OkHttpClient apiGwClient = getApiGatewayOkClient(); 
 		
 		// This call lists the strong authentication methods.
 		String getStrongAuthMethodsURL =  getApiGatewayUrl() + "/cc/api/user/getStrongAuthnMethods?_dc=" + System.currentTimeMillis();
@@ -729,12 +759,7 @@ public class UserInterfaceSession extends SessionBase {
 		// to the user interface URL and not to the API Gateway's URL.  This means we
 		// have to use the cookie manager from the UI interaction.
 		
-		// TODO: Cleanup / standardize this.
-		OkHttpClient.Builder uiClientBuilder = new OkHttpClient.Builder();
-		OkHttpUtils.applyTimeoutSettings(uiClientBuilder);
-		OkHttpUtils.applyLoggingInterceptors(uiClientBuilder);
-		uiClientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
-		OkHttpClient uiClient = uiClientBuilder.build();
+		OkHttpClient uiClient = getUserInterfaceOkClient();
 		
 		HashMap<String,String> uiHeadersMap = new HashMap<String,String>();
 		uiHeadersMap.put("X-CSRF-Token", this.csrfToken);
@@ -765,19 +790,14 @@ public class UserInterfaceSession extends SessionBase {
 	 */
 	public String getNewSessionToken() {
 		
-		// TODO: Cleanup / standardize this.
-		OkHttpClient.Builder apiGwClientBuilder = new OkHttpClient.Builder();
-		OkHttpUtils.applyTimeoutSettings(apiGwClientBuilder);
-		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
-		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
-		OkHttpClient apiGwClient = apiGwClientBuilder.build();
+		OkHttpClient uiClient = getUserInterfaceOkClient();
 		
 		String uiSessionUrl = getUserInterfaceUrl() + "ui/session";
 		
 		Response response;
 		String uiSessionResponseJson;
 		try {
-			response = doGet(uiSessionUrl, apiGwClient, null, null);
+			response = doGet(uiSessionUrl, uiClient, null, null);
 			uiSessionResponseJson = response.body().string();
 			log.debug("UiSessionToken: " + uiSessionResponseJson);
 		} catch (IOException e) {

@@ -36,7 +36,6 @@ import java.lang.reflect.Type;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.HttpCookie;
-import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -604,8 +603,6 @@ public class UserInterfaceSession extends SessionBase {
 	 * @return the newly gotten session token.
 	 */
 	public String stronglyAuthenticate() {
-		
-		String retStr = null;
 		
 		// TODO: Cleanup / standardize this.
 		OkHttpClient.Builder apiGwClientBuilder = new OkHttpClient.Builder();

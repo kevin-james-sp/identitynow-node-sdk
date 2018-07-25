@@ -52,6 +52,8 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * A model of a Session based on a user interface session for a specific user.
@@ -503,7 +505,17 @@ public class UserInterfaceSession extends SessionBase {
 		String loginResponse = response.body().string();
 		log.debug("Login Response Body:" + loginResponse);
 		
-		// TODO: FIX THIS. Parse the /ui/main page to get the CSRF Token.
+		// Parse the /ui/main page to get the CSRF Token.
+		String csrfTokenRegex = "SLPT.globalContext.csrf\\s=\\s'(\\w+)'";
+		Pattern p = Pattern.compile(csrfTokenRegex);
+		Matcher m = p.matcher(loginResponse);
+		if (m.find()) {
+			csrfToken = m.group(1);
+			log.debug("Parsed CSRF Token: " + csrfToken);
+		} else {
+			log.warn("Failed to parse CSRF token from 'SLPT.globalContext.csrf'");
+		}
+		
 		Document uiMainDoc = Jsoup.parse(loginResponse);
 		String globalContextSelector = "script[contains(., 'SLPT.globalContext.api')]";
 		Elements globalContextScript = uiMainDoc.select(globalContextSelector);
@@ -605,13 +617,13 @@ public class UserInterfaceSession extends SessionBase {
 		// This call lists the strong authentication methods.
 		String getStrongAuthMethodsURL =  getApiGatewayUrl() + "/cc/api/user/getStrongAuthnMethods?_dc=" + System.currentTimeMillis();
 		
-		HashMap<String,String> headersMap = new HashMap<String,String>();
-		headersMap.put("Authorization", "Bearer " + this.accessToken);
+		HashMap<String,String> apiHeadersMap = new HashMap<String,String>();
+		apiHeadersMap.put("Authorization", "Bearer " + this.accessToken);
 		
 		Response response;
 		String getStrongAuthMethodsJsonArray;
 		try {
-			response = doGet(getStrongAuthMethodsURL, apiGwClient, headersMap, null);
+			response = doGet(getStrongAuthMethodsURL, apiGwClient, apiHeadersMap, null);
 			getStrongAuthMethodsJsonArray = response.body().string();
 			log.debug("getStrongAuthnMethods: " + getStrongAuthMethodsJsonArray);
 		} catch (IOException e) {
@@ -644,7 +656,7 @@ public class UserInterfaceSession extends SessionBase {
 		// Pull back the list of challenge questions available for the user.
 		String apiChallengeListJsonArray;
 		try {
-			response = doGet(getChlngQsURL, apiGwClient, headersMap, null);
+			response = doGet(getChlngQsURL, apiGwClient, apiHeadersMap, null);
 			apiChallengeListJsonArray = response.body().string();
 			log.debug("api/challenge/list: " + apiChallengeListJsonArray);
 		} catch (IOException e) {
@@ -674,7 +686,7 @@ public class UserInterfaceSession extends SessionBase {
 		String userGetUrl = getApiGatewayUrl() + "/cc/api/user/get?_dc=" + System.currentTimeMillis();
 		String userGetJson;
 		try {
-			response = doGet(userGetUrl, apiGwClient, headersMap, null);
+			response = doGet(userGetUrl, apiGwClient, apiHeadersMap, null);
 			userGetJson = response.body().string();
 			log.debug("/api/user/get: " + userGetJson);
 		} catch (IOException e) {
@@ -727,11 +739,13 @@ public class UserInterfaceSession extends SessionBase {
 		uiClientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
 		OkHttpClient uiClient = uiClientBuilder.build();
 		
-		String apiStronAuthn = getUserInterfaceUrl() + "api/user/strongAuthn";
+		HashMap<String,String> uiHeadersMap = new HashMap<String,String>();
+		uiHeadersMap.put("X-CSRF-Token", this.csrfToken);
 		
+		String apiStronAuthn = getUserInterfaceUrl() + "api/user/strongAuthn";
 		String strongAuthnResponseStr;
 		try {
-			response = doPost(apiStronAuthn, scrubbedQJsonArrayString, uiClient, headersMap, null);
+			response = doPost(apiStronAuthn, scrubbedQJsonArrayString, uiClient, apiHeadersMap, null);
 			strongAuthnResponseStr = response.body().string();
 			log.debug("api/user/strongAuthn: " + strongAuthnResponseStr);
 		} catch (IOException e) {

@@ -10,7 +10,6 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-import okhttp3.internal.http2.Header;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -590,7 +589,7 @@ public class UserInterfaceSession extends SessionBase {
 	/**
 	 * Strongly authenticate the User Interface session by submitting answers to KBA questions.
 	 * @param kbaAnswers
-	 * @return
+	 * @return the newly gotten session token.
 	 */
 	public String stronglyAuthenticate() {
 		
@@ -684,13 +683,66 @@ public class UserInterfaceSession extends SessionBase {
 		}
 		
 		User user = gson.fromJson(userGetJson, User.class);
-		
 		log.debug("kbaReqForAuthn: " + user.getKbaReqForAuthn());
 		
+		// Strong Authentication payloads are sent as a JSON array of hashed
+		// toLowerCase() answers paired with the ID string of the KBA question 
+		// they answer. Example:
+		// [
+		//    {"id":"2163","answer":"a5f058b4a8882c6f5704cc9fae279cbb348612a1a3bb81581931fbdc1d5de3f1"},
+		//    {"id":"2164","answer":"a5f058b4a8882c6f5704cc9fae279cbb348612a1a3bb81581931fbdc1d5de3f1"}
+		// ]
+		// We put this in a "scrubbedQuestions" list that only has IDs and Answer strings.
 		
 		// Apply the user's answer and submit the strong authentication back up to the UI.
+		ClientCredentials creds = getCredentials();
+		ArrayList<UiKbaQuestion> scrubbedQuestions = new ArrayList<UiKbaQuestion>();
+		for (UiKbaQuestion kbaQuestion : answeredKbaQuestions) {
+			String answer = creds.getKbaAnswer(kbaQuestion.getText());
+			if (null != answer) {
+				log.debug("Setting user answer to [" + kbaQuestion.getText() + "] ==> " + answer);
+				
+				String hashedStrongAuthnCredential = sha256Hash(answer.toLowerCase());
+				
+				UiKbaQuestion scrubbedQ = new UiKbaQuestion();
+				scrubbedQ.setId(kbaQuestion.getId());
+				scrubbedQ.setAnswer(hashedStrongAuthnCredential);
+				scrubbedQ.setHasAnswer(true);
+				scrubbedQuestions.add(scrubbedQ);
+			}
+		}
+
+		// Build out JSON string here:
+		String scrubbedQJsonArrayString = gson.toJson(scrubbedQuestions);
+		log.debug("scrubbedQJsonArrayString: ", scrubbedQJsonArrayString);
 		
-		return retStr;
+		// Submit the Strong Authn payload.  Note that this call is made directly
+		// to the user interface URL and not to the API Gateway's URL.  This means we
+		// have to use the cookie manager from the UI interaction.
+		
+		// TODO: Cleanup / standardize this.
+		OkHttpClient.Builder uiClientBuilder = new OkHttpClient.Builder();
+		OkHttpUtils.applyTimeoutSettings(uiClientBuilder);
+		OkHttpUtils.applyLoggingInterceptors(uiClientBuilder);
+		uiClientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
+		OkHttpClient uiClient = uiClientBuilder.build();
+		
+		String apiStronAuthn = getUserInterfaceUrl() + "api/user/strongAuthn";
+		
+		String strongAuthnResponseStr;
+		try {
+			response = doPost(apiStronAuthn, scrubbedQJsonArrayString, uiClient, headersMap, null);
+			strongAuthnResponseStr = response.body().string();
+			log.debug("api/user/strongAuthn: " + strongAuthnResponseStr);
+		} catch (IOException e) {
+			log.error("Failure while calling " + apiStronAuthn, e);
+			return null;
+		}
+		
+		// TODO: Handle non-200 response.
+		
+		// Get a new session token to reflect the strongly authenticated status of the session.
+		return getNewSessionToken();
 		
 	}
 	

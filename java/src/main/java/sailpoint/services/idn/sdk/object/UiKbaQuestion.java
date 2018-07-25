@@ -45,6 +45,10 @@ public class UiKbaQuestion {
 	
 	@SerializedName("numAnswers")
 	public int numAnswers;
+	
+	// Note: Used when POSTing an answer up for Strong Auth.
+	@SerializedName("answer")
+	public String answer;
 
 	public String getId() {
 		return id;
@@ -76,6 +80,14 @@ public class UiKbaQuestion {
 
 	public void setNumAnswers(int numAnswers) {
 		this.numAnswers = numAnswers;
+	}
+
+	public String getAnswer() {
+		return answer;
+	}
+
+	public void setAnswer(String userAnswer) {
+		this.answer = userAnswer;
 	}
 	
 }

@@ -219,24 +219,31 @@ public class OkHttpUtils {
 	 * @param getRequest
 	 * @return
 	 */
-	public Response callWithRetires(OkHttpClient okClient, Request getRequest) {
+	public static Response callWithRetires(OkHttpClient okClient, Request getRequest) {
 
 		Response response = null;
 		int attemptCount = 0;
-		int responseCode = 500;
+		int responseCode = 500; // Default to generic service-side alarm.
 		do {
 			try {
 				response = okClient.newCall(getRequest).execute();
 				responseCode = response.code();
-				if (200 == responseCode) {
+				if (response.isSuccessful()) {
 					break; // out of do-while() loop.
 				}
 			} catch (IOException e) {
 				log.error("Failure while calling " + getRequest.url().toString(), e);
 				return null;
 			}
-
-			if (429 == responseCode) {
+			
+			// Note: using cascading if() to preserve the "break;" keyword.
+			if (302 == responseCode) {
+				
+				// Got a redirect, silently let it through.
+				log.trace("302 - Redirect to new location, passing up to caller.");
+				break; // out of do-while() loop;
+				
+			} else if (429 == responseCode) {
 				// Look for any header returned like: Retry-After = 1 where the server
 				// advises us as a client for how long to wait to back-off requests.
 				int retryDelay = RETRY_429_DELAY_MS_DEFAULT;

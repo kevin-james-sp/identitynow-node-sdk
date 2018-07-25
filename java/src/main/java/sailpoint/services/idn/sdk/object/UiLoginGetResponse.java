@@ -20,7 +20,6 @@ public class UiLoginGetResponse {
 	}
 
 	public UiLoginGetResponse(String ssoServerUrl, String goToOnFail, UiAuthData apiAuth, UiOrgData apiOrg) {
-
 		this.ssoServerUrl = ssoServerUrl;
 		this.goToOnFail = goToOnFail;
 		this.apiAuth = apiAuth;

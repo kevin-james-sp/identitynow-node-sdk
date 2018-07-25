@@ -146,7 +146,10 @@ public class ClientCredentials extends HashMap<String,String> {
 		
 		// Iterate through the Question text keys to find a match.
 		for (String k : kbaQtoAMap.keySet()) {
-			if (k.toLowerCase().contains(questionText.toLowerCase())) {
+			if ( 
+					k.toLowerCase().contains(questionText.toLowerCase()) ||
+					questionText.toLowerCase().contains(k.toLowerCase())
+			) {
 				String a = kbaQtoAMap.get(k);
 				if ((null != a) && (0 != a.length())) {
 					return a;

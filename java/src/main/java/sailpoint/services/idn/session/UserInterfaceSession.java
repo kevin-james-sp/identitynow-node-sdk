@@ -1,6 +1,8 @@
 package sailpoint.services.idn.session;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
 import okhttp3.FormBody;
 import okhttp3.Headers;
 import okhttp3.JavaNetCookieJar;
@@ -8,14 +10,20 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
+
 import sailpoint.services.idn.sdk.ClientCredentials;
+import sailpoint.services.idn.sdk.object.UiKbaQuestion;
 import sailpoint.services.idn.sdk.object.UiLoginGetResponse;
 import sailpoint.services.idn.sdk.object.UiSailpointGlobals;
+import sailpoint.services.idn.sdk.object.UiSessionToken;
+import sailpoint.services.idn.sdk.object.UiStrongAuthMethod;
+import sailpoint.services.idn.sdk.object.User;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -24,6 +32,7 @@ import javax.crypto.NoSuchPaddingException;
 import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Type;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.HttpCookie;
@@ -42,6 +51,8 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * A model of a Session based on a user interface session for a specific user.
@@ -67,7 +78,11 @@ public class UserInterfaceSession extends SessionBase {
 	public long loginSequenceDuration = 0;
 	public long logoutSequenceDuration = 0; 
 	
-	CookieManager cookieManager = new CookieManager();
+	protected CookieManager cookieManager = new CookieManager();
+	
+	// Two clients used to talk to different edge interfaces of IdentityNow.
+	protected OkHttpClient userInterfaceClient = null;
+	protected OkHttpClient apiGatewayClient = null;
 	
 	public UserInterfaceSession (ClientCredentials clientCredentials) {
 		
@@ -94,6 +109,7 @@ public class UserInterfaceSession extends SessionBase {
 	}
 	
 	public OkHttpClient getClient() {
+		// There is an ambiguiity here: Do we want the CC client or the API GW client.
 		throw new IllegalArgumentException("TODO: Stub this out for UserInterfaceSession");
 	}
 	
@@ -206,6 +222,53 @@ public class UserInterfaceSession extends SessionBase {
 	}
 
 	/**
+	 * Return an OkHttpClient for use in calling into the API Gateway.
+	 * The UI makes some (nay most?) of its API lookups via the API Gateway now.
+	 * The API Gateway clients do _not_ utilize cookies the way the UI clients do.
+	 * 
+	 * This is a singleton; the client is not reconstructed every call, see: 
+	 *    https://github.com/square/okhttp/issues/2636
+	 *     
+	 * @return
+	 */
+	public OkHttpClient getApiGatewayOkClient () {
+		
+		if (null != apiGatewayClient) return apiGatewayClient;
+		
+		OkHttpClient.Builder apiGwClientBuilder = new OkHttpClient.Builder();
+		OkHttpUtils.applyTimeoutSettings(apiGwClientBuilder);
+		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
+		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
+		apiGatewayClient = apiGwClientBuilder.build();
+		
+		return apiGatewayClient;
+	}
+	
+	/**
+	 * Return an OkHttpClient for use in calling into the IdentityNow user interface.
+	 * This supports traditional "v0" and "v1" API calls based on cookies, CSRF token
+	 * and CCSESSIONID.   The cookie store is declared at the UserInterfaceSession 
+	 * class instance and is shared by all calls made to the UI.
+	 * 
+	 * This is a singleton; the client is not reconstructed every call, see: 
+	 *    https://github.com/square/okhttp/issues/2636
+	 *    
+	 * @return
+	 */
+	public OkHttpClient getUserInterfaceOkClient () {
+		
+		if (null != userInterfaceClient) return userInterfaceClient;
+		
+		OkHttpClient.Builder uiClientBuilder = new OkHttpClient.Builder();
+		OkHttpUtils.applyTimeoutSettings(uiClientBuilder);
+		OkHttpUtils.applyLoggingInterceptors(uiClientBuilder);
+		uiClientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
+		userInterfaceClient = uiClientBuilder.build();
+		
+		return userInterfaceClient;
+	}
+	
+	/**
 	 * Connect to the IdentityNow service and establish the session.  This "logs in"
 	 * using whatever means the session has at its disposal to connect to the service.
 	 * 
@@ -281,6 +344,7 @@ public class UserInterfaceSession extends SessionBase {
 			// fall through to logic below.
 			break;
 		}
+		response.close();
 		
 		// Pull out the CCSESSIONID cookie, we need to pass this to the SSO server.
 		HttpCookie ccSessionCookie = null;
@@ -493,7 +557,17 @@ public class UserInterfaceSession extends SessionBase {
 		String loginResponse = response.body().string();
 		log.debug("Login Response Body:" + loginResponse);
 		
-		// TODO: FIX THIS. Parse the /ui/main page to get the CSRF Token.
+		// Parse the /ui/main page to get the CSRF Token.
+		String csrfTokenRegex = "SLPT.globalContext.csrf\\s=\\s'(\\w+)'";
+		Pattern p = Pattern.compile(csrfTokenRegex);
+		Matcher m = p.matcher(loginResponse);
+		if (m.find()) {
+			csrfToken = m.group(1);
+			log.debug("Parsed CSRF Token: " + csrfToken);
+		} else {
+			log.warn("Failed to parse CSRF token from 'SLPT.globalContext.csrf'");
+		}
+		
 		Document uiMainDoc = Jsoup.parse(loginResponse);
 		String globalContextSelector = "script[contains(., 'SLPT.globalContext.api')]";
 		Elements globalContextScript = uiMainDoc.select(globalContextSelector);
@@ -510,6 +584,8 @@ public class UserInterfaceSession extends SessionBase {
 //		this.setApiGatewayUrl(apiSlptGlobals.getApi().getBaseUrl());
 //		log.debug("API URL:" + this.getApiGatewayUrl());
 		
+		getNewSessionToken();
+		
 		loginSequenceDuration = System.currentTimeMillis() - loginSequenceStartTime;
 		log.debug("Login sequence completed in " + loginSequenceDuration + " msecs.");
 		
@@ -524,7 +600,8 @@ public class UserInterfaceSession extends SessionBase {
 	Git commit: cd3c37a34516c35254e5eb13d37f8b93e6260480 
 		 */
 		
-		// TODO: Make an API Gateway call to CC's api/user/get interface.  
+		// TODO: Make an API Gateway call to CC's api/user/get interface.
+		
 		return this;
 	}
 	
@@ -573,6 +650,212 @@ public class UserInterfaceSession extends SessionBase {
 		log.debug("Logout processed in " + logoutSequenceDuration  + " msecs.");
 
 		return;
+		
+	}
+	
+	/**
+	 * Strongly authenticate the User Interface session by submitting answers to KBA questions.
+	 * @param kbaAnswers
+	 * @return the newly gotten session token.
+	 */
+	public String stronglyAuthenticate() {
+		
+		OkHttpClient apiGwClient = getApiGatewayOkClient(); 
+		
+		// This call lists the strong authentication methods.
+		String getStrongAuthMethodsURL =  getApiGatewayUrl() + "/cc/api/user/getStrongAuthnMethods?_dc=" + System.currentTimeMillis();
+		
+		HashMap<String,String> apiHeadersMap = new HashMap<String,String>();
+		apiHeadersMap.put("Authorization", "Bearer " + this.accessToken);
+		
+		Response response;
+		String getStrongAuthMethodsJsonArray;
+		try {
+			response = doGet(getStrongAuthMethodsURL, apiGwClient, apiHeadersMap, null);
+			getStrongAuthMethodsJsonArray = response.body().string();
+			log.debug("getStrongAuthnMethods: " + getStrongAuthMethodsJsonArray);
+		} catch (IOException e) {
+			log.error("Failure while calling " + getStrongAuthMethodsURL, e);
+			return null;
+		}
+		
+		// TODO: Handle non-200 responses here!
+		
+		Gson gson = new Gson();
+		
+		Type listTypeStrongAuthn = new TypeToken<ArrayList<UiStrongAuthMethod>>(){}.getType();
+		List<UiStrongAuthMethod> availableMethods = new Gson().fromJson(getStrongAuthMethodsJsonArray, listTypeStrongAuthn);
+		
+		// Traverse the list and ensure that a KBA type is available.
+		boolean kbaTypeAvailable = false;
+		for (UiStrongAuthMethod uisam : availableMethods) {
+			if ("KBA".equals(uisam.getStrongAuthType())) {
+				kbaTypeAvailable = true;
+			}
+		}
+		
+		if (!kbaTypeAvailable) {
+			log.error("No KBA strong authentication is available for this user.");
+			return null;
+		}
+		
+		String getChlngQsURL = getApiGatewayUrl() + "/cc/api/challenge/list?allLanguages=false&_dc=" + System.currentTimeMillis();
+		
+		// Pull back the list of challenge questions available for the user.
+		String apiChallengeListJsonArray;
+		try {
+			response = doGet(getChlngQsURL, apiGwClient, apiHeadersMap, null);
+			apiChallengeListJsonArray = response.body().string();
+			log.debug("api/challenge/list: " + apiChallengeListJsonArray);
+		} catch (IOException e) {
+			log.error("Failure while calling " + getChlngQsURL, e);
+			return null;
+		}
+		
+		// TODO: Handle non-200 responses here!
+		Type listTypeChallengeQuestion = new TypeToken<ArrayList<UiKbaQuestion>>(){}.getType();
+		List<UiKbaQuestion> availableKbaQuestions = new Gson().fromJson(apiChallengeListJsonArray, listTypeChallengeQuestion);
+		
+		// Find the KBA questions that the user has an answer specified for.
+		ArrayList<UiKbaQuestion> answeredKbaQuestions = new ArrayList<UiKbaQuestion>(); 
+		for (UiKbaQuestion thisKbaQ : availableKbaQuestions) {
+			if (thisKbaQ.isHasAnswer()) {
+				answeredKbaQuestions.add(thisKbaQ);
+			}
+		}
+		
+		log.debug("User has " + answeredKbaQuestions.size() + " answered KBA questions.");
+		
+		// The user interface presents N strongAuthn questions to answer.  A user typically
+		// must answer a sub-set of these to strongly authenticate.  Say there are 5 questions
+		// with an answer provided and 3 answers must be sumbitted for the strong-auth to go 
+		// through. 
+		// This next call gets the number that has to be answered.
+		String userGetUrl = getApiGatewayUrl() + "/cc/api/user/get?_dc=" + System.currentTimeMillis();
+		String userGetJson;
+		try {
+			response = doGet(userGetUrl, apiGwClient, apiHeadersMap, null);
+			userGetJson = response.body().string();
+			log.debug("/api/user/get: " + userGetJson);
+		} catch (IOException e) {
+			log.error("Failure while calling " + userGetUrl, e);
+			return null;
+		}
+		
+		User user = gson.fromJson(userGetJson, User.class);
+		log.debug("kbaReqForAuthn: " + user.getKbaReqForAuthn());
+		
+		// Strong Authentication payloads are sent as a JSON array of hashed
+		// toLowerCase() answers paired with the ID string of the KBA question 
+		// they answer. Example:
+		// [
+		//    {"id":"2163","answer":"a5f058b4a8882c6f5704cc9fae279cbb348612a1a3bb81581931fbdc1d5de3f1"},
+		//    {"id":"2164","answer":"a5f058b4a8882c6f5704cc9fae279cbb348612a1a3bb81581931fbdc1d5de3f1"}
+		// ]
+		// We put this in a "scrubbedQuestions" list that only has IDs and Answer strings.
+		
+		// Apply the user's answer and submit the strong authentication back up to the UI.
+		ClientCredentials creds = getCredentials();
+		ArrayList<UiKbaQuestion> scrubbedQuestions = new ArrayList<UiKbaQuestion>();
+		for (UiKbaQuestion kbaQuestion : answeredKbaQuestions) {
+			String answer = creds.getKbaAnswer(kbaQuestion.getText());
+			if (null != answer) {
+				log.debug("Setting user answer to [" + kbaQuestion.getText() + "] ==> " + answer);
+				
+				String hashedStrongAuthnCredential = sha256Hash(answer.toLowerCase());
+				
+				UiKbaQuestion scrubbedQ = new UiKbaQuestion();
+				scrubbedQ.setId(kbaQuestion.getId());
+				scrubbedQ.setAnswer(hashedStrongAuthnCredential);
+				scrubbedQ.setHasAnswer(true);
+				scrubbedQuestions.add(scrubbedQ);
+			}
+		}
+
+		// Build out JSON string here:
+		String scrubbedQJsonArrayString = gson.toJson(scrubbedQuestions);
+		log.debug("scrubbedQJsonArrayString: ", scrubbedQJsonArrayString);
+		
+		// Submit the Strong Authn payload.  Note that this call is made directly
+		// to the user interface URL and not to the API Gateway's URL.  This means we
+		// have to use the cookie manager from the UI interaction.
+		
+		OkHttpClient uiClient = getUserInterfaceOkClient();
+		
+		HashMap<String,String> uiHeadersMap = new HashMap<String,String>();
+		uiHeadersMap.put("X-CSRF-Token", this.csrfToken);
+		
+		String apiStronAuthn = getUserInterfaceUrl() + "api/user/strongAuthn";
+		String strongAuthnResponseStr;
+		try {
+			response = doPost(apiStronAuthn, scrubbedQJsonArrayString, uiClient, uiHeadersMap, null);
+			strongAuthnResponseStr = response.body().string();
+			log.debug("api/user/strongAuthn: " + strongAuthnResponseStr);
+		} catch (IOException e) {
+			log.error("Failure while calling " + apiStronAuthn, e);
+			return null;
+		}
+		
+		// TODO: Handle non-200 response.
+		
+		// Get a new session token to reflect the strongly authenticated status of the session.
+		return getNewSessionToken();
+		
+	}
+	
+	/**
+	 * Retrieves a new JWT session token for user interface session.  This is used by
+	 * user interface sessions to call into the API gateway.
+	 * 
+	 * @return
+	 */
+	public String getNewSessionToken() {
+		
+		OkHttpClient uiClient = getUserInterfaceOkClient();
+		
+		String uiSessionUrl = getUserInterfaceUrl() + "ui/session";
+		
+		Response response;
+		String uiSessionResponseJson;
+		try {
+			response = doGet(uiSessionUrl, uiClient, null, null);
+			uiSessionResponseJson = response.body().string();
+			log.debug("UiSessionToken: " + uiSessionResponseJson);
+		} catch (IOException e) {
+			log.error("Failure while calling " + uiSessionUrl, e);
+			return null;
+		}
+		
+		// TODO: Handle non-200 responses here!
+		
+		Gson gson = new Gson();
+		
+		UiSessionToken uiSessToken = gson.fromJson(uiSessionResponseJson, UiSessionToken.class);
+		
+		this.csrfToken = uiSessToken.getCsrfToken();
+		this.oauthToken = uiSessToken.getAccessToken();
+		this.accessToken = uiSessToken.getAccessToken();
+		return uiSessToken.getAccessToken();
+	}
+	
+	public String doApiGet (String apiUrlSuffix) {
+		
+		String apiUrl = getApiGatewayUrl() + apiUrlSuffix;
+		
+		HashMap<String,String> apiHeadersMap = new HashMap<String,String>();
+		apiHeadersMap.put("Authorization", "Bearer " + this.accessToken);
+		
+		try (Response response = doGet(apiUrl, getApiGatewayOkClient(), apiHeadersMap, null)) {
+			if (!response.isSuccessful()) {
+				log.error(response.code() + " while calling " + apiUrl);
+			}
+			String responseJson = response.body().string();
+			log.debug(apiUrlSuffix + ": " + responseJson);
+			return responseJson;
+		} catch (IOException e) {
+			log.error("Failure while calling " + apiUrl, e);
+			return null;
+		}
 		
 	}
 

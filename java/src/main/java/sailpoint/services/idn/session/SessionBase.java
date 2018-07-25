@@ -27,7 +27,9 @@ public class SessionBase implements java.lang.AutoCloseable {
 	// Default to API Only session types for SDK use.
 	protected SessionType sessionType = SessionType.SESSION_TYPE_API_ONLY;
 	
+	// The most recent JWT token associated with the session.
 	protected String accessToken = null;
+	
 	protected int expiresIn = -1;
 	protected boolean isAthenticated = false;
 	
@@ -133,7 +135,8 @@ public class SessionBase implements java.lang.AutoCloseable {
 			}
 		}
 		Request request = builder.build();
-		return client.newCall(request).execute();
+		
+		return OkHttpUtils.callWithRetires(client, request);
 	}
 	
 	public static String getCookieString (HttpCookie cookie) {
@@ -175,7 +178,7 @@ public class SessionBase implements java.lang.AutoCloseable {
 		builder.url(url);
 		builder.post(body);
 		Request request = builder.build();
-		return client.newCall(request).execute();
+		return OkHttpUtils.callWithRetires(client, request);
 	}
 	
 	/**
@@ -201,7 +204,7 @@ public class SessionBase implements java.lang.AutoCloseable {
 		builder.url(url);
 		builder.post(formBody);
 		Request request = builder.build();
-		return client.newCall(request).execute();
+		return OkHttpUtils.callWithRetires(client, request);
 	}
 	
 	// Whatever comes back from the UI can override the API Gateway URL setting.

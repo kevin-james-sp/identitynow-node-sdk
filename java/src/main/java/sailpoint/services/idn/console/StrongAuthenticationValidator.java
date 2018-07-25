@@ -1,7 +1,5 @@
 package sailpoint.services.idn.console;
 
-import java.io.IOException;
-
 import org.apache.logging.log4j.Level;
 
 import sailpoint.services.idn.sdk.ClientCredentials;
@@ -24,16 +22,15 @@ public class StrongAuthenticationValidator {
 		System.out.println("All Rights Reserved.");
 		System.out.println("");
 		
-		Log4jUtils.boostrapLog4j(Level.DEBUG);
+		Log4jUtils.boostrapLog4j(Level.INFO);
 		
 		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
 		
 		if (envCreds.hasUserCredentials()) {
 			System.out.println("Attempting to login to " + envCreds.getOrgName() + " UI as " + envCreds.getOrgUser() + " ...");
-			try (SessionBase session = SessionFactory.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC) ){
-				session.open();
-				System.out.println("Successfully authenticated to UI session. CCSESSIONID: " + session.getUniqueId());
-				UserInterfaceSession uiSession = (UserInterfaceSession) session;
+			try (UserInterfaceSession uiSession = (UserInterfaceSession) SessionFactory.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC) ){
+				uiSession.open();
+				System.out.println("Successfully authenticated to UI session. CCSESSIONID: " + uiSession.getUniqueId());
 				System.out.println("Strongly authenticating UI session ...");
 				uiSession.getNewSessionToken();
 				String jwtToken = uiSession.stronglyAuthenticate();
@@ -43,10 +40,6 @@ public class StrongAuthenticationValidator {
 					System.out.println("Failed to strongly authenticate.  Validate enviroment credentials; Is KBA enalbed and are the answers correct?");
 					exitVal = 1;
 				}
-			} catch (IOException e) {
-				System.out.println("Failed to esablish UI type session to the org.");
-				e.printStackTrace();
-				exitVal = 1;
 			} catch (Exception e) {
 				System.out.println("Failed to esablish UI type session to the org.");
 				e.printStackTrace();

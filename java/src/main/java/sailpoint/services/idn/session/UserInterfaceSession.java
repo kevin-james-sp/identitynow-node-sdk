@@ -1,6 +1,8 @@
 package sailpoint.services.idn.session;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
 import okhttp3.FormBody;
 import okhttp3.Headers;
 import okhttp3.JavaNetCookieJar;
@@ -17,9 +19,12 @@ import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 
 import sailpoint.services.idn.sdk.ClientCredentials;
+import sailpoint.services.idn.sdk.object.UiKbaQuestion;
 import sailpoint.services.idn.sdk.object.UiLoginGetResponse;
 import sailpoint.services.idn.sdk.object.UiSailpointGlobals;
 import sailpoint.services.idn.sdk.object.UiSessionToken;
+import sailpoint.services.idn.sdk.object.UiStrongAuthMethod;
+import sailpoint.services.idn.sdk.object.User;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -28,9 +33,11 @@ import javax.crypto.NoSuchPaddingException;
 import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Type;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.HttpCookie;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -603,11 +610,11 @@ public class UserInterfaceSession extends SessionBase {
 		headersMap.put("Authorization", "Bearer " + this.accessToken);
 		
 		Response response;
-		String getStrongAuthMethodsJson;
+		String getStrongAuthMethodsJsonArray;
 		try {
 			response = doGet(getStrongAuthMethodsURL, apiGwClient, headersMap, null);
-			getStrongAuthMethodsJson = response.body().string();
-			log.debug("getStrongAuthnMethods: " + getStrongAuthMethodsJson);
+			getStrongAuthMethodsJsonArray = response.body().string();
+			log.debug("getStrongAuthnMethods: " + getStrongAuthMethodsJsonArray);
 		} catch (IOException e) {
 			log.error("Failure while calling " + getStrongAuthMethodsURL, e);
 			return null;
@@ -615,22 +622,73 @@ public class UserInterfaceSession extends SessionBase {
 		
 		// TODO: Handle non-200 responses here!
 		
-		// Expected response: TBD.
+		Gson gson = new Gson();
+		
+		Type listTypeStrongAuthn = new TypeToken<ArrayList<UiStrongAuthMethod>>(){}.getType();
+		List<UiStrongAuthMethod> availableMethods = new Gson().fromJson(getStrongAuthMethodsJsonArray, listTypeStrongAuthn);
+		
+		// Traverse the list and ensure that a KBA type is available.
+		boolean kbaTypeAvailable = false;
+		for (UiStrongAuthMethod uisam : availableMethods) {
+			if ("KBA".equals(uisam.getStrongAuthType())) {
+				kbaTypeAvailable = true;
+			}
+		}
+		
+		if (!kbaTypeAvailable) {
+			log.error("No KBA strong authentication is available for this user.");
+			return null;
+		}
 		
 		String getChlngQsURL = getApiGatewayUrl() + "/cc/api/challenge/list?allLanguages=false&_dc=" + System.currentTimeMillis();
 		
 		// Pull back the list of challenge questions available for the user.
-		String apiChallengeListJson;
+		String apiChallengeListJsonArray;
 		try {
 			response = doGet(getChlngQsURL, apiGwClient, headersMap, null);
-			apiChallengeListJson = response.body().string();
-			log.debug("api/challenge/list: " + apiChallengeListJson);
+			apiChallengeListJsonArray = response.body().string();
+			log.debug("api/challenge/list: " + apiChallengeListJsonArray);
 		} catch (IOException e) {
 			log.error("Failure while calling " + getChlngQsURL, e);
 			return null;
 		}
 		
 		// TODO: Handle non-200 responses here!
+		Type listTypeChallengeQuestion = new TypeToken<ArrayList<UiKbaQuestion>>(){}.getType();
+		List<UiKbaQuestion> availableKbaQuestions = new Gson().fromJson(apiChallengeListJsonArray, listTypeChallengeQuestion);
+		
+		// Find the KBA questions that the user has an answer specified for.
+		ArrayList<UiKbaQuestion> answeredKbaQuestions = new ArrayList<UiKbaQuestion>(); 
+		for (UiKbaQuestion thisKbaQ : availableKbaQuestions) {
+			if (thisKbaQ.isHasAnswer()) {
+				answeredKbaQuestions.add(thisKbaQ);
+			}
+		}
+		
+		log.debug("User has " + answeredKbaQuestions.size() + " answered KBA questions.");
+		
+		// The user interface presents N strongAuthn questions to answer.  A user typically
+		// must answer a sub-set of these to strongly authenticate.  Say there are 5 questions
+		// with an answer provided and 3 answers must be sumbitted for the strong-auth to go 
+		// through. 
+		// This next call gets the number that has to be answered.
+		String userGetUrl = getApiGatewayUrl() + "/cc/api/user/get?_dc=" + System.currentTimeMillis();
+		String userGetJson;
+		try {
+			response = doGet(userGetUrl, apiGwClient, headersMap, null);
+			userGetJson = response.body().string();
+			log.debug("/api/user/get: " + userGetJson);
+		} catch (IOException e) {
+			log.error("Failure while calling " + userGetUrl, e);
+			return null;
+		}
+		
+		User user = gson.fromJson(userGetJson, User.class);
+		
+		log.debug("kbaReqForAuthn: " + user.getKbaReqForAuthn());
+		
+		
+		// Apply the user's answer and submit the strong authentication back up to the UI.
 		
 		return retStr;
 		

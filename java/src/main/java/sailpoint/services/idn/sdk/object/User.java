@@ -56,6 +56,9 @@ public class User {
 	
 	@SerializedName("name")
 	public String name;
+	
+	@SerializedName("kbaReqForAuthn")
+	public int kbaReqForAuthn;
 
 	public String getId() {
 		return id;
@@ -87,6 +90,14 @@ public class User {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	public int getKbaReqForAuthn() {
+		return kbaReqForAuthn;
+	}
+
+	public void setKbaReqForAuthn(int kbaReqForAuthn) {
+		this.kbaReqForAuthn = kbaReqForAuthn;
 	}
 	
 }

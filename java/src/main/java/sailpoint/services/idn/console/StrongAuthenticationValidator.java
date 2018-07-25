@@ -4,8 +4,6 @@ import org.apache.logging.log4j.Level;
 
 import sailpoint.services.idn.sdk.ClientCredentials;
 import sailpoint.services.idn.sdk.EnvironmentCredentialer;
-import sailpoint.services.idn.session.SessionBase;
-// import sailpoint.services.idn.sdk.object.Tenant;
 import sailpoint.services.idn.session.SessionFactory;
 import sailpoint.services.idn.session.SessionType;
 import sailpoint.services.idn.session.UserInterfaceSession;

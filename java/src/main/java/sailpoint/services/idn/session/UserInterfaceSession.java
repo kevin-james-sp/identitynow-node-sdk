@@ -745,7 +745,7 @@ public class UserInterfaceSession extends SessionBase {
 		String apiStronAuthn = getUserInterfaceUrl() + "api/user/strongAuthn";
 		String strongAuthnResponseStr;
 		try {
-			response = doPost(apiStronAuthn, scrubbedQJsonArrayString, uiClient, apiHeadersMap, null);
+			response = doPost(apiStronAuthn, scrubbedQJsonArrayString, uiClient, uiHeadersMap, null);
 			strongAuthnResponseStr = response.body().string();
 			log.debug("api/user/strongAuthn: " + strongAuthnResponseStr);
 		} catch (IOException e) {

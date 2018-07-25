@@ -845,12 +845,11 @@ public class UserInterfaceSession extends SessionBase {
 		HashMap<String,String> apiHeadersMap = new HashMap<String,String>();
 		apiHeadersMap.put("Authorization", "Bearer " + this.accessToken);
 		
-		String responseJson;
 		try (Response response = doGet(apiUrl, getApiGatewayOkClient(), apiHeadersMap, null)) {
 			if (!response.isSuccessful()) {
 				log.error(response.code() + " while calling " + apiUrl);
 			}
-			responseJson = response.body().string();
+			String responseJson = response.body().string();
 			log.debug(apiUrlSuffix + ": " + responseJson);
 			return responseJson;
 		} catch (IOException e) {

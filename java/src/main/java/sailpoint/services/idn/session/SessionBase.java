@@ -135,7 +135,8 @@ public class SessionBase implements java.lang.AutoCloseable {
 			}
 		}
 		Request request = builder.build();
-		return client.newCall(request).execute();
+		
+		return OkHttpUtils.callWithRetires(client, request);
 	}
 	
 	public static String getCookieString (HttpCookie cookie) {
@@ -177,7 +178,7 @@ public class SessionBase implements java.lang.AutoCloseable {
 		builder.url(url);
 		builder.post(body);
 		Request request = builder.build();
-		return client.newCall(request).execute();
+		return OkHttpUtils.callWithRetires(client, request);
 	}
 	
 	/**
@@ -203,7 +204,7 @@ public class SessionBase implements java.lang.AutoCloseable {
 		builder.url(url);
 		builder.post(formBody);
 		Request request = builder.build();
-		return client.newCall(request).execute();
+		return OkHttpUtils.callWithRetires(client, request);
 	}
 	
 	// Whatever comes back from the UI can override the API Gateway URL setting.

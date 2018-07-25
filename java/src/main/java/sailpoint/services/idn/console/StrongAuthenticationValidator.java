@@ -34,7 +34,7 @@ public class StrongAuthenticationValidator {
 				session.open();
 				System.out.println("Successfully authenticated to UI session. CCSESSIONID: " + session.getUniqueId());
 				UserInterfaceSession uiSession = (UserInterfaceSession) session;
-				System.out.println("Strongly authentication UI session ...");
+				System.out.println("Strongly authenticating UI session ...");
 				uiSession.getNewSessionToken();
 				String jwtToken = uiSession.stronglyAuthenticate();
 				if (null != jwtToken) {

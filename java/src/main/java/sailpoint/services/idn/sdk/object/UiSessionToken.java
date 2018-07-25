@@ -14,7 +14,7 @@ import com.google.gson.annotations.SerializedName;
  */
 public class UiSessionToken {
 	
-	// Exmample JSON:
+	// Example JSON:
 	/*
 	 {
 	  "authType":"OAuth2.0",
@@ -42,10 +42,10 @@ public class UiSessionToken {
 	public String accessToken;
 	
 	@SerializedName("refreshIn")
-	public int refreshIn;
+	public Long refreshIn;
 	
 	@SerializedName("pollUrl")
-	public int pollUrl;
+	public String pollUrl;
 	
 	@SerializedName("strongAuth")
 	public boolean strongAuth;
@@ -88,19 +88,19 @@ public class UiSessionToken {
 		this.accessToken = accessToken;
 	}
 
-	public int getRefreshIn() {
+	public Long getRefreshIn() {
 		return refreshIn;
 	}
 
-	public void setRefreshIn(int refreshIn) {
+	public void setRefreshIn(Long refreshIn) {
 		this.refreshIn = refreshIn;
 	}
 
-	public int getPollUrl() {
+	public String getPollUrl() {
 		return pollUrl;
 	}
 
-	public void setPollUrl(int pollUrl) {
+	public void setPollUrl(String pollUrl) {
 		this.pollUrl = pollUrl;
 	}
 

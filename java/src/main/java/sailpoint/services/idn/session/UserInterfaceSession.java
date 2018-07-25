@@ -8,6 +8,8 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import okhttp3.internal.http2.Header;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jsoup.Jsoup;
@@ -597,10 +599,13 @@ public class UserInterfaceSession extends SessionBase {
 		// This call lists the strong authentication methods.
 		String getStrongAuthMethodsURL =  getApiGatewayUrl() + "/cc/api/user/getStrongAuthnMethods?_dc=" + System.currentTimeMillis();
 		
+		HashMap<String,String> headersMap = new HashMap<String,String>();
+		headersMap.put("Authorization", "Bearer " + this.accessToken);
+		
 		Response response;
 		String getStrongAuthMethodsJson;
 		try {
-			response = doGet(getStrongAuthMethodsURL, apiGwClient, null, null);
+			response = doGet(getStrongAuthMethodsURL, apiGwClient, headersMap, null);
 			getStrongAuthMethodsJson = response.body().string();
 			log.debug("getStrongAuthnMethods: " + getStrongAuthMethodsJson);
 		} catch (IOException e) {
@@ -617,7 +622,7 @@ public class UserInterfaceSession extends SessionBase {
 		// Pull back the list of challenge questions available for the user.
 		String apiChallengeListJson;
 		try {
-			response = doGet(getChlngQsURL, apiGwClient, null, null);
+			response = doGet(getChlngQsURL, apiGwClient, headersMap, null);
 			apiChallengeListJson = response.body().string();
 			log.debug("api/challenge/list: " + apiChallengeListJson);
 		} catch (IOException e) {
@@ -643,7 +648,7 @@ public class UserInterfaceSession extends SessionBase {
 		OkHttpClient.Builder apiGwClientBuilder = new OkHttpClient.Builder();
 		OkHttpUtils.applyTimeoutSettings(apiGwClientBuilder);
 		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
-		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
+		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
 		OkHttpClient apiGwClient = apiGwClientBuilder.build();
 		
 		String uiSessionUrl = getUserInterfaceUrl() + "ui/session";
@@ -653,7 +658,7 @@ public class UserInterfaceSession extends SessionBase {
 		try {
 			response = doGet(uiSessionUrl, apiGwClient, null, null);
 			uiSessionResponseJson = response.body().string();
-			log.debug("getStrongAuthnMethods: " + uiSessionResponseJson);
+			log.debug("UiSessionToken: " + uiSessionResponseJson);
 		} catch (IOException e) {
 			log.error("Failure while calling " + uiSessionUrl, e);
 			return null;

@@ -13,9 +13,11 @@ import org.apache.logging.log4j.Logger;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
+
 import sailpoint.services.idn.sdk.ClientCredentials;
 import sailpoint.services.idn.sdk.object.UiLoginGetResponse;
 import sailpoint.services.idn.sdk.object.UiSailpointGlobals;
+import sailpoint.services.idn.sdk.object.UiSessionToken;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -574,6 +576,99 @@ public class UserInterfaceSession extends SessionBase {
 
 		return;
 		
+	}
+	
+	/**
+	 * Strongly authenticate the User Interface session by submitting answers to KBA questions.
+	 * @param kbaAnswers
+	 * @return
+	 */
+	public String stronglyAuthenticate() {
+		
+		String retStr = null;
+		
+		// TODO: Cleanup / standardize this.
+		OkHttpClient.Builder apiGwClientBuilder = new OkHttpClient.Builder();
+		OkHttpUtils.applyTimeoutSettings(apiGwClientBuilder);
+		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
+		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
+		OkHttpClient apiGwClient = apiGwClientBuilder.build();
+		
+		// This call lists the strong authentication methods.
+		String getStrongAuthMethodsURL =  getApiGatewayUrl() + "/cc/api/user/getStrongAuthnMethods?_dc=" + System.currentTimeMillis();
+		
+		Response response;
+		String getStrongAuthMethodsJson;
+		try {
+			response = doGet(getStrongAuthMethodsURL, apiGwClient, null, null);
+			getStrongAuthMethodsJson = response.body().string();
+			log.debug("getStrongAuthnMethods: " + getStrongAuthMethodsJson);
+		} catch (IOException e) {
+			log.error("Failure while calling " + getStrongAuthMethodsURL, e);
+			return null;
+		}
+		
+		// TODO: Handle non-200 responses here!
+		
+		// Expected response: TBD.
+		
+		String getChlngQsURL = getApiGatewayUrl() + "/cc/api/challenge/list?allLanguages=false&_dc=" + System.currentTimeMillis();
+		
+		// Pull back the list of challenge questions available for the user.
+		String apiChallengeListJson;
+		try {
+			response = doGet(getChlngQsURL, apiGwClient, null, null);
+			apiChallengeListJson = response.body().string();
+			log.debug("api/challenge/list: " + apiChallengeListJson);
+		} catch (IOException e) {
+			log.error("Failure while calling " + getChlngQsURL, e);
+			return null;
+		}
+		
+		// TODO: Handle non-200 responses here!
+		
+		return retStr;
+		
+	}
+	
+	/**
+	 * Retrieves a new JWT session token for user interface session.  This is used by
+	 * user interface sessions to call into the API gateway.
+	 * 
+	 * @return
+	 */
+	public String getNewSessionToken() {
+		
+		// TODO: Cleanup / standardize this.
+		OkHttpClient.Builder apiGwClientBuilder = new OkHttpClient.Builder();
+		OkHttpUtils.applyTimeoutSettings(apiGwClientBuilder);
+		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
+		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
+		OkHttpClient apiGwClient = apiGwClientBuilder.build();
+		
+		String uiSessionUrl = getUserInterfaceUrl() + "ui/session";
+		
+		Response response;
+		String uiSessionResponseJson;
+		try {
+			response = doGet(uiSessionUrl, apiGwClient, null, null);
+			uiSessionResponseJson = response.body().string();
+			log.debug("getStrongAuthnMethods: " + uiSessionResponseJson);
+		} catch (IOException e) {
+			log.error("Failure while calling " + uiSessionUrl, e);
+			return null;
+		}
+		
+		// TODO: Handle non-200 responses here!
+		
+		Gson gson = new Gson();
+		
+		UiSessionToken uiSessToken = gson.fromJson(uiSessionResponseJson, UiSessionToken.class);
+		
+		this.csrfToken = uiSessToken.getCsrfToken();
+		this.oauthToken = uiSessToken.getAccessToken();
+		this.accessToken = uiSessToken.getAccessToken();
+		return uiSessToken.getAccessToken();
 	}
 
 }

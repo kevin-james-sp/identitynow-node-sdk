@@ -27,7 +27,9 @@ public class SessionBase implements java.lang.AutoCloseable {
 	// Default to API Only session types for SDK use.
 	protected SessionType sessionType = SessionType.SESSION_TYPE_API_ONLY;
 	
+	// The most recent JWT token associated with the session.
 	protected String accessToken = null;
+	
 	protected int expiresIn = -1;
 	protected boolean isAthenticated = false;
 	

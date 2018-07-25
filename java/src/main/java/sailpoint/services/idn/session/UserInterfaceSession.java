@@ -78,7 +78,11 @@ public class UserInterfaceSession extends SessionBase {
 	public long loginSequenceDuration = 0;
 	public long logoutSequenceDuration = 0; 
 	
-	CookieManager cookieManager = new CookieManager();
+	protected CookieManager cookieManager = new CookieManager();
+	
+	// Two clients used to talk to different edge interfaces of IdentityNow.
+	protected OkHttpClient userInterfaceClient = null;
+	protected OkHttpClient apiGatewayClient = null;
 	
 	public UserInterfaceSession (ClientCredentials clientCredentials) {
 		
@@ -105,6 +109,7 @@ public class UserInterfaceSession extends SessionBase {
 	}
 	
 	public OkHttpClient getClient() {
+		// There is an ambiguiity here: Do we want the CC client or the API GW client.
 		throw new IllegalArgumentException("TODO: Stub this out for UserInterfaceSession");
 	}
 	
@@ -220,15 +225,23 @@ public class UserInterfaceSession extends SessionBase {
 	 * Return an OkHttpClient for use in calling into the API Gateway.
 	 * The UI makes some (nay most?) of its API lookups via the API Gateway now.
 	 * The API Gateway clients do _not_ utilize cookies the way the UI clients do.
+	 * 
+	 * This is a singleton; the client is not reconstructed every call, see: 
+	 *    https://github.com/square/okhttp/issues/2636
+	 *     
 	 * @return
 	 */
 	public OkHttpClient getApiGatewayOkClient () {
+		
+		if (null != apiGatewayClient) return apiGatewayClient;
+		
 		OkHttpClient.Builder apiGwClientBuilder = new OkHttpClient.Builder();
 		OkHttpUtils.applyTimeoutSettings(apiGwClientBuilder);
 		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
 		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
-		OkHttpClient apiGwClient = apiGwClientBuilder.build();
-		return apiGwClient;
+		apiGatewayClient = apiGwClientBuilder.build();
+		
+		return apiGatewayClient;
 	}
 	
 	/**
@@ -236,21 +249,25 @@ public class UserInterfaceSession extends SessionBase {
 	 * This supports traditional "v0" and "v1" API calls based on cookies, CSRF token
 	 * and CCSESSIONID.   The cookie store is declared at the UserInterfaceSession 
 	 * class instance and is shared by all calls made to the UI.
+	 * 
+	 * This is a singleton; the client is not reconstructed every call, see: 
+	 *    https://github.com/square/okhttp/issues/2636
+	 *    
 	 * @return
 	 */
 	public OkHttpClient getUserInterfaceOkClient () {
+		
+		if (null != userInterfaceClient) return userInterfaceClient;
+		
 		OkHttpClient.Builder uiClientBuilder = new OkHttpClient.Builder();
 		OkHttpUtils.applyTimeoutSettings(uiClientBuilder);
 		OkHttpUtils.applyLoggingInterceptors(uiClientBuilder);
 		uiClientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
-		OkHttpClient uiClient = uiClientBuilder.build();
-		return uiClient;
+		userInterfaceClient = uiClientBuilder.build();
+		
+		return userInterfaceClient;
 	}
 	
-	
-	
-
-
 	/**
 	 * Connect to the IdentityNow service and establish the session.  This "logs in"
 	 * using whatever means the session has at its disposal to connect to the service.
@@ -327,6 +344,7 @@ public class UserInterfaceSession extends SessionBase {
 			// fall through to logic below.
 			break;
 		}
+		response.close();
 		
 		// Pull out the CCSESSIONID cookie, we need to pass this to the SSO server.
 		HttpCookie ccSessionCookie = null;
@@ -566,6 +584,8 @@ public class UserInterfaceSession extends SessionBase {
 //		this.setApiGatewayUrl(apiSlptGlobals.getApi().getBaseUrl());
 //		log.debug("API URL:" + this.getApiGatewayUrl());
 		
+		getNewSessionToken();
+		
 		loginSequenceDuration = System.currentTimeMillis() - loginSequenceStartTime;
 		log.debug("Login sequence completed in " + loginSequenceDuration + " msecs.");
 		
@@ -580,7 +600,8 @@ public class UserInterfaceSession extends SessionBase {
 	Git commit: cd3c37a34516c35254e5eb13d37f8b93e6260480 
 		 */
 		
-		// TODO: Make an API Gateway call to CC's api/user/get interface.  
+		// TODO: Make an API Gateway call to CC's api/user/get interface.
+		
 		return this;
 	}
 	
@@ -815,6 +836,28 @@ public class UserInterfaceSession extends SessionBase {
 		this.oauthToken = uiSessToken.getAccessToken();
 		this.accessToken = uiSessToken.getAccessToken();
 		return uiSessToken.getAccessToken();
+	}
+	
+	public String doApiGet (String apiUrlSuffix) {
+		
+		String apiUrl = getApiGatewayUrl() + apiUrlSuffix;
+		
+		HashMap<String,String> apiHeadersMap = new HashMap<String,String>();
+		apiHeadersMap.put("Authorization", "Bearer " + this.accessToken);
+		
+		String responseJson;
+		try (Response response = doGet(apiUrl, getApiGatewayOkClient(), apiHeadersMap, null)) {
+			if (!response.isSuccessful()) {
+				log.error(response.code() + " while calling " + apiUrl);
+			}
+			responseJson = response.body().string();
+			log.debug(apiUrlSuffix + ": " + responseJson);
+			return responseJson;
+		} catch (IOException e) {
+			log.error("Failure while calling " + apiUrl, e);
+			return null;
+		}
+		
 	}
 
 }

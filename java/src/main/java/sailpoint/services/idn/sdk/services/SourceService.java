@@ -3,6 +3,7 @@ package sailpoint.services.idn.sdk.services;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
+import retrofit2.http.DELETE;
 import retrofit2.http.Field;
 import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.GET;
@@ -11,6 +12,8 @@ import retrofit2.http.POST;
 import retrofit2.http.Part;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
+
+import java.util.Map;
 
 public interface SourceService {
 	
@@ -57,7 +60,7 @@ public interface SourceService {
 	
 	@POST( "/api/source/deleteSchemaAttribute" )
 	Call<ResponseBody> deleteSchemaAttribute (  );
-	
+
 	/*
 	 * Aggregation
 	 */
@@ -217,5 +220,48 @@ public interface SourceService {
 	
 	@POST( "/api/source/syncPassword" )
 	Call<ResponseBody> syncPassword (  );
-	
+
+	/*
+	JDBC Provisioning endpoints, these are still in development, and will not be callable until CC endpoints are updated
+	to reference Mantis endpoints. The paths reflect what we believe will be added to CC, but are likely to change before finalization.
+	 See IDNPERF-331
+	 */
+
+
+
+	@POST("/api/source/addAttributeToGroupSchema")
+	Call<ResponseBody> addAttributeToGroupSchema(@Field ("schemaAttributeRequest") Map schemaAttributeRequest,
+	                                             @Field("sourceId") String sourceId);
+
+	@POST("/api/source/deleteAttributesFromGroupSchema")
+	Call<ResponseBody> deleteAttributesFromGroupSchema(@Field("sourceId") String sourceId,
+	                                                   @Field("schemaAttributeRequest") Map schemaAttributeRequest);
+
+	@POST("/api/source/deleteGroupSchema")
+	Call<ResponseBody> deleteGroupSchema(@Field("sourceId") String sourceId);
+
+	@GET("/api/source/buildMapRule")
+	Call<ResponseBody> getBuildMapRule(@Field("sourceId") String sourceId);
+
+	@GET("api/source/JDBCProvisionRule")
+	Call<ResponseBody> getJDBCProvisionRule(@Field("sourceId") String sourceId);
+
+	@POST("/api/source/buildMapRule")
+	Call<ResponseBody> postBuildMapRule(@Field("sourceId") String sourceId,
+	                                    @Field("sourceCode") String sourceCode);
+
+	@POST("/api/source/JDBCProvisionRule")
+	Call<ResponseBody> postJDBCProvisionRule(@Field("sourceId") String sourceId,
+	                                         @Field("sourceCode") String sourceCode);
+
+	@DELETE("/api/source/buildMapRule")
+	Call<ResponseBody> deleteBuildMapRule(@Field("sourceId") String sourceId);
+
+	@DELETE("/api/source/JDBCProvisionRule")
+	Call<ResponseBody> deleteJDBCProvisionRule(@Field("sourceId") String sourceId);
+
+	@POST("/api/provisioning/discoverCreatePolicy")
+	Call<ResponseBody> discoverCreatePolicy(@Field("sourceId") String sourceId);
+
+
 }

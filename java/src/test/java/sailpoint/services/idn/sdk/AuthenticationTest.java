@@ -6,7 +6,7 @@ class AuthenticationTest {
 
 	@Test
 	void test() {
-		/*
+
 		Log4jUtils.boostrapLog4j(Level.INFO);
 		
 		List<ClientCredentials> credsList = FrequentlyUsedCredentials.getInstance().getAllTestCredentials();

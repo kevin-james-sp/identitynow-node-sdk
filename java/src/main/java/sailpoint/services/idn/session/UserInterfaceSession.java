@@ -69,6 +69,9 @@ public class UserInterfaceSession extends SessionBase {
 	public static final String URL_UI          = "ui";
 	public static final String URL_LOGOUT      = "logout";
 	
+	// Max token age: 5 minutes in milliseconds.
+	public static final long MAX_JWT_TOKEN_AGE = 300000;
+	
 	public String ssoUrl = null;
 	public String ccSessionId = null;
 	public String csrfToken = null;
@@ -77,6 +80,7 @@ public class UserInterfaceSession extends SessionBase {
 	// Durations for performance analysis.
 	public long loginSequenceDuration = 0;
 	public long logoutSequenceDuration = 0; 
+	public long lastTokenUpdate = 0;
 	
 	protected CookieManager cookieManager = new CookieManager();
 	
@@ -832,10 +836,27 @@ public class UserInterfaceSession extends SessionBase {
 		
 		UiSessionToken uiSessToken = gson.fromJson(uiSessionResponseJson, UiSessionToken.class);
 		
+		lastTokenUpdate = System.currentTimeMillis();
 		this.csrfToken = uiSessToken.getCsrfToken();
 		this.oauthToken = uiSessToken.getAccessToken();
 		this.accessToken = uiSessToken.getAccessToken();
+		
+		
 		return uiSessToken.getAccessToken();
+	}
+	
+	// Update the JWT token used for this session if we get close to expiration.
+	// Return true of a new token was requested/retrieved, false if the same one remains.
+	public boolean checkTokenExpiration() {
+		
+		long tokenAge = System.currentTimeMillis() - lastTokenUpdate;
+		if (tokenAge > MAX_JWT_TOKEN_AGE) {
+			getNewSessionToken();
+			return true;
+		}
+		
+		return false;
+		
 	}
 	
 	public String doApiGet (String apiUrlSuffix) {
@@ -844,6 +865,7 @@ public class UserInterfaceSession extends SessionBase {
 		
 		HashMap<String,String> apiHeadersMap = new HashMap<String,String>();
 		apiHeadersMap.put("Authorization", "Bearer " + this.accessToken);
+		// apiHeadersMap.put("User-Agent", OkHttpUtils.getUserAgent());
 		
 		try (Response response = doGet(apiUrl, getApiGatewayOkClient(), apiHeadersMap, null)) {
 			if (!response.isSuccessful()) {

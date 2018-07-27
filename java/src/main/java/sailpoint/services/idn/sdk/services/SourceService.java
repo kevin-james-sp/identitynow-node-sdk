@@ -222,16 +222,15 @@ public interface SourceService {
 	Call<ResponseBody> syncPassword (  );
 
 	/*
-	JDBC Provisioning endpoints, these are still in development, and will not be callable until CC endpoints are updated
+	JDBC Provisioning endpoints,
+	these are still in development, and will not be callable until CC endpoints are updated
 	to reference Mantis endpoints. The paths reflect what we believe will be added to CC, but are likely to change before finalization.
 	 See IDNPERF-331
 	 */
 
-
-
 	@POST("/api/source/addAttributeToGroupSchema")
-	Call<ResponseBody> addAttributeToGroupSchema(@Field ("schemaAttributeRequest") Map schemaAttributeRequest,
-	                                             @Field("sourceId") String sourceId);
+	Call<ResponseBody> addAttributeToGroupSchema(@Field ("sourceId") String sourceId,
+	                                             @Field("schemaAttributeRequest") String schemaAttributeRequest);
 
 	@POST("/api/source/deleteAttributesFromGroupSchema")
 	Call<ResponseBody> deleteAttributesFromGroupSchema(@Field("sourceId") String sourceId,

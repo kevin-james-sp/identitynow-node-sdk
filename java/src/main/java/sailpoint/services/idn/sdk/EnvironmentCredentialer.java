@@ -19,6 +19,9 @@ public class EnvironmentCredentialer {
 	
 	public final static Logger log = LogManager.getLogger(EnvironmentCredentialer.class);
 	
+	// Optional environment variable that specifies where the config file is located.
+	public static final String IDENTITYNOW_SDK_CONF = "IDENTITYNOW_SDK_CONF";
+	
 	// The static credentials file lives hidden in a directory for the local user.
 	public static final String credentialsFile = "/.idnSdk/sdkClient.conf";
 	
@@ -46,7 +49,9 @@ public class EnvironmentCredentialer {
 		
 		Properties props = new Properties();
 		
-		String filePath = System.getProperty("user.home") + "/" + credentialsFile; 
+		// Allow the environment to specify an optional configuration file path. 
+		String defaultCredsPath = System.getProperty("user.home") + "/" + credentialsFile;
+		String filePath = System.getProperty("IDENTITYNOW_SDK_CONF", defaultCredsPath);
 		
 		File f = new File(filePath);
 		if (f.exists()) try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {

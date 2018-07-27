@@ -19,6 +19,12 @@ project.uploadArchives{
 	}
 }
 
+// Support a gradle task of 'testJar' that builds the .jar with the test classes included.
+task testJar(type: Jar) {
+	classifier = 'tests'
+	from sourceSets.test.output.classesDirs
+}
+
 jar {
 	manifest {
 		attributes 'Main-Class': 'sailpoint.services.idn.console.EnvironmentReport'

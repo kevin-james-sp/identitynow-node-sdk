@@ -1,8 +1,6 @@
 package sailpoint.services.idn.session;
 
 
-import java.io.IOException;
-
 import okhttp3.OkHttpClient;
 import retrofit2.Response;
 import retrofit2.Retrofit;
@@ -11,6 +9,8 @@ import sailpoint.services.idn.sdk.ClientCredentials;
 import sailpoint.services.idn.sdk.EnvironmentCredentialer;
 import sailpoint.services.idn.sdk.interceptor.BasicAuthInterceptor;
 import sailpoint.services.idn.sdk.services.AuthorizationService;
+
+import java.io.IOException;
 
 /**
  * Factory for creating various types of IdentityNow sessions.
@@ -21,6 +21,7 @@ import sailpoint.services.idn.sdk.services.AuthorizationService;
  *  - A simple auth UI session can exist with no API credentials in context.
  *  - A strong auth UI session can exist with no API credentials in context.
  *  - An oAuthToken CC API session must have an API key and users basic creds.
+ *  This needs to be verified as of 7/30/2018
  * 
  * @author adam.hampton
  *

@@ -32,11 +32,8 @@ public interface SourceService {
 	Call<ResponseBody> get (  );
 	
 	@POST( "/api/source/create" )
-	Call<ResponseBody> create (@Field("description") String description,
-	                           @Field("name") String name,
-	                           @Field("serviceDefinitionName") String serviceDefinitionName,
-	                           @Field("serviceType") String serviceType,
-	                           @Field("sourceType") String sourceType);
+	@FormUrlEncoded
+	Call<ResponseBody> create (@FieldMap Map<String, String> params);
 
 
 	@POST( "/api/source/update/{sourceId}" )

@@ -1,10 +1,12 @@
 package sailpoint.services.idn.sdk.services;
 
+import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.http.DELETE;
 import retrofit2.http.Field;
+import retrofit2.http.FieldMap;
 import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.GET;
 import retrofit2.http.Multipart;
@@ -15,6 +17,8 @@ import retrofit2.http.Query;
 
 import java.util.Map;
 
+//TODO: Flesh out all calls. A warning to anyone using this library, not all calls are complete and may not function
+//as intended or at all
 public interface SourceService {
 	
 	/*
@@ -28,10 +32,14 @@ public interface SourceService {
 	Call<ResponseBody> get (  );
 	
 	@POST( "/api/source/create" )
-	Call<ResponseBody> create (  );
-	
-	@POST( "/api/source/update" )
-		Call<ResponseBody> update (  );
+	@FormUrlEncoded
+	Call<ResponseBody> create (@FieldMap Map<String, String> params);
+
+
+	@POST( "/api/source/update/{sourceId}" )
+	@FormUrlEncoded
+	Call<ResponseBody> update (@FieldMap Map<String, String> params,
+	                           @Path("sourceId") int sourceId);
 	
 	@POST( "/api/source/delete" )
 	Call<ResponseBody> delete (  );
@@ -49,14 +57,16 @@ public interface SourceService {
 	@GET( "/api/source/getAccountSchema" )
 	Call<ResponseBody> getAccountSchema (  );
 	
-	@POST( "/api/source/discoverSchema" )
-	Call<ResponseBody> discoverSchema (  );
+	@POST( "/api/source/discoverSchema/{sourceId}" )
+	Call<ResponseBody> discoverSchema ( @Path("sourceId") int sourceId );
 	
 	@POST( "/api/source/createSchemaAttribute" )
 	Call<ResponseBody> createSchemaAttribute (  );
 	
-	@POST( "/api/source/updateSchemaAttributes" )
-	Call<ResponseBody> updateSchemaAttributes (  );
+	@POST( "/api/source/updateSchemaAttributes/{sourceId}" )
+	@FormUrlEncoded
+	Call<ResponseBody> updateSchemaAttributes (@Path("sourceId") int sourceId,
+	                                           @FieldMap Map<String, String> params);
 	
 	@POST( "/api/source/deleteSchemaAttribute" )
 	Call<ResponseBody> deleteSchemaAttribute (  );
@@ -112,8 +122,10 @@ public interface SourceService {
 	 * Uploads
 	 */
 	
-	@POST( "/api/source/uploadConnectorFile" )
-	Call<ResponseBody> uploadConnectorFile (  );
+	@POST( "/api/source/uploadConnectorFile/{sourceId}" )
+	@Multipart
+	Call<ResponseBody> uploadConnectorFile (@Path("sourceId") int sourceId,
+	                                        @Part MultipartBody.Part filePart);
 	
 	@POST( "/api/source/uploadCustomIcon" )
 	Call<ResponseBody> uploadCustomIcon (  );

@@ -52,16 +52,24 @@ public class StrongAuthnConcurrentDriver {
 					try (UserInterfaceSession uiSession = (UserInterfaceSession) SessionFactory.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC)) {
 						uiSession.open();
 						uiSession.getNewSessionToken();
-						uiSession.stronglyAuthenticate();
-						ccSession = uiSession.getUniqueId();
+						String newSession = uiSession.stronglyAuthenticate();
+						if (null == newSession) {
+							int failCount = failureCount.incrementAndGet();
+							log.error("Failure establising new CC session, failure ratio: " + failCount + "/" + callCount.get());
+						} else {
+							ccSession = uiSession.getUniqueId();
+						}
+						
 					} catch (IOException e) {
 						int failCount = failureCount.incrementAndGet();
 						log.error("Failure establising new CC session, failure ratio: " + failCount + "/" + callCount.get(), e);
 						return;
 					}
-					long sessionSetup = System.currentTimeMillis() - sessionStart;
 					
-					log.info("Call " + thisCall + " successfully authenticated to CC session in " + sessionSetup + " msecs, CCSESSIONID:" + ccSession);
+					if (null != ccSession) {
+						long sessionSetup = System.currentTimeMillis() - sessionStart;
+						log.info("Call " + thisCall + " successfully authenticated to CC session in " + sessionSetup + " msecs, CCSESSIONID:" + ccSession);
+					}
 					
 					threadCount++;
 				

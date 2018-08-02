@@ -831,6 +831,9 @@ public class UserInterfaceSession extends SessionBase {
 		}
 		
 		// TODO: Handle non-200 responses here!
+		if (!response.isSuccessful()) {
+			return null;
+		}
 		
 		Gson gson = new Gson();
 		

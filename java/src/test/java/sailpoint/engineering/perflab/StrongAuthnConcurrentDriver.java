@@ -58,9 +58,10 @@ public class StrongAuthnConcurrentDriver {
 						return;
 					}
 					long sessionSetup = System.currentTimeMillis() - sessionStart;
-					log.info("Successfully authenticated to CC session in " + sessionSetup + " msecs, CCSESSIONID:" + ccSession);
 					
 					int thisCall = callCount.incrementAndGet();
+					log.info("Call " + thisCall + " successfully authenticated to CC session in " + sessionSetup + " msecs, CCSESSIONID:" + ccSession);
+					
 					threadCount++;
 				
 				}

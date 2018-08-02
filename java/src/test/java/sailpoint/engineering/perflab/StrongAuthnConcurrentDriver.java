@@ -46,6 +46,8 @@ public class StrongAuthnConcurrentDriver {
 						
 					long sessionStart = System.currentTimeMillis();
 					String ccSession = null;
+					
+					int thisCall = callCount.incrementAndGet();
 					// Auto-close the uISession after every try() block.
 					try (UserInterfaceSession uiSession = (UserInterfaceSession) SessionFactory.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC)) {
 						uiSession.open();
@@ -53,13 +55,12 @@ public class StrongAuthnConcurrentDriver {
 						uiSession.stronglyAuthenticate();
 						ccSession = uiSession.getUniqueId();
 					} catch (IOException e) {
-						log.error("Failure establising new CC session", e);
-						failureCount.incrementAndGet();
+						int failCount = failureCount.incrementAndGet();
+						log.error("Failure establising new CC session, failure ratio: " + failCount + "/" + callCount.get(), e);
 						return;
 					}
 					long sessionSetup = System.currentTimeMillis() - sessionStart;
 					
-					int thisCall = callCount.incrementAndGet();
 					log.info("Call " + thisCall + " successfully authenticated to CC session in " + sessionSetup + " msecs, CCSESSIONID:" + ccSession);
 					
 					threadCount++;

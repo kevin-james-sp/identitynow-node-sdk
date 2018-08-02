@@ -28,7 +28,7 @@ public class StrongAuthnConcurrentDriver {
 		
 		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
 		
-		int numWorkerThreads = 12;
+		int numWorkerThreads = 32;
 		log.info("Making Bulk strong authentication calls into " + envCreds.getOrgName() + " using " + numWorkerThreads + " threads.");
 		
 		AtomicInteger desiredCalls = new AtomicInteger(10000);
@@ -54,6 +54,7 @@ public class StrongAuthnConcurrentDriver {
 						ccSession = uiSession.getUniqueId();
 					} catch (IOException e) {
 						log.error("Failure establising new CC session", e);
+						failureCount.incrementAndGet();
 						return;
 					}
 					long sessionSetup = System.currentTimeMillis() - sessionStart;

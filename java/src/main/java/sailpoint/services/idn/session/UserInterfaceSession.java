@@ -5,6 +5,7 @@ import com.google.gson.reflect.TypeToken;
 
 import okhttp3.FormBody;
 import okhttp3.Headers;
+import okhttp3.Interceptor;
 import okhttp3.JavaNetCookieJar;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -236,17 +237,27 @@ public class UserInterfaceSession extends SessionBase {
 	 * @return
 	 */
 	public OkHttpClient getApiGatewayOkClient () {
-		
+		return getApiGatewayOkClient(null);
+	}
+
+	public OkHttpClient getApiGatewayOkClient (List<Interceptor> interceptorsToApply) {
+	
 		if (null != apiGatewayClient) return apiGatewayClient;
 		
 		OkHttpClient.Builder apiGwClientBuilder = new OkHttpClient.Builder();
 		OkHttpUtils.applyTimeoutSettings(apiGwClientBuilder);
 		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
 		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
+		if (null != interceptorsToApply) {
+			for (Interceptor icept  : interceptorsToApply) {
+				apiGwClientBuilder.addInterceptor(icept);
+			}	
+		}
 		apiGatewayClient = apiGwClientBuilder.build();
 		
 		return apiGatewayClient;
 	}
+	
 	
 	/**
 	 * Return an OkHttpClient for use in calling into the IdentityNow user interface.

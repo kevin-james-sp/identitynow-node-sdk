@@ -11,6 +11,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import okhttp3.Interceptor.Chain;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -258,6 +259,22 @@ public class UserInterfaceSession extends SessionBase {
 		return apiGatewayClient;
 	}
 	
+	/** 
+	 * Returns an Interceptor that injects a UI Session's JWT token into the call sequence.
+	 * @return
+	 */
+	public Interceptor getJwtTokenBearerInterceptor () {
+		return new Interceptor() {
+				@Override
+				public Response intercept(Chain chain) throws IOException {
+					Request originalReq = chain.request();
+					Request.Builder builder =
+							originalReq.newBuilder().header("Authorization", "Bearer " + accessToken);
+					Request newRequest = builder.build();
+					return chain.proceed(newRequest);
+				}
+		};
+	}
 	
 	/**
 	 * Return an OkHttpClient for use in calling into the IdentityNow user interface.

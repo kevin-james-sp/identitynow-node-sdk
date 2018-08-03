@@ -19,6 +19,8 @@ import java.util.Map;
 
 //TODO: Flesh out all calls. A warning to anyone using this library, not all calls are complete and may not function
 //as intended or at all
+//These calls do not explicitly state the need for an auth header, but they will need an auth header with an api token.
+//We recommend the use of an interceptor to add the token to all calls when using this api.
 public interface SourceService {
 	
 	/*

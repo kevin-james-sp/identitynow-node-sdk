@@ -28,7 +28,8 @@ public class StrongAuthnConcurrentDriver {
 		
 		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
 		
-		int numWorkerThreads = 32;
+		int numWorkerThreads = Integer.parseInt(System.getProperty("numWorkerThreads", "32"));
+		
 		log.info("Making Bulk strong authentication calls into " + envCreds.getOrgName() + " using " + numWorkerThreads + " threads.");
 		
 		AtomicInteger desiredCalls = new AtomicInteger(10000);

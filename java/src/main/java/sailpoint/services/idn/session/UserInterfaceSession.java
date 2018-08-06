@@ -588,7 +588,12 @@ public class UserInterfaceSession extends SessionBase {
 //		this.setApiGatewayUrl(apiSlptGlobals.getApi().getBaseUrl());
 //		log.debug("API URL:" + this.getApiGatewayUrl());
 		
-		getNewSessionToken();
+		// Allow the environment to turn off the /ui/session call for testing.
+		if (Boolean.parseBoolean(System.getProperty("skipUiSessionCall", "false"))) {
+			log.debug("Skipping /ui/session call by config request.");
+		} else {
+			getNewSessionToken();
+		}
 		
 		loginSequenceDuration = System.currentTimeMillis() - loginSequenceStartTime;
 		log.debug("Login sequence completed in " + loginSequenceDuration + " msecs.");

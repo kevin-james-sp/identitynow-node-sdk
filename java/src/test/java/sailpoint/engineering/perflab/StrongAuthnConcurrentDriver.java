@@ -52,10 +52,10 @@ public class StrongAuthnConcurrentDriver {
 					// Auto-close the uISession after every try() block.
 					try (UserInterfaceSession uiSession = (UserInterfaceSession) SessionFactory.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC)) {
 						uiSession.open();
-						uiSession.getNewSessionToken();
 						if (Boolean.parseBoolean(System.getProperty("skipUiSessionCall", "false"))) {
 							log.debug("Skipping stronglyAuthenticate() due to skipUiSessionCall setting.");
 						} else {
+							// uiSession.getNewSessionToken();
 							String newSession = uiSession.stronglyAuthenticate();
 							if (null == newSession) {
 								int failCount = failureCount.incrementAndGet();

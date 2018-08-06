@@ -808,6 +808,11 @@ public class UserInterfaceSession extends SessionBase {
 		// TODO: Handle non-200 response.
 		
 		// Get a new session token to reflect the strongly authenticated status of the session.
+		if (Boolean.parseBoolean(System.getProperty("skipUiSessionCall", "false"))) {
+			log.debug("Skipping /ui/session call by config request.");
+			return accessToken;
+		} 
+		
 		return getNewSessionToken();
 		
 	}

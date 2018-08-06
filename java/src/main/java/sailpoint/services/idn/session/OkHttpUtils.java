@@ -49,6 +49,11 @@ public class OkHttpUtils {
 			Boolean.parseBoolean((System.getProperty("exposeHostUser", "true")))
 	);
 	
+	// Configurable option for exposing thread name in User-Agent strings.
+	public static AtomicBoolean exposeThreadName = new AtomicBoolean(
+			Boolean.parseBoolean((System.getProperty("exposeThreadName", "false")))
+	);
+	
 	// Calculated 1 time and then re-used for the remainder of calls.
 	private static String userAgent = null;
 
@@ -76,6 +81,7 @@ public class OkHttpUtils {
 		sb.append("Mozilla/5.0 (IdentityNow Services Chandlery SDK Client on ");
 		sb.append(System.getProperty("os.name") + " " + System.getProperty("os.version"));
 		sb.append(" java:" + System.getProperty("java.version"));
+		
 		if (exposeHostName.get()) {
 			String hostName = "unspecified";
 			try {
@@ -85,9 +91,15 @@ public class OkHttpUtils {
 			}
 			sb.append(" host:" + hostName);
 		}
+		
 		if (exposeHostUser.get()) {
 			sb.append(" user:" + System.getProperty("user.name"));
 		}
+		
+		if (exposeThreadName.get()) {
+			sb.append(" thread:" + Thread.currentThread().getName());
+		}
+		
 		sb.append(")");
 		
 		userAgent = sb.toString();

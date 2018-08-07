@@ -74,8 +74,12 @@ public class OkHttpUtils {
 	// Return the Chandlery user agent for other HTTP clients to use.
 	public static String getUserAgent() {
 		
-		// Short circuit if we have already calculated the User-Agent string.
-		if (null != userAgent) return userAgent;
+		if (Boolean.parseBoolean(System.getProperty("skipUiSessionCall", "false"))) {
+			// Short circuit if we have already calculated the User-Agent string.
+			if (null != userAgent) return userAgent;
+		} else {
+			// re-evaluated every time, fall through to code below.
+		}
 		
 		StringBuilder sb = new StringBuilder();		
 		sb.append("Mozilla/5.0 (IdentityNow Services Chandlery SDK Client on ");

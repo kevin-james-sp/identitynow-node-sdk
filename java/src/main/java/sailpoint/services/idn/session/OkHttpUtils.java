@@ -74,11 +74,11 @@ public class OkHttpUtils {
 	// Return the Chandlery user agent for other HTTP clients to use.
 	public static String getUserAgent() {
 		
-		if (Boolean.parseBoolean(System.getProperty("skipUiSessionCall", "false"))) {
+		if (exposeThreadName.get()) {
+			// User-agent is re-evaluated every time, fall through to code below.
+		} else {
 			// Short circuit if we have already calculated the User-Agent string.
 			if (null != userAgent) return userAgent;
-		} else {
-			// re-evaluated every time, fall through to code below.
 		}
 		
 		StringBuilder sb = new StringBuilder();		
@@ -100,8 +100,10 @@ public class OkHttpUtils {
 			sb.append(" user:" + System.getProperty("user.name"));
 		}
 		
+		// This blows away all previous settings.
 		if (exposeThreadName.get()) {
-			sb.append(" thread:" + Thread.currentThread().getName());
+			sb = new StringBuilder();
+			sb.append("Chandlery-"+ Thread.currentThread().getName() + " (exposeThreadName true");
 		}
 		
 		sb.append(")");

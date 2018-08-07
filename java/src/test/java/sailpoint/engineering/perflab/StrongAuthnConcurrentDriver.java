@@ -20,11 +20,14 @@ import sailpoint.services.idn.session.UserInterfaceSession;
 
 public class StrongAuthnConcurrentDriver {
 	
-	public final static Logger log = LogManager.getLogger(StrongAuthnConcurrentDriver.class);
+	public static Logger log = null;
 
 	public static void main(String[] args) {
 		
 		Log4jUtils.boostrapLog4j(Level.INFO);
+		
+		// Assign this _after_ bootstrapping log4j to prevent errors in output.
+		log = LogManager.getLogger(StrongAuthnConcurrentDriver.class);
 		
 		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
 		

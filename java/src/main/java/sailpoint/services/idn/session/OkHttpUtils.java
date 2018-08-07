@@ -103,10 +103,12 @@ public class OkHttpUtils {
 		// This blows away all previous settings.
 		if (exposeThreadName.get()) {
 			sb = new StringBuilder();
-			sb.append("Chandlery-"+ Thread.currentThread().getName() + " (exposeThreadName true");
+			sb.append("Chandlery-"+ Thread.currentThread().getName());
+		} else {
+			sb.append(")");
 		}
 		
-		sb.append(")");
+		
 		
 		userAgent = sb.toString();
 		

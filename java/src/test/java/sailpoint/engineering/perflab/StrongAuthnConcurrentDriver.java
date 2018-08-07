@@ -51,7 +51,13 @@ public class StrongAuthnConcurrentDriver {
 					int thisCall = callCount.incrementAndGet();
 					// Auto-close the uISession after every try() block.
 					try (UserInterfaceSession uiSession = (UserInterfaceSession) SessionFactory.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC)) {
-						uiSession.open();
+						UserInterfaceSession openOk = uiSession.open();
+						if (null == openOk) {
+							int failCount = failureCount.incrementAndGet();
+							log.error("Failure establising new CC session, failure ratio: " + failCount + "/" + callCount.get());
+						} else {
+							ccSession = openOk.getUniqueId();
+						}
 						if (Boolean.parseBoolean(System.getProperty("skipUiSessionCall", "false"))) {
 							log.debug("Skipping stronglyAuthenticate() due to skipUiSessionCall setting.");
 						} else {
@@ -59,7 +65,7 @@ public class StrongAuthnConcurrentDriver {
 							String newSession = uiSession.stronglyAuthenticate();
 							if (null == newSession) {
 								int failCount = failureCount.incrementAndGet();
-								log.error("Failure establising new CC session, failure ratio: " + failCount + "/" + callCount.get());
+								log.error("Failure establising strongly authenticated CC session, failure ratio: " + failCount + "/" + callCount.get());
 							} else {
 								ccSession = uiSession.getUniqueId();
 							}

@@ -263,7 +263,7 @@ public class UserInterfaceSession extends SessionBase {
 	 * Returns an Interceptor that injects a UI Session's JWT token into the call sequence.
 	 * @return
 	 */
-	public Interceptor getJwtTokenBearerInterceptor () {
+	private Interceptor getJwtTokenBearerInterceptor () {
 		return new Interceptor() {
 				@Override
 				public Response intercept(Chain chain) throws IOException {

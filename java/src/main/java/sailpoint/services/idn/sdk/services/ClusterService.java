@@ -9,7 +9,7 @@ public interface ClusterService {
 
 	//null okay for the Query query.
 	@GET( "/api/cluster/list" )
-	Call<ResponseBody> supportsAggregation (@Query("dc") int dc,
+	Call<ResponseBody> clusterList (@Query("dc") long dc,
 	                                        @Query("operational") boolean operational,
 	                                        @Query("query") String query);
 

@@ -8,7 +8,7 @@ import retrofit2.http.Query;
 public interface ClusterService {
 
 	//null okay for the Query query.
-	@GET( "/api/cluster/list" )
+	@GET( "/cc/api/cluster/list" )
 	Call<ResponseBody> clusterList (@Query("dc") long dc,
 	                                        @Query("operational") boolean operational,
 	                                        @Query("query") String query);

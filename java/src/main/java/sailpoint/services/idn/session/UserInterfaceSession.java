@@ -571,7 +571,7 @@ public class UserInterfaceSession extends SessionBase {
 			catch (NullPointerException e){
 				log.error("A null pointer exception has occurred. Did the post to SSO return all headers?");
 				if(nextUrl == null)
-					log.debug("The Location header was null.");
+					log.error("The Location header was null.");
 			}
 			switch (response.code()) {
 			case 302:

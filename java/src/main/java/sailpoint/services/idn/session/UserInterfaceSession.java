@@ -113,7 +113,7 @@ public class UserInterfaceSession extends SessionBase {
 	public String getUniqueId() {
 		return ccSessionId;
 	}
-	
+
 	public OkHttpClient getClient() {
 		// There is an ambiguiity here: Do we want the CC client or the API GW client.
 		throw new IllegalArgumentException("TODO: Stub this out for UserInterfaceSession");
@@ -297,7 +297,7 @@ public class UserInterfaceSession extends SessionBase {
 		uiClientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
 		uiClientBuilder.addInterceptor(getJwtTokenBearerInterceptor());
 		userInterfaceClient = uiClientBuilder.build();
-		
+
 		return userInterfaceClient;
 	}
 	
@@ -565,7 +565,14 @@ public class UserInterfaceSession extends SessionBase {
 		boolean redirectsDone = false;
 		String nextUrl = response.header("Location");
 		do {
-			response = doGet(nextUrl, manual302Client, null, cookieManager.getCookieStore().getCookies());
+			try{
+				response = doGet(nextUrl, manual302Client, null, cookieManager.getCookieStore().getCookies());
+			}
+			catch (NullPointerException e){
+				log.error("A null pointer exception has occurred. Did the post to SSO return all headers?");
+				if(nextUrl == null)
+					log.debug("The Location header was null.");
+			}
 			switch (response.code()) {
 			case 302:
 				nextUrl = response.header("Location");

@@ -1,5 +1,16 @@
 package sailpoint.services.idn.session;
 
+import okhttp3.Headers;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.logging.HttpLoggingInterceptor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import sailpoint.services.idn.sdk.ClientCredentials;
+import sailpoint.services.idn.sdk.interceptor.ApiCredentialsBasicAuthInterceptor;
+import sailpoint.services.idn.sdk.interceptor.JwtBearerAuthInterceptor;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -8,18 +19,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import okhttp3.Headers;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.logging.HttpLoggingInterceptor;
-import sailpoint.services.idn.sdk.ClientCredentials;
-import sailpoint.services.idn.sdk.interceptor.ApiCredentialsBasicAuthInterceptor;
-import sailpoint.services.idn.sdk.interceptor.JwtBearerAuthInterceptor;
 
 /**
  * Convenience methods for repeatedly constructing OkHttp infrastructure to call

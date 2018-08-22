@@ -4,12 +4,14 @@ import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.http.Field;
 import retrofit2.http.FormUrlEncoded;
+import retrofit2.http.GET;
 import retrofit2.http.POST;
+import retrofit2.http.Query;
 
 public interface IdentityService {
 	
 	@FormUrlEncoded
-	@POST( "/api/user/invite" )
+	@POST( "/cc/api/user/invite" )
 	Call<ResponseBody> invite ( @Field( "ids" ) String userId );
 	
 //	@POST( "/api/user/attestUsageCert" )
@@ -44,9 +46,18 @@ public interface IdentityService {
 //	
 //	@POST( "/api/user/isPasswordValid" ) 
 //	Call<ResponseBody> isPasswordValid ( );
-//	
-//	@GET( "/api/user/list" ) 
-//	Call<ResponseBody> list ( );
+//
+	@GET( "/cc/api/user/list?_dc=1534949498371&query=&filters={\"joinOperator\":\"OR\",\"filter\":[{\"property\":\"name\",\"value\":\"\"},{\"property\":\"alias\",\"value\":\"\"},{\"property\":\"email\",\"value\":\"\"}]}&limit=100&page=1&start=0&sorters=[{\"property\":\"name\",\"direction\":\"ASC\"}]" )
+	Call<ResponseBody> list ( );
+
+	@GET("/cc/api/user/list")
+	Call<ResponseBody> customList(@Query("_dc") String dc,
+	                              @Query("query") String query,
+	                              @Query("filters") String filters,
+	                              @Query("limit") String limit,
+	                              @Query("page") String page,
+	                              @Query("start") String start,
+	                              @Query("sorters") String sorters);
 //	
 //	@POST( "/api/user/preview" ) 
 //	Call<ResponseBody> preview ( );

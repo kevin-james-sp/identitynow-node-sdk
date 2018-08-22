@@ -1,11 +1,10 @@
 package sailpoint.services.idn.console;
 
-import java.util.List;
-
 import org.apache.logging.log4j.Level;
-
 import sailpoint.services.idn.sdk.ClientCredentials;
 import sailpoint.services.idn.sdk.EnvironmentCredentialer;
+
+import java.util.List;
 
 public class EnvironmentReport {
 	

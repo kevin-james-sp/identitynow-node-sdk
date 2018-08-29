@@ -111,6 +111,16 @@ public class OkHttpUtils {
 		);
 	}
 
+	/**
+	 * Apply HTTP proxy to HTTP client builder.
+	 * Start building proxy if system property proxyType is defined.
+	 * Proxy type must be one of HTTP, DIRECT or SOCKS which is NOT case-sensitive.
+	 * Proxy host must not be null. Proxy port must in range of 0 to 65535.
+	 *
+	 * @throws NumberFormatException if system property proxyPort cannot be parsed into an integer.
+	 * @throws IllegalArgumentException if one of proxy type, host or port is not valid.
+	 * @param builder
+	 */
 	public static void applyProxySettings (OkHttpClient.Builder builder) {
 		String proxyTypeStr = System.getProperty("proxyType");
 		if (proxyTypeStr != null) {

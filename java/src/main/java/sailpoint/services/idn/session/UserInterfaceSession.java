@@ -226,7 +226,7 @@ public class UserInterfaceSession extends SessionBase {
 	}
 
 	/**
-	 * Return an OkHttpClient for use in calling into the API Gateway.
+	 * Return an OkHttpClient builder for use in calling into the API Gateway.
 	 * The UI makes some (nay most?) of its API lookups via the API Gateway now.
 	 * The API Gateway clients do _not_ utilize cookies the way the UI clients do.
 	 * 

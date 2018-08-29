@@ -2,6 +2,8 @@ package sailpoint.services.idn.session;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
@@ -107,6 +109,28 @@ public class OkHttpUtils {
 				log.debug(msg);
 			}).setLevel(HttpLoggingInterceptor.Level.BODY)
 		);
+	}
+
+	public static void applyProxySettings (OkHttpClient.Builder builder) {
+		String proxyTypeStr = System.getProperty("proxyType");
+		if (proxyTypeStr != null) {
+			try {
+				Proxy.Type proxyType = Proxy.Type.valueOf(proxyTypeStr.toUpperCase());
+				int proxyPort = Integer.parseInt(System.getProperty("proxyPort"));
+
+				Proxy proxy = new Proxy(proxyType, new InetSocketAddress(System.getProperty("proxyHost"), proxyPort));
+				builder.proxy(proxy);
+
+			} catch (NumberFormatException e) {
+				log.error("Error adding HTTP proxy. Proxy port number is invalid.", e);
+				throw e;
+			} catch (IllegalArgumentException e) {
+				log.error("Error adding HTTP proxy. Make sure that proxy type is one of DIRECT, HTTP or SOCKS(Not case-sensitive), "
+						+ "proxy host is not null and port number is within range.", e);
+				throw e;
+			}
+
+		}
 	}
 
 	public OkHttpUtils(SessionBase session) {

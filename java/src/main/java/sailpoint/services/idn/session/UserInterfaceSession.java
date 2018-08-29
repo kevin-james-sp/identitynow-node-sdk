@@ -226,7 +226,7 @@ public class UserInterfaceSession extends SessionBase {
 	}
 
 	/**
-	 * Return an OkHttpClient builder for use in calling into the API Gateway.
+	 * Return an OkHttpClient for use in calling into the API Gateway.
 	 * The UI makes some (nay most?) of its API lookups via the API Gateway now.
 	 * The API Gateway clients do _not_ utilize cookies the way the UI clients do.
 	 * 
@@ -275,7 +275,7 @@ public class UserInterfaceSession extends SessionBase {
 	}
 
 	/**
-	 * Return a common http client for the general usage.
+	 * Return a common http client builder for the general usage.
 	 *
 	 * TODO: Make this the common client builder and also include user agent, etc. in future
 	 * TODO: We need to use this builder in getApiGatewayOkClient and getUserInterfaceOkClient method. This is left over to prevent merge conflict because at this point, the above two methods are modified (being overloaded) in IDNPERF-331 branch.
@@ -283,6 +283,10 @@ public class UserInterfaceSession extends SessionBase {
 	 * @return
 	 */
 	public OkHttpClient.Builder getCommonOkClientBuilder () {
+		return getCommonOkClientBuilder(cookieManager);
+	}
+
+	public OkHttpClient.Builder getCommonOkClientBuilder (CookieManager cookieManager) {
 		OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
 		OkHttpUtils.applyTimeoutSettings(clientBuilder);
 		OkHttpUtils.applyLoggingInterceptors(clientBuilder);
@@ -404,10 +408,7 @@ public class UserInterfaceSession extends SessionBase {
 		//     *.api.identitynow.com/cc/* 
 		//  or *.api.identitynow.com/v2/*
 		// So we build a new cookie manager here:
-		OkHttpClient.Builder apiGwClientBuilder = new OkHttpClient.Builder();
-		OkHttpUtils.applyTimeoutSettings(apiGwClientBuilder);
-		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
-		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
+		OkHttpClient.Builder apiGwClientBuilder = getCommonOkClientBuilder(new CookieManager());
 		OkHttpClient apiGwClient = apiGwClientBuilder.build();
 
 		//Build the options URLw

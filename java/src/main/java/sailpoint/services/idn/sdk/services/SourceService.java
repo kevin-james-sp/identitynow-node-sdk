@@ -41,7 +41,7 @@ public interface SourceService {
 	@POST( "/cc/api/source/update/{sourceId}" )
 	@FormUrlEncoded
 	Call<ResponseBody> update (@FieldMap Map<String, String> params,
-	                           @Path("sourceId") int sourceId);
+	                           @Path("sourceId") String sourceId);
 	
 	@POST( "/cc/api/source/delete" )
 	Call<ResponseBody> delete (  );

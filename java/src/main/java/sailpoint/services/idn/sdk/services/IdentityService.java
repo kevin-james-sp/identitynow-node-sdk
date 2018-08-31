@@ -29,8 +29,8 @@ public interface IdentityService {
 //	@POST( "/api/user/enabled" ) 
 //	Call<ResponseBody> enabled ( );
 //	
-	@GET( "/api/user/get" )
-	Call<ResponseBody> get (@Query("_dc") long dc);
+//	@GET( "/api/user/get" ) 
+//	Call<ResponseBody> get ( );
 //	
 //	@GET( "/api/user/getExportReport" ) 
 //	Call<ResponseBody> getExportReport ( );
@@ -47,18 +47,14 @@ public interface IdentityService {
 //	@POST( "/api/user/isPasswordValid" ) 
 //	Call<ResponseBody> isPasswordValid ( );
 //
+	@GET( "/cc/api/user/list?_dc=1534949498371&query=&filters={\"joinOperator\":\"OR\",\"filter\":[{\"property\":\"name\",\"value\":\"\"},{\"property\":\"alias\",\"value\":\"\"},{\"property\":\"email\",\"value\":\"\"}]}&limit=100&page=1&start=0&sorters=[{\"property\":\"name\",\"direction\":\"ASC\"}]" )
+	Call<ResponseBody> list ( );
 
-	//example of params, includes escaped chars for quotes (Actually making this call with quotes will cause a http 400:
-	//"/cc/api/user/list?_dc=1535145271644&query=Support&filters={\"joinOperator\":\"OR\",\"filter\":[{\"property\":
-	// \"name\",\"value\":\"Support\"},{\"property\":\"alias\",\"value\":\"Support\"},{\"property\":\"email\",\"value\":\"Support\"}]}&limit=100&page=1&start=0&sorters=[{\"property\":\"name\",\"direction\":\"ASC\"}]"
+	@GET("/cc/api/user/list?_dc=1535145271644&query=Support&filters={\"joinOperator\":\"OR\",\"filter\":[{\"property\":\"name\",\"value\":\"Support\"},{\"property\":\"alias\",\"value\":\"Support\"},{\"property\":\"email\",\"value\":\"Support\"}]}&limit=100&page=1&start=0&sorters=[{\"property\":\"name\",\"direction\":\"ASC\"}]")
+	Call<ResponseBody> getSupportUserList();
 
 	@GET("/cc/api/user/list")
-	Call<ResponseBody> list(@Query("_dc") long dc,
-	                        @Query("query") String query);
-
-	//Server accepts, but will fail with 504, not sure why..
-	@GET("/cc/api/user/list")
-	Call<ResponseBody> customList(@Query("_dc") long dc,
+	Call<ResponseBody> customList(@Query("_dc") String dc,
 	                              @Query("query") String query,
 	                              @Query("filters") String filters,
 	                              @Query("limit") String limit,

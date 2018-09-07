@@ -248,6 +248,7 @@ public class UserInterfaceSession extends SessionBase {
 		OkHttpClient.Builder apiGwClientBuilder = new OkHttpClient.Builder();
 		OkHttpUtils.applyTimeoutSettings(apiGwClientBuilder);
 		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
+		OkHttpUtils.applyProxySettings(apiGwClientBuilder);
 		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
 		if (null != interceptorsToApply) {
 			for (Interceptor icept  : interceptorsToApply) {
@@ -294,11 +295,34 @@ public class UserInterfaceSession extends SessionBase {
 		OkHttpClient.Builder uiClientBuilder = new OkHttpClient.Builder();
 		OkHttpUtils.applyTimeoutSettings(uiClientBuilder);
 		OkHttpUtils.applyLoggingInterceptors(uiClientBuilder);
+		OkHttpUtils.applyProxySettings(uiClientBuilder);
 		uiClientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
 		uiClientBuilder.addInterceptor(getJwtTokenBearerInterceptor());
 		userInterfaceClient = uiClientBuilder.build();
 
 		return userInterfaceClient;
+	}
+
+	/**
+	 * Return a common http client builder for the general usage.
+	 *
+	 * TODO: Make this the common client builder and also include user agent, etc. in future
+	 * TODO: We need to use this builder in getApiGatewayOkClient and getUserInterfaceOkClient method. This is left over to prevent merge conflict because at this point, the above two methods are modified (being overloaded) in IDNPERF-331 branch.
+	 *
+	 * @return
+	 */
+	public OkHttpClient.Builder getCommonOkClientBuilder () {
+		return getCommonOkClientBuilder(cookieManager);
+	}
+
+	public OkHttpClient.Builder getCommonOkClientBuilder (CookieManager cookieManager) {
+		OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
+		OkHttpUtils.applyTimeoutSettings(clientBuilder);
+		OkHttpUtils.applyLoggingInterceptors(clientBuilder);
+		OkHttpUtils.applyProxySettings(clientBuilder);
+		clientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
+
+		return clientBuilder;
 	}
 	
 	/**
@@ -339,13 +363,9 @@ public class UserInterfaceSession extends SessionBase {
 		//    Then finally to /ui and then /main
 		// 6. Check for KBA map and if present do strong Auth-N.
 		// 7. Check for API credentials and if present then do OAuth token for session.
-		
-		// TODO: Use a common client builder that includes user-agents, etc.
-		OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
-		OkHttpUtils.applyTimeoutSettings(clientBuilder);
-		OkHttpUtils.applyLoggingInterceptors(clientBuilder);
-		clientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
-			
+
+		OkHttpClient.Builder clientBuilder = getCommonOkClientBuilder();
+
 		OkHttpClient client = clientBuilder.build();
 		
 		// STEP 1: Call /login/login and extract the API Gateway URL for the org and other data.
@@ -417,10 +437,7 @@ public class UserInterfaceSession extends SessionBase {
 		//     *.api.identitynow.com/cc/* 
 		//  or *.api.identitynow.com/v2/*
 		// So we build a new cookie manager here:
-		OkHttpClient.Builder apiGwClientBuilder = new OkHttpClient.Builder();
-		OkHttpUtils.applyTimeoutSettings(apiGwClientBuilder);
-		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
-		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
+		OkHttpClient.Builder apiGwClientBuilder = getCommonOkClientBuilder(new CookieManager());
 		OkHttpClient apiGwClient = apiGwClientBuilder.build();
 
 		//Build the options URLw
@@ -605,7 +622,7 @@ public class UserInterfaceSession extends SessionBase {
 			csrfToken = m.group(1);
 			log.debug("Parsed CSRF Token: " + csrfToken);
 		} else {
-			log.warn("Failed to parse CSRF token from 'SLPT.globalContext.csrf'");
+			log.warn("Failed to parse CSRF token from 'SLPT.globalContext.csrf' for CCSESSIONID: " + ccSessionId + " HTML was: " + loginResponse);	
 		}
 		
 		Document uiMainDoc = Jsoup.parse(loginResponse);
@@ -647,12 +664,8 @@ public class UserInterfaceSession extends SessionBase {
 	
 	@Override
 	public void close() {
-		
-		// TODO: Use a common client builder that includes user-agents, etc.
-		OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
-		OkHttpUtils.applyTimeoutSettings(clientBuilder);
-		OkHttpUtils.applyLoggingInterceptors(clientBuilder);
-		clientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
+
+		OkHttpClient.Builder clientBuilder = getCommonOkClientBuilder();
 			
 		OkHttpClient client = clientBuilder.build();
 		

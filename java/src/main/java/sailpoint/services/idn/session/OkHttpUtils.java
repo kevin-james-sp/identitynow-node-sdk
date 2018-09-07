@@ -108,6 +108,38 @@ public class OkHttpUtils {
 		);
 	}
 
+	/**
+	 * Apply HTTP proxy to HTTP client builder.
+	 * Start building proxy if system property proxyType is defined.
+	 * Proxy type must be one of HTTP, DIRECT or SOCKS which is NOT case-sensitive.
+	 * Proxy host must not be null. Proxy port must be in range of 0 to 65535.
+	 *
+	 * @throws NumberFormatException if system property proxyPort cannot be parsed into an integer.
+	 * @throws IllegalArgumentException if one of proxy type, host or port is not valid.
+	 * @param builder
+	 */
+	public static void applyProxySettings (OkHttpClient.Builder builder) {
+		String proxyTypeStr = System.getProperty("proxyType");
+		if (proxyTypeStr != null) {
+			try {
+				Proxy.Type proxyType = Proxy.Type.valueOf(proxyTypeStr.toUpperCase());
+				int proxyPort = Integer.parseInt(System.getProperty("proxyPort"));
+
+				Proxy proxy = new Proxy(proxyType, new InetSocketAddress(System.getProperty("proxyHost"), proxyPort));
+				builder.proxy(proxy);
+
+			} catch (NumberFormatException e) {
+				log.error("Error adding HTTP proxy. Proxy port number is invalid.", e);
+				throw e;
+			} catch (IllegalArgumentException e) {
+				log.error("Error adding HTTP proxy. Make sure that proxy type is one of DIRECT, HTTP or SOCKS(Not case-sensitive), "
+						+ "proxy host is not null and port number is within range.", e);
+				throw e;
+			}
+
+		}
+	}
+
 	public OkHttpUtils(SessionBase session) {
 		this.session = session;
 	}

@@ -9,6 +9,7 @@ import retrofit2.http.Field;
 import retrofit2.http.FieldMap;
 import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.GET;
+import retrofit2.http.Headers;
 import retrofit2.http.Multipart;
 import retrofit2.http.POST;
 import retrofit2.http.Part;
@@ -41,7 +42,7 @@ public interface SourceService {
 	@POST( "/cc/api/source/update/{sourceId}" )
 	@FormUrlEncoded
 	Call<ResponseBody> update (@FieldMap Map<String, String> params,
-	                           @Path("sourceId") int sourceId);
+	                           @Path("sourceId") String sourceId);
 	
 	@POST( "/cc/api/source/delete" )
 	Call<ResponseBody> delete (  );
@@ -60,14 +61,14 @@ public interface SourceService {
 	Call<ResponseBody> getAccountSchema (  );
 	
 	@POST( "/cc/api/source/discoverSchema/{sourceId}" )
-	Call<ResponseBody> discoverSchema ( @Path("sourceId") int sourceId );
+	Call<ResponseBody> discoverSchema ( @Path("sourceId") String sourceId );
 	
 	@POST( "/cc/api/source/createSchemaAttribute" )
 	Call<ResponseBody> createSchemaAttribute (  );
 	
 	@POST( "/cc/api/source/updateSchemaAttributes/{sourceId}" )
 	@FormUrlEncoded
-	Call<ResponseBody> updateSchemaAttributes (@Path("sourceId") int sourceId,
+	Call<ResponseBody> updateSchemaAttributes (@Path("sourceId") String sourceId,
 	                                           @FieldMap Map<String, String> params);
 	
 	@POST( "/cc/api/source/deleteSchemaAttribute" )
@@ -126,7 +127,7 @@ public interface SourceService {
 	
 	@POST( "/cc/api/source/uploadConnectorFile/{sourceId}" )
 	@Multipart
-	Call<ResponseBody> uploadConnectorFile (@Path("sourceId") int sourceId,
+	Call<ResponseBody> uploadConnectorFile (@Path("sourceId") String sourceId,
 	                                        @Part MultipartBody.Part filePart);
 	
 	@POST( "/cc/api/source/uploadCustomIcon" )
@@ -235,46 +236,41 @@ public interface SourceService {
 	@POST( "/cc/api/source/syncPassword" )
 	Call<ResponseBody> syncPassword (  );
 
-	/*
-	JDBC Provisioning endpoints,
-	these are still in development, and will not be callable until CC endpoints are updated
-	to reference Mantis endpoints. The paths reflect what we believe will be added to CC, but are likely to change before finalization.
-	 See IDNPERF-331
-	 */
-
-	@POST("/cc/api/source/addAttributeToGroupSchema")
+	//no mantis calls will work, fml
+	@POST("/mantis/sources/sources/addAttributeToGroupSchema")
 	Call<ResponseBody> addAttributeToGroupSchema(@Field ("sourceId") String sourceId,
 	                                             @Field("schemaAttributeRequest") String schemaAttributeRequest);
 
-	@POST("/cc/api/source/deleteAttributesFromGroupSchema")
+	@POST("/mantis/sources/sources/deleteAttributesFromGroupSchema")
 	Call<ResponseBody> deleteAttributesFromGroupSchema(@Field("sourceId") String sourceId,
 	                                                   @Field("schemaAttributeRequest") Map schemaAttributeRequest);
 
-	@POST("/cc/api/source/deleteGroupSchema")
+	@POST("/mantis/sources/sources/deleteGroupSchema")
 	Call<ResponseBody> deleteGroupSchema(@Field("sourceId") String sourceId);
 
-	@GET("/cc/api/source/buildMapRule")
-	Call<ResponseBody> getBuildMapRule(@Field("sourceId") String sourceId);
+	@GET("/mantis/sources/sources/{sourceId}/buildMapRule")
+	Call<ResponseBody> getBuildMapRule(@Path("sourceId") String sourceId);
 
-	@GET("api/source/JDBCProvisionRule")
-	Call<ResponseBody> getJDBCProvisionRule(@Field("sourceId") String sourceId);
+	@GET("/mantis/sources/sources/{sourceId}/JDBCProvisionRule")
+	Call<ResponseBody> getJDBCProvisionRule(@Path("sourceId") String sourceId);
 
-	@POST("/cc/api/source/buildMapRule")
-	Call<ResponseBody> postBuildMapRule(@Field("sourceId") String sourceId,
+	@Headers("Content-Type:application/json")
+	@POST("/mantis/sources/sources/{sourceId}/buildMapRule")
+	Call<ResponseBody> postBuildMapRule(@Path("sourceId") String sourceId,
 	                                    @Field("sourceCode") String sourceCode);
 
-	@POST("/cc/api/source/JDBCProvisionRule")
-	Call<ResponseBody> postJDBCProvisionRule(@Field("sourceId") String sourceId,
+	@POST("/mantis/sources/sources/{sourceId}/JDBCProvisionRule")
+	Call<ResponseBody> postJDBCProvisionRule(@Path("sourceId") String sourceId,
 	                                         @Field("sourceCode") String sourceCode);
 
-	@DELETE("/cc/api/source/buildMapRule")
-	Call<ResponseBody> deleteBuildMapRule(@Field("sourceId") String sourceId);
+	@DELETE("/mantis/sources/sources/{sourceId}/buildMapRule")
+	Call<ResponseBody> deleteBuildMapRule(@Path("sourceId") String sourceId);
 
-	@DELETE("/cc/api/source/JDBCProvisionRule")
-	Call<ResponseBody> deleteJDBCProvisionRule(@Field("sourceId") String sourceId);
+	@DELETE("/mantis/sources/sources/{sourceId}/JDBCProvisionRule")
+	Call<ResponseBody> deleteJDBCProvisionRule(@Path("sourceId") String sourceId);
 
-	@POST("/cc/api/provisioning/discoverCreatePolicy")
-	Call<ResponseBody> discoverCreatePolicy(@Field("sourceId") String sourceId);
+	@POST("/mantis/provisioning/provisioningPolicies/{sourceId}/discoverCreatePolicy")
+	Call<ResponseBody> discoverCreatePolicy(@Path("sourceId") String sourceId);
 
 
 }

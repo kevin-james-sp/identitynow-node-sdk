@@ -5,11 +5,13 @@ import com.google.gson.reflect.TypeToken;
 
 import okhttp3.FormBody;
 import okhttp3.Headers;
+import okhttp3.Interceptor;
 import okhttp3.JavaNetCookieJar;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import okhttp3.Interceptor.Chain;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -111,7 +113,7 @@ public class UserInterfaceSession extends SessionBase {
 	public String getUniqueId() {
 		return ccSessionId;
 	}
-	
+
 	public OkHttpClient getClient() {
 		// There is an ambiguiity here: Do we want the CC client or the API GW client.
 		throw new IllegalArgumentException("TODO: Stub this out for UserInterfaceSession");
@@ -236,7 +238,11 @@ public class UserInterfaceSession extends SessionBase {
 	 * @return
 	 */
 	public OkHttpClient getApiGatewayOkClient () {
-		
+		return getApiGatewayOkClient(null);
+	}
+
+	public OkHttpClient getApiGatewayOkClient (List<Interceptor> interceptorsToApply) {
+	
 		if (null != apiGatewayClient) return apiGatewayClient;
 		
 		OkHttpClient.Builder apiGwClientBuilder = new OkHttpClient.Builder();
@@ -244,9 +250,31 @@ public class UserInterfaceSession extends SessionBase {
 		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
 		OkHttpUtils.applyProxySettings(apiGwClientBuilder);
 		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
+		if (null != interceptorsToApply) {
+			for (Interceptor icept  : interceptorsToApply) {
+				apiGwClientBuilder.addInterceptor(icept);
+			}	
+		}
 		apiGatewayClient = apiGwClientBuilder.build();
 		
 		return apiGatewayClient;
+	}
+	
+	/** 
+	 * Returns an Interceptor that injects a UI Session's JWT token into the call sequence.
+	 * @return
+	 */
+	private Interceptor getJwtTokenBearerInterceptor () {
+		return new Interceptor() {
+				@Override
+				public Response intercept(Chain chain) throws IOException {
+					Request originalReq = chain.request();
+					Request.Builder builder =
+							originalReq.newBuilder().header("Authorization", "Bearer " + accessToken);
+					Request newRequest = builder.build();
+					return chain.proceed(newRequest);
+				}
+		};
 	}
 	
 	/**
@@ -269,8 +297,9 @@ public class UserInterfaceSession extends SessionBase {
 		OkHttpUtils.applyLoggingInterceptors(uiClientBuilder);
 		OkHttpUtils.applyProxySettings(uiClientBuilder);
 		uiClientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
+		uiClientBuilder.addInterceptor(getJwtTokenBearerInterceptor());
 		userInterfaceClient = uiClientBuilder.build();
-		
+
 		return userInterfaceClient;
 	}
 
@@ -553,7 +582,14 @@ public class UserInterfaceSession extends SessionBase {
 		boolean redirectsDone = false;
 		String nextUrl = response.header("Location");
 		do {
-			response = doGet(nextUrl, manual302Client, null, cookieManager.getCookieStore().getCookies());
+			try{
+				response = doGet(nextUrl, manual302Client, null, cookieManager.getCookieStore().getCookies());
+			}
+			catch (NullPointerException e){
+				log.error("A null pointer exception has occurred. Did the post to SSO return all headers?");
+				if(nextUrl == null)
+					log.error("The Location header was null.");
+			}
 			switch (response.code()) {
 			case 302:
 				nextUrl = response.header("Location");

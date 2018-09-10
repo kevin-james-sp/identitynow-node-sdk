@@ -7,10 +7,8 @@ import retrofit2.http.Query;
 
 public interface ClusterService {
 
-	//null okay for the Query query.
-	@GET( "/api/cluster/list" )
-	Call<ResponseBody> supportsAggregation (@Query("dc") int dc,
-	                                        @Query("operational") boolean operational,
-	                                        @Query("query") String query);
 
+	//Cannot be null, or the query will be dropped from the url. The ui sets the query to an empty string.
+	@GET( "/cc/api/cluster/list" )
+	Call<ResponseBody> clusterList (@Query("dc") long dc);
 }

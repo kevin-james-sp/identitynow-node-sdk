@@ -4,12 +4,14 @@ import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.http.Field;
 import retrofit2.http.FormUrlEncoded;
+import retrofit2.http.GET;
 import retrofit2.http.POST;
+import retrofit2.http.Query;
 
 public interface IdentityService {
 	
 	@FormUrlEncoded
-	@POST( "/api/user/invite" )
+	@POST( "/cc/api/user/invite" )
 	Call<ResponseBody> invite ( @Field( "ids" ) String userId );
 	
 //	@POST( "/api/user/attestUsageCert" )
@@ -27,8 +29,8 @@ public interface IdentityService {
 //	@POST( "/api/user/enabled" ) 
 //	Call<ResponseBody> enabled ( );
 //	
-//	@GET( "/api/user/get" ) 
-//	Call<ResponseBody> get ( );
+@GET( "/api/user/get" )
+Call<ResponseBody> get (@Query("_dc") long dc);
 //	
 //	@GET( "/api/user/getExportReport" ) 
 //	Call<ResponseBody> getExportReport ( );
@@ -44,10 +46,26 @@ public interface IdentityService {
 //	
 //	@POST( "/api/user/isPasswordValid" ) 
 //	Call<ResponseBody> isPasswordValid ( );
-//	
-//	@GET( "/api/user/list" ) 
-//	Call<ResponseBody> list ( );
-//	
+//
+//example of params, includes escaped chars for quotes (Actually making this call with quotes will cause a http 400:
+	//"/cc/api/user/list?_dc=1535145271644&query=Support&filters={\"joinOperator\":\"OR\",\"filter\":[{\"property\":
+	// \"name\",\"value\":\"Support\"},{\"property\":\"alias\",\"value\":\"Support\"},{\"property\":\"email\",\"value\":\"Support\"}]}&limit=100&page=1&start=0&sorters=[{\"property\":\"name\",\"direction\":\"ASC\"}]"
+
+	@GET("/cc/api/user/list")
+	Call<ResponseBody> list(@Query("_dc") long dc,
+	                        @Query("query") String query);
+
+	//Server accepts, but will fail with 504, not sure why..
+	@GET("/cc/api/user/list")
+	Call<ResponseBody> customList(@Query("_dc") long dc,
+	                              @Query("query") String query,
+	                              @Query("filters") String filters,
+	                              @Query("limit") String limit,
+	                              @Query("page") String page,
+	                              @Query("start") String start,
+	                              @Query("sorters") String sorters);
+
+	//
 //	@POST( "/api/user/preview" ) 
 //	Call<ResponseBody> preview ( );
 //	

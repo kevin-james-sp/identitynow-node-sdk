@@ -9,6 +9,7 @@ import retrofit2.http.Field;
 import retrofit2.http.FieldMap;
 import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.GET;
+import retrofit2.http.Headers;
 import retrofit2.http.Multipart;
 import retrofit2.http.POST;
 import retrofit2.http.Part;
@@ -19,118 +20,120 @@ import java.util.Map;
 
 //TODO: Flesh out all calls. A warning to anyone using this library, not all calls are complete and may not function
 //as intended or at all
+//These calls do not explicitly state the need for an auth header, but they will need an auth header with an api token.
+//We recommend the use of an interceptor to add the token to all calls when using this api.
 public interface SourceService {
 	
 	/*
 	 * Basics
 	 */
 	
-	@GET( "/api/source/list" )
+	@GET( "/cc/api/source/list" )
 	Call<ResponseBody> list (  );
 	
-	@GET( "/api/source/get" ) 
+	@GET( "/cc/api/source/get" )
 	Call<ResponseBody> get (  );
 	
-	@POST( "/api/source/create" )
+	@POST( "/cc/api/source/create" )
 	@FormUrlEncoded
 	Call<ResponseBody> create (@FieldMap Map<String, String> params);
 
 
-	@POST( "/api/source/update/{sourceId}" )
+	@POST( "/cc/api/source/update/{sourceId}" )
 	@FormUrlEncoded
 	Call<ResponseBody> update (@FieldMap Map<String, String> params,
-	                           @Path("sourceId") int sourceId);
+	                           @Path("sourceId") String sourceId);
 	
-	@POST( "/api/source/delete" )
+	@POST( "/cc/api/source/delete" )
 	Call<ResponseBody> delete (  );
 	
-	@GET( "/api/source/export" )
+	@GET( "/cc/api/source/export" )
 	Call<ResponseBody> exportSource (  );
 	
-	@POST( "/api/source/import" )
+	@POST( "/cc/api/source/import" )
 	Call<ResponseBody> importSource (  );
 	
 	/*
 	 * Schema
 	 */
 	
-	@GET( "/api/source/getAccountSchema" )
+	@GET( "/cc/api/source/getAccountSchema" )
 	Call<ResponseBody> getAccountSchema (  );
 	
-	@POST( "/api/source/discoverSchema/{sourceId}" )
-	Call<ResponseBody> discoverSchema ( @Path("sourceId") int sourceId );
+	@POST( "/cc/api/source/discoverSchema/{sourceId}" )
+	Call<ResponseBody> discoverSchema ( @Path("sourceId") String sourceId );
 	
-	@POST( "/api/source/createSchemaAttribute" )
+	@POST( "/cc/api/source/createSchemaAttribute" )
 	Call<ResponseBody> createSchemaAttribute (  );
 	
-	@POST( "/api/source/updateSchemaAttributes/{sourceId}" )
+	@POST( "/cc/api/source/updateSchemaAttributes/{sourceId}" )
 	@FormUrlEncoded
-	Call<ResponseBody> updateSchemaAttributes (@Path("sourceId") int sourceId,
+	Call<ResponseBody> updateSchemaAttributes (@Path("sourceId") String sourceId,
 	                                           @FieldMap Map<String, String> params);
 	
-	@POST( "/api/source/deleteSchemaAttribute" )
+	@POST( "/cc/api/source/deleteSchemaAttribute" )
 	Call<ResponseBody> deleteSchemaAttribute (  );
 
 	/*
 	 * Aggregation
 	 */
 	
-	@GET( "/api/source/supportsAggregation" )
+	@GET( "/cc/api/source/supportsAggregation" )
 	Call<ResponseBody> supportsAggregation ( );
 	
-	@GET( "/api/source/getAggregationSchedules" )
+	@GET( "/cc/api/source/getAggregationSchedules" )
 	Call<ResponseBody> getAggregationSchedules ( );
 	
-	@POST( "/api/source/testConnection/{id}" )
+	@POST( "/cc/api/source/testConnection/{id}" )
 	Call<ResponseBody> testConnection(
 			@Path( "id" ) String id );
 	
-	@POST( "/api/source/loadAccounts/{id}")
+	@POST( "/cc/api/source/loadAccounts/{id}")
 	Call<ResponseBody> aggregateAccounts(
 			@Path( "id" ) String id );
 	
 	@Multipart
-	@POST( "/api/source/loadAccounts/{id}")
+	@POST( "/cc/api/source/loadAccounts/{id}")
 	Call<ResponseBody> aggregateAccounts(
 			@Path( "id" ) String id,
 			@Part( "file\"; filename=\"file.csv\" " ) RequestBody file );
 	
-	@POST( "/api/source/cancelAggregation" )
+	@POST( "/cc/api/source/cancelAggregation" )
 	Call<ResponseBody> cancelAggregation (  );
 	
-	@POST( "/api/source/loadEntitlements/{id}" )
+	@POST( "/cc/api/source/loadEntitlements/{id}" )
 	Call<ResponseBody> aggregateEntitlements ( 
 			@Path( "id" ) String id );
 	
-	@POST( "/api/source/scheduleAggregation" )
+	@POST( "/cc/api/source/scheduleAggregation" )
 	Call<ResponseBody> scheduleAggregation (  );
 	
-	@POST( "/api/source/scheduleEntitlementAggregation" )
+	@POST( "/cc/api/source/scheduleEntitlementAggregation" )
 	Call<ResponseBody> scheduleEntitlementAggregation (  );
 	
 	/*
 	 * Correlation
 	 */
 	
-	@GET( "/api/source/getUncorrelatedAccounts" )
+	@GET( "/cc/api/source/getUncorrelatedAccounts" )
 	Call<ResponseBody> getUncorrelatedAccounts (  );
 	
-	@GET( "/api/source/getUncorrelatedAccountsCount" )
+	@GET( "/cc/api/source/getUncorrelatedAccountsCount" )
 	Call<ResponseBody> getUncorrelatedAccountsCount (  );
 	
 	/*
 	 * Uploads
 	 */
 	
-	@POST( "/api/source/uploadConnectorFile/{sourceId}" )
+	@POST( "/cc/api/source/uploadConnectorFile/{sourceId}" )
 	@Multipart
-	Call<ResponseBody> uploadConnectorFile (@Path("sourceId") int sourceId,
+	Call<ResponseBody> uploadConnectorFile (@Path("sourceId") String sourceId,
 	                                        @Part MultipartBody.Part filePart);
 	
-	@POST( "/api/source/uploadCustomIcon" )
+	@POST( "/cc/api/source/uploadCustomIcon" )
 	Call<ResponseBody> uploadCustomIcon (  );
 	
-	@POST( "/api/source/importEntitlementsCsv" )
+	@POST( "/cc/api/source/importEntitlementsCsv" )
 	Call<ResponseBody> importEntitlementsCsv (  );
 	
 	/*
@@ -138,141 +141,136 @@ public interface SourceService {
 	 */
 	
 	@FormUrlEncoded
-	@POST( "/api/source/runAccountsExportReport" )
+	@POST( "/cc/api/source/runAccountsExportReport" )
 	Call<ResponseBody> runAccountsExportReport(
 		@Field( "sourceId" ) String sourceId,
 		@Field( "reportName" ) String reportName );
 		  
-	@GET( "/api/source/getAccountsExportReport" )
+	@GET( "/cc/api/source/getAccountsExportReport" )
 	Call<ResponseBody> getAccountsExportReport(
 		@Query( "sourceId" ) String sourceId,
 		@Query( "reportName" ) String reportName );
 	
-	@GET( "/api/source/exportAccountFeed" )
+	@GET( "/cc/api/source/exportAccountFeed" )
 	Call<ResponseBody> exportAccountFeed( );
 	
-	@GET( "/api/source/exportEntitlementsCsv" )
+	@GET( "/cc/api/source/exportEntitlementsCsv" )
 	Call<ResponseBody> exportEntitlementsCsv( );
 	
-	@GET( "/api/source/getAccountsCsv" )
+	@GET( "/cc/api/source/getAccountsCsv" )
 	Call<ResponseBody> getAccountsCsv( );
 	
-	@POST( "/api/source/runAccountsExportReport" )
+	@POST( "/cc/api/source/runAccountsExportReport" )
 	Call<ResponseBody> runAccountsExportReport( );
 	
-	@POST( "/api/source/runProvisioningSummary" ) 
+	@POST( "/cc/api/source/runProvisioningSummary" ) 
 	Call<ResponseBody> runProvisioningSummary( );
 	
-	@POST( "/api/source/runResetSummary" )
+	@POST( "/cc/api/source/runResetSummary" )
 	Call<ResponseBody> runResetSummary( );
 	
 	/*
 	 * Misc
 	 */
 	
-	@GET( "/api/source/connections" )
+	@GET( "/cc/api/source/connections" )
 	Call<ResponseBody> connections (  );
 	
-	@POST( "/api/source/createNotification" )
+	@POST( "/cc/api/source/createNotification" )
 	Call<ResponseBody> createNotification (  );
 	
-	@GET( "/api/source/getDeleteThreshold" )
+	@GET( "/cc/api/source/getDeleteThreshold" )
 	Call<ResponseBody> getDeleteThreshold (  );
 	
-	@POST( "/api/source/updateDeleteThreshold" )
+	@POST( "/cc/api/source/updateDeleteThreshold" )
 	Call<ResponseBody> updateDeleteThreshold (  );
 	
-	@GET( "/api/source/getAccountsTemplate" )
+	@GET( "/cc/api/source/getAccountsTemplate" )
 	Call<ResponseBody> getAccountsTemplate (  );
 	
-	@GET( "/api/source/getProvisioningSummary" )
+	@GET( "/cc/api/source/getProvisioningSummary" )
 	Call<ResponseBody> getProvisioningSummary (  );
 	
-	@GET( "/api/source/getApplicationConfig" )
+	@GET( "/cc/api/source/getApplicationConfig" )
 	Call<ResponseBody> getApplicationConfig (  );
 	
-	@GET( "/api/source/getAttributeSyncConfig" )
+	@GET( "/cc/api/source/getAttributeSyncConfig" )
 	Call<ResponseBody> getAttributeSyncConfig (  );
 	
-	@GET( "/api/source/getConfig" )
+	@GET( "/cc/api/source/getConfig" )
 	Call<ResponseBody> getConfig (  );
 	
-	@GET( "/api/source/getEntitlementAggregationSchedules" )
+	@GET( "/cc/api/source/getEntitlementAggregationSchedules" )
 	Call<ResponseBody> getEntitlementAggregationSchedules (  );
 	
-	@GET( "/api/source/getEntitlementsTemplate" )
+	@GET( "/cc/api/source/getEntitlementsTemplate" )
 	Call<ResponseBody> getEntitlementsTemplate (  );
 	
-	@GET( "/api/source/getPasswordSyncInfo" )
+	@GET( "/cc/api/source/getPasswordSyncInfo" )
 	Call<ResponseBody> getPasswordSyncInfo (  );
 	
-	@GET( "/api/source/getResetSummary" )
+	@GET( "/cc/api/source/getResetSummary" )
 	Call<ResponseBody> getResetSummary (  );
 	
-	@GET( "/api/source/getSourceDefinitions" )
+	@GET( "/cc/api/source/getSourceDefinitions" )
 	Call<ResponseBody> getSourceDefinitions (  );
 	
-	@POST( "/api/source/loadUncorrelatedAccounts" )
+	@POST( "/cc/api/source/loadUncorrelatedAccounts" )
 	Call<ResponseBody> loadUncorrelatedAccounts (  );
 	
-	@POST( "/api/source/reset" )
+	@POST( "/cc/api/source/reset" )
 	Call<ResponseBody> reset (  );
 	
-	@POST( "/api/source/resetAll" )
+	@POST( "/cc/api/source/resetAll" )
 	Call<ResponseBody> resetAll (  );
 	
-	@POST( "/api/source/setAttributeSyncConfig" )
+	@POST( "/cc/api/source/setAttributeSyncConfig" )
 	Call<ResponseBody> setAttributeSyncConfig (  );
 	
-	@POST( "/api/source/setPassword" )
+	@POST( "/cc/api/source/setPassword" )
 	Call<ResponseBody> setPassword (  );
 	
-	@GET( "/api/source/status" )
+	@GET( "/cc/api/source/status" )
 	Call<ResponseBody> status (  );
 	
-	@POST( "/api/source/syncPassword" )
+	@POST( "/cc/api/source/syncPassword" )
 	Call<ResponseBody> syncPassword (  );
 
-	/*
-	JDBC Provisioning endpoints,
-	these are still in development, and will not be callable until CC endpoints are updated
-	to reference Mantis endpoints. The paths reflect what we believe will be added to CC, but are likely to change before finalization.
-	 See IDNPERF-331
-	 */
-
-	@POST("/api/source/addAttributeToGroupSchema")
+	//no mantis calls will work, fml
+	@POST("/mantis/sources/sources/addAttributeToGroupSchema")
 	Call<ResponseBody> addAttributeToGroupSchema(@Field ("sourceId") String sourceId,
 	                                             @Field("schemaAttributeRequest") String schemaAttributeRequest);
 
-	@POST("/api/source/deleteAttributesFromGroupSchema")
+	@POST("/mantis/sources/sources/deleteAttributesFromGroupSchema")
 	Call<ResponseBody> deleteAttributesFromGroupSchema(@Field("sourceId") String sourceId,
 	                                                   @Field("schemaAttributeRequest") Map schemaAttributeRequest);
 
-	@POST("/api/source/deleteGroupSchema")
+	@POST("/mantis/sources/sources/deleteGroupSchema")
 	Call<ResponseBody> deleteGroupSchema(@Field("sourceId") String sourceId);
 
-	@GET("/api/source/buildMapRule")
-	Call<ResponseBody> getBuildMapRule(@Field("sourceId") String sourceId);
+	@GET("/mantis/sources/sources/{sourceId}/buildMapRule")
+	Call<ResponseBody> getBuildMapRule(@Path("sourceId") String sourceId);
 
-	@GET("api/source/JDBCProvisionRule")
-	Call<ResponseBody> getJDBCProvisionRule(@Field("sourceId") String sourceId);
+	@GET("/mantis/sources/sources/{sourceId}/JDBCProvisionRule")
+	Call<ResponseBody> getJDBCProvisionRule(@Path("sourceId") String sourceId);
 
-	@POST("/api/source/buildMapRule")
-	Call<ResponseBody> postBuildMapRule(@Field("sourceId") String sourceId,
+	@Headers("Content-Type:application/json")
+	@POST("/mantis/sources/sources/{sourceId}/buildMapRule")
+	Call<ResponseBody> postBuildMapRule(@Path("sourceId") String sourceId,
 	                                    @Field("sourceCode") String sourceCode);
 
-	@POST("/api/source/JDBCProvisionRule")
-	Call<ResponseBody> postJDBCProvisionRule(@Field("sourceId") String sourceId,
+	@POST("/mantis/sources/sources/{sourceId}/JDBCProvisionRule")
+	Call<ResponseBody> postJDBCProvisionRule(@Path("sourceId") String sourceId,
 	                                         @Field("sourceCode") String sourceCode);
 
-	@DELETE("/api/source/buildMapRule")
-	Call<ResponseBody> deleteBuildMapRule(@Field("sourceId") String sourceId);
+	@DELETE("/mantis/sources/sources/{sourceId}/buildMapRule")
+	Call<ResponseBody> deleteBuildMapRule(@Path("sourceId") String sourceId);
 
-	@DELETE("/api/source/JDBCProvisionRule")
-	Call<ResponseBody> deleteJDBCProvisionRule(@Field("sourceId") String sourceId);
+	@DELETE("/mantis/sources/sources/{sourceId}/JDBCProvisionRule")
+	Call<ResponseBody> deleteJDBCProvisionRule(@Path("sourceId") String sourceId);
 
-	@POST("/api/provisioning/discoverCreatePolicy")
-	Call<ResponseBody> discoverCreatePolicy(@Field("sourceId") String sourceId);
+	@POST("/mantis/provisioning/provisioningPolicies/{sourceId}/discoverCreatePolicy")
+	Call<ResponseBody> discoverCreatePolicy(@Path("sourceId") String sourceId);
 
 
 }

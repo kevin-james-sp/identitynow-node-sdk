@@ -17,39 +17,38 @@ public interface MantisService {
 	//no mantis calls will work, fml
 	@FormUrlEncoded
 	@POST("/debug/v2/mantis/post?path=sources%2Fsources%2FaddAttributeToGroupSchema")
-	Call<ResponseBody> addAttributeToGroupSchema(@Field ("sourceId") String sourceId,
+	Call<ResponseBody> addAttributeToGroupSchema(@Field ("externalId") String externalId,
 	                                             @Field("schemaAttributeRequest") String schemaAttributeRequest);
 
 	@POST("/debug/v2/mantis/post?path=sources%2Fsources%2FdeleteAttributesFromGroupSchema")
-	Call<ResponseBody> deleteAttributesFromGroupSchema(@Field("sourceId") String sourceId,
+	Call<ResponseBody> deleteAttributesFromGroupSchema(@Field("externalId") String externalId,
 	                                                   @Field("schemaAttributeRequest") Map schemaAttributeRequest);
 
 	@POST("/debug/v2/mantis/post?path=sources%2Fsources%2FdeleteGroupSchema")
-	Call<ResponseBody> deleteGroupSchema(@Field("sourceId") String sourceId);
+	Call<ResponseBody> deleteGroupSchema(@Field("externalId") String externalId);
 
-	@GET("/debug/v2/mantis/post?path=sources%2Fsources%2F{sourceId}%2FbuildMapRule")
-	Call<ResponseBody> getBuildMapRule(@Path("sourceId") String sourceId);
+	@GET("/debug/v2/mantis/post?path=sources%2Fsources%2F{externalId}%2FbuildMapRule")
+	Call<ResponseBody> getBuildMapRule(@Path("externalId") String externalId);
 
-	@GET("/debug/v2/mantis/post?path=sources%2Fsources%2F{sourceId}%2FJDBCProvisionRule")
-	Call<ResponseBody> getJDBCProvisionRule(@Path("sourceId") String sourceId);
+	@GET("/debug/v2/mantis/post?path=sources%2Fsources%2F{externalId}%2FJDBCProvisionRule")
+	Call<ResponseBody> getJDBCProvisionRule(@Path("externalId") String externalId);
 
 	@Headers("Content-Type:application/json")
-	@POST("/debug/v2/mantis/post?path=sources%2Fsources%2F{sourceId}%2FbuildMapRule")
-	Call<ResponseBody> postBuildMapRule(@Path("sourceId") String sourceId,
+	@POST("/debug/v2/mantis/post?path=sources%2Fsources%2F{externalId}%2FbuildMapRule")
+	Call<ResponseBody> postBuildMapRule(@Path("externalId") String externalId,
 	                                    @Field("sourceCode") String sourceCode);
 
-	@POST("/debug/v2/mantis/post?path=sources%2Fsources%2F{sourceId}%2FJDBCProvisionRule")
-	Call<ResponseBody> postJDBCProvisionRule(@Path("sourceId") String sourceId,
+	@POST("/debug/v2/mantis/post?path=sources%2Fsources%2F{externalId}%2FJDBCProvisionRule")
+	Call<ResponseBody> postJDBCProvisionRule(@Path("externalId") String externalId,
 	                                         @Field("sourceCode") String sourceCode);
 
-	@DELETE("/debug/v2/mantis/post?path=sources%2Fsources%2F{sourceId}%2FbuildMapRule")
-	Call<ResponseBody> deleteBuildMapRule(@Path("sourceId") String sourceId);
+	@DELETE("/debug/v2/mantis/post?path=sources%2Fsources%2F{externalId}%2FbuildMapRule")
+	Call<ResponseBody> deleteBuildMapRule(@Path("externalId") String externalId);
 
-	@DELETE("/debug/v2/mantis/post?path=sources%2Fsources%2F{sourceId}%2FJDBCProvisionRule")
-	Call<ResponseBody> deleteJDBCProvisionRule(@Path("sourceId") String sourceId);
+	@DELETE("/debug/v2/mantis/post?path=sources%2Fsources%2F{externalId}%2FJDBCProvisionRule")
+	Call<ResponseBody> deleteJDBCProvisionRule(@Path("externalId") String externalId);
 
-	@POST("/debug/v2/mantis/post?path=provisioning%2FprovisioningPolicies%2F{sourceId}%2FdiscoverCreatePolicy")
-	Call<ResponseBody> discoverCreatePolicy(@Path("sourceId") String sourceId);
-
+	@POST("/debug/v2/mantis/post?path=provisioning%2FprovisioningPolicies%2F{externalId}%2FdiscoverCreatePolicy")
+	Call<ResponseBody> discoverCreatePolicy(@Path("externalId") String externalId);
 
 }

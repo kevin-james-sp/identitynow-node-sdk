@@ -689,7 +689,10 @@ public class UserInterfaceSession extends SessionBase {
 			return null;
 		}
 		
-		// TODO: Handle non-200 responses here!
+		// Handle non-200 responses here!
+		if (!response.isSuccessful()) {
+			return null;
+		}
 		
 		Gson gson = new Gson();
 		
@@ -722,7 +725,11 @@ public class UserInterfaceSession extends SessionBase {
 			return null;
 		}
 		
-		// TODO: Handle non-200 responses here!
+		// Handle non-200 responses here!
+		if (!response.isSuccessful()) {
+			return null;
+		}
+		
 		Type listTypeChallengeQuestion = new TypeToken<ArrayList<UiKbaQuestion>>(){}.getType();
 		List<UiKbaQuestion> availableKbaQuestions = new Gson().fromJson(apiChallengeListJsonArray, listTypeChallengeQuestion);
 		

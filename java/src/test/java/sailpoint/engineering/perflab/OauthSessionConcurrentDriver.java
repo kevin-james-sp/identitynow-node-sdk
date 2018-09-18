@@ -33,7 +33,7 @@ public class OauthSessionConcurrentDriver {
 		
 		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
 		
-		int numWorkerThreads = Integer.parseInt(System.getProperty("numWorkerThreads", "400"));
+		int numWorkerThreads = Integer.parseInt(System.getProperty("numWorkerThreads", "10"));
 		
 		AtomicInteger numUiSessionCalls = new AtomicInteger(Integer.parseInt(System.getProperty("numUiSessionCalls", "1000000")));
 		
@@ -97,11 +97,16 @@ public class OauthSessionConcurrentDriver {
 								localStats.accept(duration);
 								
 								// Warn if the duration takes a long time, give it 1/2 a second.
-								if (duration > 2000) {
+								if (duration > 5000) {
 									log.warn("Long call to /ui/session - duration: " + duration + " msecs for session:" + multiCallStr);
 								}
 								
 								int thisGlobalCall = uiSessionCallCount.incrementAndGet();
+								
+								if ((uiSessionCalls % 3) == 0) {
+									String appList = uiSession.doApiGet("/cc/api/app/list");
+									log.info("cc/api/app/list:" + appList);
+								}
 								
 								if ((uiSessionCalls % 50) == 0) {
 									String statsStr = String.format("%d/%d/%f", localStats.getMin(), localStats.getMax(), localStats.getAverage());

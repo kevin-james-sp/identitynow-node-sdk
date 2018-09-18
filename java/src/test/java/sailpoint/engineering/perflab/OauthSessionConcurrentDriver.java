@@ -98,6 +98,8 @@ public class OauthSessionConcurrentDriver {
 								if (null == newSession) {
 									int failCount = failureCount.incrementAndGet();
 									log.error("Failure establising strongly authenticated CC session, failure ratio: " + failCount + "/" + loginCallCount.get());
+									activeThreadCount.decrementAndGet();
+									return;
 								} else {
 									ccSession = uiSession.getUniqueId();
 								}

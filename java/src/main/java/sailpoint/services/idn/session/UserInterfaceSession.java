@@ -806,7 +806,10 @@ public class UserInterfaceSession extends SessionBase {
 			return null;
 		}
 		
-		// TODO: Handle non-200 response.
+		// Handle non-200 response.
+		if (!response.isSuccessful()) {
+			return null;
+		}
 		
 		// Get a new session token to reflect the strongly authenticated status of the session.
 		if (Boolean.parseBoolean(System.getProperty("skipUiSessionCall", "false"))) {

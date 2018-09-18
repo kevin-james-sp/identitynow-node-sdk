@@ -569,7 +569,12 @@ public class UserInterfaceSession extends SessionBase {
 			csrfToken = m.group(1);
 			log.debug("Parsed CSRF Token: " + csrfToken);
 		} else {
-			log.warn("Failed to parse CSRF token from 'SLPT.globalContext.csrf' for CCSESSIONID: " + ccSessionId + " HTML was: " + loginResponse);
+			if (log.isDebugEnabled()) {
+				log.warn("Failed to parse CSRF token from 'SLPT.globalContext.csrf' for CCSESSIONID: " + ccSessionId + " HTML was: " + loginResponse);
+			} else {
+				log.warn("Failed to parse CSRF token from 'SLPT.globalContext.csrf' for CCSESSIONID: " + ccSessionId);
+			}
+			
 			return null;
 		}
 		

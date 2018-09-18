@@ -120,8 +120,8 @@ public class OauthSessionConcurrentDriver {
 								
 									localStats.accept(duration);
 									
-									// Warn if the duration takes a long time, give it 1/2 a second.
-									if (duration > 5000) {
+									// Warn if the duration takes a long time, give it an irrationally long time.
+									if (duration > 25000) {
 										log.warn("Long call to /ui/session - duration: " + duration + " msecs for session:" + multiCallStr);
 									}
 									

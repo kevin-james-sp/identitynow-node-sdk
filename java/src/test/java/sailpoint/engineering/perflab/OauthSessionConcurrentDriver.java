@@ -46,10 +46,18 @@ public class OauthSessionConcurrentDriver {
 		
 		ExecutorService es = Executors.newFixedThreadPool(numWorkerThreads);
 		
+		AtomicInteger threadStarupDelaySerial = new AtomicInteger(0);
+		
 		for (int i=0;i<=numWorkerThreads;i++) {
 			es.submit(() -> {
 				
 				int threadCount = 0;
+				
+				try {
+					Thread.sleep(25 * threadStarupDelaySerial.incrementAndGet());
+				} catch (Exception ex) {
+					log.error("Failure while waiting for thread start up delay.", ex);
+				}
 				
 				while (uiSessionCallCount.get() < numUiSessionCalls.get()) {
 						
@@ -105,7 +113,7 @@ public class OauthSessionConcurrentDriver {
 								
 								if ((uiSessionCalls % 3) == 0) {
 									String appList = uiSession.doApiGet("/cc/api/app/list");
-									log.info("cc/api/app/list:" + appList);
+									log.debug("cc/api/app/list:" + appList);
 								}
 								
 								if ((uiSessionCalls % 50) == 0) {

@@ -715,6 +715,7 @@ public class UserInterfaceSession extends SessionBase {
 		
 		// Handle non-200 responses here!
 		if (!response.isSuccessful()) {
+			response.close();
 			return null;
 		}
 		response.close();
@@ -753,6 +754,7 @@ public class UserInterfaceSession extends SessionBase {
 		
 		// Handle non-200 responses here!
 		if (!response.isSuccessful()) {
+			response.close();
 			return null;
 		}
 		response.close();
@@ -796,6 +798,7 @@ public class UserInterfaceSession extends SessionBase {
 		
 		// Handle non-200 response.
 		if (!response.isSuccessful()) {
+			response.close();
 			return null;
 		}
 		response.close();
@@ -857,10 +860,10 @@ public class UserInterfaceSession extends SessionBase {
 		
 		// Handle non-200 response.
 		if (!response.isSuccessful()) {
+			response.close();
 			return null;
 		}
 		response.close();
-		response = null;
 		
 		// Get a new session token to reflect the strongly authenticated status of the session.
 		if (Boolean.parseBoolean(System.getProperty("skipUiSessionCall", "false"))) {
@@ -897,6 +900,7 @@ public class UserInterfaceSession extends SessionBase {
 		
 		// Handle non-200 response.
 		if (!response.isSuccessful()) {
+			response.close();
 			return null;
 		}
 		response.close();

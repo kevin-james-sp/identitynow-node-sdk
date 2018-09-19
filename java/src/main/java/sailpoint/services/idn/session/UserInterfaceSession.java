@@ -321,13 +321,8 @@ public class UserInterfaceSession extends SessionBase {
 		// 6. Check for KBA map and if present do strong Auth-N.
 		// 7. Check for API credentials and if present then do OAuth token for session.
 		
-		// TODO: Use a common client builder that includes user-agents, etc.
-		OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
-		OkHttpUtils.applyTimeoutSettings(clientBuilder);
-		OkHttpUtils.applyLoggingInterceptors(clientBuilder);
-		clientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
-			
-		OkHttpClient client = clientBuilder.build();
+		// Use a common client builder that includes user-agents, etc.
+		OkHttpClient client = getUserInterfaceOkClient();
 		
 		// STEP 1: Call /login/login and extract the API Gateway URL for the org and other data.
 		
@@ -639,13 +634,8 @@ public class UserInterfaceSession extends SessionBase {
 	@Override
 	public void close() {
 		
-		// TODO: Use a common client builder that includes user-agents, etc.
-		OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
-		OkHttpUtils.applyTimeoutSettings(clientBuilder);
-		OkHttpUtils.applyLoggingInterceptors(clientBuilder);
-		clientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
-			
-		OkHttpClient client = clientBuilder.build();
+		// Use a common client builder that includes user-agents, etc.
+		OkHttpClient client = getUserInterfaceOkClient();
 		
 		long logoutStart = 0;
 		long logoutEnd = 0;

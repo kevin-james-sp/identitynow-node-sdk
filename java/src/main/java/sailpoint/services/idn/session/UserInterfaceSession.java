@@ -273,6 +273,10 @@ public class UserInterfaceSession extends SessionBase {
 		OkHttpUtils.applyTimeoutSettings(uiClientBuilder);
 		OkHttpUtils.applyLoggingInterceptors(uiClientBuilder);
 		uiClientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
+		
+		ConnectionPool uiCxnPool = new ConnectionPool(1, 10, TimeUnit.SECONDS);
+		uiClientBuilder.connectionPool(uiCxnPool);
+		
 		userInterfaceClient = uiClientBuilder.build();
 		
 		return userInterfaceClient;

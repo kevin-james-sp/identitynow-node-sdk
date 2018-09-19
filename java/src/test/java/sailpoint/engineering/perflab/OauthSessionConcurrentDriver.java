@@ -142,7 +142,7 @@ public class OauthSessionConcurrentDriver {
 										log.debug("cc/api/user/status:" + appList);
 									}
 									
-									if ((uiSessionCalls % 4) == 0) {
+									if ((uiSessionCalls % 2) == 0) {
 										String appList = uiSession.doApiGet("/v2/identity/apps/?limit=50&offset=0");
 										log.debug("v2/identity/apps:" + appList);
 									}

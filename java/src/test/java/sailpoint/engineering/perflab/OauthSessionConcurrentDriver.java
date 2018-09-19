@@ -39,6 +39,8 @@ public class OauthSessionConcurrentDriver {
 		
 		log.info("Making " + numUiSessionCalls +" /ui/session calls on " + envCreds.getOrgName() + " using " + numWorkerThreads + " threads.");
 		
+		AtomicInteger interThreadStartupDelay = new AtomicInteger(Integer.parseInt(System.getProperty("interThreadStartupDelay", "2500")));
+		
 		AtomicInteger desiredLoginCalls = new AtomicInteger(Integer.parseInt(System.getProperty("loginCallsPerThread", "10")));
 		AtomicInteger loginCallCount = new AtomicInteger(0);
 		AtomicInteger uiSessionCallCount = new AtomicInteger(0);
@@ -173,10 +175,9 @@ public class OauthSessionConcurrentDriver {
 			}
 
 			try {
-				Thread.sleep(500);
+				Thread.sleep(interThreadStartupDelay.get());
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				log.error("Failedure while sleeping in polling loop.", e);
 			}
 		
 		} while (

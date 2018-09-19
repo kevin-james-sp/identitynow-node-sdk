@@ -836,7 +836,10 @@ public class UserInterfaceSession extends SessionBase {
 
 		// Build out JSON string here:
 		String scrubbedQJsonArrayString = gson.toJson(scrubbedQuestions);
-		log.debug("scrubbedQJsonArrayString: ", scrubbedQJsonArrayString);
+		log.debug("scrubbedQJsonArrayString: [" + scrubbedQJsonArrayString + "]");
+		if (10 > scrubbedQJsonArrayString.length()) {
+			log.error("Extremely short scrubbedQJsonArrayString: [" + scrubbedQJsonArrayString + "], probably invalid.");
+		}
 		
 		// Submit the Strong Authn payload.  Note that this call is made directly
 		// to the user interface URL and not to the API Gateway's URL.  This means we
@@ -865,7 +868,7 @@ public class UserInterfaceSession extends SessionBase {
 			switch(responseCode) {
 			case 400:
 			case 403:
-				log.error("HTTP error " + responseCode + " while calling " + apiStronAuthn + " with [" + scrubbedQJsonArrayString + "]");
+				log.error("HTTP error " + responseCode + " while calling " + apiStronAuthn + " with  payload: " + scrubbedQJsonArrayString);
 				break;
 			default:
 				break;

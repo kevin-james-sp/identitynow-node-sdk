@@ -33,7 +33,7 @@ public class OauthSessionConcurrentDriver {
 		
 		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
 		
-		int numWorkerThreads = Integer.parseInt(System.getProperty("numWorkerThreads", "10"));
+		int numWorkerThreads = Integer.parseInt(System.getProperty("numWorkerThreads", "20"));
 		
 		AtomicInteger numUiSessionCalls = new AtomicInteger(Integer.parseInt(System.getProperty("numUiSessionCalls", "1000000")));
 		

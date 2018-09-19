@@ -33,7 +33,7 @@ public class OauthSessionConcurrentDriver {
 		
 		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
 		
-		int numWorkerThreads = Integer.parseInt(System.getProperty("numWorkerThreads", "10"));
+		int numWorkerThreads = Integer.parseInt(System.getProperty("numWorkerThreads", "100"));
 		
 		AtomicInteger numUiSessionCalls = new AtomicInteger(Integer.parseInt(System.getProperty("numUiSessionCalls", "1000000")));
 		
@@ -132,7 +132,7 @@ public class OauthSessionConcurrentDriver {
 									
 									int thisGlobalCall = uiSessionCallCount.incrementAndGet();
 									
-									if ((uiSessionCalls % 5) == 0) {
+									if ((uiSessionCalls % 2) == 0) {
 										String appList = uiSession.doApiGet("/cc/api/app/list");
 										log.debug("cc/api/app/list:" + appList);
 									}

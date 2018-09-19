@@ -431,6 +431,8 @@ public class UserInterfaceSession extends SessionBase {
 			String acam = optionsResponse.header("access-control-allow-methods").toString();
 			log.debug("access-control-allow-methods: " + acam);
 		}
+		optionsResponse.close();
+		optionsResponse = null;
 		
 		// STEP 3: Make a POST to /login/get to get the properties for the user.
 		String jsonContent = "{username=" + getCredentials().getOrgUser() + "}";
@@ -439,6 +441,7 @@ public class UserInterfaceSession extends SessionBase {
 		response = doPost(uiUrl, jsonContent, apiGwClient, null, null);
 		String responseBody = response.body().string();
 		log.debug(responseBody);
+		response.close();
 		
 		UiLoginGetResponse apiLoginGetResponse = gson.fromJson(responseBody, UiLoginGetResponse.class);
 		log.debug("encryption type = " + apiLoginGetResponse.getApiAuth().getEncryptionType());
@@ -540,8 +543,10 @@ public class UserInterfaceSession extends SessionBase {
 			switch (response.code()) {
 			case 302:
 				nextUrl = response.header("Location");
+				response.close();
 				break;
 			case 403:
+				response.close();
 				String errMsg = "Failure while following redirects from SSO; unable to login";
 				log.error(errMsg);
 				throw new IOException(errMsg);
@@ -554,12 +559,13 @@ public class UserInterfaceSession extends SessionBase {
 				oauthToken  = nextUrl.substring(nextUrl.lastIndexOf(callbackToken) + 1);
 				log.debug("oauthToken: " + oauthToken);
 			}
-				
 			
 		} while (!redirectsDone);
 		
 		String loginResponse = response.body().string();
 		log.debug("Login Response Body:" + loginResponse);
+		response.close();
+		response = null;
 		
 		// Parse the /ui/main page to get the CSRF Token.
 		String csrfTokenRegex = "SLPT.globalContext.csrf\\s=\\s'(\\w+)'";
@@ -661,6 +667,9 @@ public class UserInterfaceSession extends SessionBase {
 			break;
 		}
 		
+		response.close();
+		response = null;
+		
 		logoutSequenceDuration = logoutEnd - logoutStart;
 		log.debug("Logout processed in " + logoutSequenceDuration  + " msecs.");
 
@@ -698,6 +707,8 @@ public class UserInterfaceSession extends SessionBase {
 		if (!response.isSuccessful()) {
 			return null;
 		}
+		response.close();
+		response = null;
 		
 		Gson gson = new Gson();
 		
@@ -734,6 +745,9 @@ public class UserInterfaceSession extends SessionBase {
 		if (!response.isSuccessful()) {
 			return null;
 		}
+		response.close();
+		response = null;
+
 		
 		Type listTypeChallengeQuestion = new TypeToken<ArrayList<UiKbaQuestion>>(){}.getType();
 		List<UiKbaQuestion> availableKbaQuestions = new Gson().fromJson(apiChallengeListJsonArray, listTypeChallengeQuestion);
@@ -763,6 +777,13 @@ public class UserInterfaceSession extends SessionBase {
 			log.error("Failure while calling " + userGetUrl, e);
 			return null;
 		}
+		
+		// Handle non-200 response.
+		if (!response.isSuccessful()) {
+			return null;
+		}
+		response.close();
+		response = null;
 		
 		User user = gson.fromJson(userGetJson, User.class);
 		log.debug("kbaReqForAuthn: " + user.getKbaReqForAuthn());
@@ -822,6 +843,8 @@ public class UserInterfaceSession extends SessionBase {
 		if (!response.isSuccessful()) {
 			return null;
 		}
+		response.close();
+		response = null;
 		
 		// Get a new session token to reflect the strongly authenticated status of the session.
 		if (Boolean.parseBoolean(System.getProperty("skipUiSessionCall", "false"))) {
@@ -856,10 +879,12 @@ public class UserInterfaceSession extends SessionBase {
 			return null;
 		}
 		
-		// TODO: Handle non-200 responses here!
+		// Handle non-200 response.
 		if (!response.isSuccessful()) {
 			return null;
 		}
+		response.close();
+		response = null;
 		
 		Gson gson = new Gson();
 		
@@ -869,7 +894,6 @@ public class UserInterfaceSession extends SessionBase {
 		this.csrfToken = uiSessToken.getCsrfToken();
 		this.oauthToken = uiSessToken.getAccessToken();
 		this.accessToken = uiSessToken.getAccessToken();
-		
 		
 		return uiSessToken.getAccessToken();
 	}

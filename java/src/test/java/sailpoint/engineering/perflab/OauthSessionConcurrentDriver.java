@@ -33,13 +33,13 @@ public class OauthSessionConcurrentDriver {
 		
 		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
 		
-		int numWorkerThreads = Integer.parseInt(System.getProperty("numWorkerThreads", "100"));
+		int numWorkerThreads = Integer.parseInt(System.getProperty("numWorkerThreads", "10"));
 		
 		AtomicInteger numUiSessionCalls = new AtomicInteger(Integer.parseInt(System.getProperty("numUiSessionCalls", "1000000")));
 		
 		log.info("Making " + numUiSessionCalls +" /ui/session calls on " + envCreds.getOrgName() + " using " + numWorkerThreads + " threads.");
 		
-		AtomicInteger interThreadStartupDelay = new AtomicInteger(Integer.parseInt(System.getProperty("interThreadStartupDelay", "2500")));
+		AtomicInteger interThreadStartupDelay = new AtomicInteger(Integer.parseInt(System.getProperty("interThreadStartupDelay", "100")));
 		
 		AtomicInteger desiredLoginCalls = new AtomicInteger(Integer.parseInt(System.getProperty("loginCallsPerThread", "10")));
 		AtomicInteger loginCallCount = new AtomicInteger(0);

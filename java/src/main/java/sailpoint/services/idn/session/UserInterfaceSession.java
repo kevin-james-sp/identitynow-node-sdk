@@ -3,6 +3,7 @@ package sailpoint.services.idn.session;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import okhttp3.ConnectionPool;
 import okhttp3.FormBody;
 import okhttp3.Headers;
 import okhttp3.JavaNetCookieJar;
@@ -51,6 +52,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -243,6 +245,10 @@ public class UserInterfaceSession extends SessionBase {
 		OkHttpUtils.applyTimeoutSettings(apiGwClientBuilder);
 		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
 		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
+		
+		// Experiment with re-using a single connection for up to 10 seconds.
+		ConnectionPool apiGwCxnPool = new ConnectionPool(1, 10, TimeUnit.SECONDS);
+		apiGwClientBuilder.connectionPool(apiGwCxnPool);
 		apiGatewayClient = apiGwClientBuilder.build();
 		
 		return apiGatewayClient;
@@ -762,6 +768,12 @@ public class UserInterfaceSession extends SessionBase {
 		
 		log.debug("User has " + answeredKbaQuestions.size() + " answered KBA questions.");
 		
+		// Sanity check before trying to Strong-Authn.
+		if (0 == answeredKbaQuestions.size()) {
+			log.error("User " + creds.getOrgUser() + " has no KBA questions answered; unable to Strong-AuthN!");
+			return null;
+		}
+		
 		// The user interface presents N strongAuthn questions to answer.  A user typically
 		// must answer a sub-set of these to strongly authenticate.  Say there are 5 questions
 		// with an answer provided and 3 answers must be sumbitted for the strong-auth to go 
@@ -925,7 +937,11 @@ public class UserInterfaceSession extends SessionBase {
 				log.error(response.code() + " while calling " + apiUrl);
 			}
 			String responseJson = response.body().string();
-			log.debug(apiUrlSuffix + ": " + responseJson);
+			response.body().close();
+			// Spare the expensive string concat if we can:
+			if (log.isDebugEnabled()) {
+				log.debug(apiUrlSuffix + ": " + responseJson);
+			}
 			return responseJson;
 		} catch (IOException e) {
 			log.error("Failure while calling " + apiUrl, e);

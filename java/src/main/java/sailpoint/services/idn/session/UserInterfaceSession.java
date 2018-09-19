@@ -854,13 +854,22 @@ public class UserInterfaceSession extends SessionBase {
 			strongAuthnResponseStr = response.body().string();
 			log.debug("api/user/strongAuthn: " + strongAuthnResponseStr);
 		} catch (IOException e) {
-			log.error("Failure while calling " + apiStronAuthn, e);
+			log.error("Failure while calling " + apiStronAuthn + " with [" + scrubbedQJsonArrayString + "]", e);
 			return null;
 		}
 		
 		// Handle non-200 response.
 		if (!response.isSuccessful()) {
 			response.close();
+			int responseCode = response.code();
+			switch(responseCode) {
+			case 400:
+			case 403:
+				log.error("HTTP error " + responseCode + " while calling " + apiStronAuthn + " with [" + scrubbedQJsonArrayString + "]");
+				break;
+			default:
+				break;
+			}
 			return null;
 		}
 		response.close();

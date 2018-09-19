@@ -3,6 +3,7 @@ package sailpoint.services.idn.sdk;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -12,7 +13,7 @@ import java.util.regex.Pattern;
  * @author adam.hampton
  *
  */
-public class ClientCredentials extends HashMap<String,String> {
+public class ClientCredentials extends ConcurrentHashMap<String,String> {
 	
 	private static final long serialVersionUID = -1L;
 	

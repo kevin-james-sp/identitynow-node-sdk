@@ -393,11 +393,7 @@ public class UserInterfaceSession extends SessionBase {
 		//     *.api.identitynow.com/cc/* 
 		//  or *.api.identitynow.com/v2/*
 		// So we build a new cookie manager here:
-		OkHttpClient.Builder apiGwClientBuilder = new OkHttpClient.Builder();
-		OkHttpUtils.applyTimeoutSettings(apiGwClientBuilder);
-		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
-		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
-		OkHttpClient apiGwClient = apiGwClientBuilder.build();
+		OkHttpClient apiGwClient = getApiGatewayOkClient(); 
 
 		//Build the options URLw
 		String optionsUrl = getApiGatewayUrl() + "/cc/" + URL_LOGIN_GET;
@@ -523,8 +519,22 @@ public class UserInterfaceSession extends SessionBase {
 		// Add the ccSessionId cookie to the POST request to the SSO server.
 		// This is "interesting" in OkHttp3 due to the 302s that follow.
 		// For more info: https://github.com/request/request/issues/1502
-		// Instead we roll our own redirect handler here.
-		OkHttpClient manual302Client = clientBuilder.followRedirects(false).build();
+		// Instead we roll our own redirect handler here. Just like the 
+		// regular ui client builder, with fllow redirects set to false.
+		OkHttpClient manual302Client = null;
+		{
+			OkHttpClient.Builder uiClientBuilder = new OkHttpClient.Builder();
+			OkHttpUtils.applyTimeoutSettings(uiClientBuilder);
+			OkHttpUtils.applyLoggingInterceptors(uiClientBuilder);
+			uiClientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
+			
+			ConnectionPool uiCxnPool = new ConnectionPool(1, 10, TimeUnit.SECONDS);
+			uiClientBuilder.connectionPool(uiCxnPool);
+			uiClientBuilder.followRedirects(false);
+			
+			manual302Client = uiClientBuilder.build();
+		}
+		
 		response = doPost(ssoUrl, formBody, manual302Client, headers, cookieManager.getCookieStore().getCookies());
 		
 		// TODO: Support encryption types other than "hash".

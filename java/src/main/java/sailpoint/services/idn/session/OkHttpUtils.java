@@ -271,9 +271,10 @@ public class OkHttpUtils {
 				if ((null != retryAfter) && (0 != retryAfter.length())) {
 					retryDelay = 1000 * (Integer.parseInt(retryAfter));
 				}
-
+				
 				String reponseBody = response.body().toString();
-
+				response.close(); // Close the response and free its resources.
+				
 				if (attemptCount < MAX_429_RETRIES) {
 					log.warn("429 - Rate Limit Exceeded: " + reponseBody + " retrying in " + retryDelay
 							+ " msecs, attemptCount:" + attemptCount);

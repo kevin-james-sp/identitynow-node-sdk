@@ -836,9 +836,9 @@ public class UserInterfaceSession extends SessionBase {
 
 		// Build out JSON string here:
 		String scrubbedQJsonArrayString = gson.toJson(scrubbedQuestions);
-		log.debug("scrubbedQJsonArrayString: [" + scrubbedQJsonArrayString + "]");
+		log.debug("scrubbedQJsonArrayString: '" + scrubbedQJsonArrayString + "'");
 		if (10 > scrubbedQJsonArrayString.length()) {
-			log.error("Extremely short scrubbedQJsonArrayString: [" + scrubbedQJsonArrayString + "], probably invalid.");
+			log.error("Extremely short scrubbedQJsonArrayString: '" + scrubbedQJsonArrayString + "', probably invalid.");
 		}
 		
 		// Submit the Strong Authn payload.  Note that this call is made directly

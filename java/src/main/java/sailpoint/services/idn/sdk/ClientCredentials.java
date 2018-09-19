@@ -33,7 +33,19 @@ public class ClientCredentials extends ConcurrentHashMap<String,String> {
 	// Maintain a mapping of Knowledge Based Authentication question substring to answer text.
 	// Environment parameters like: kbaQ_1, kbaA_1, kbaQ_2, kbaA_2, etc.
 	private ArrayList<String> kbaQTextList = new ArrayList<String>();
-	private HashMap<String,String> kbaQtoAMap = new HashMap<String,String>();
+	private ConcurrentHashMap<String,String> kbaQtoAMap = new ConcurrentHashMap<String,String>();
+	
+	// We want to alter the entire ClientCredentials class to 
+	// extend ConcurrentHashMap eventually.  That means no setting
+	// values to NULL here below, so these will have to alter the way 
+	// they work.
+	private void setFieldWithNull (String fieldKey, String newValue) {
+		if (null == newValue) {
+			this.remove(fieldKey);
+		} else {
+			this.put(fieldKey, newValue.trim());
+		}
+	}
 	
 	/**
 	 * Constructor passing all known properties for an org.
@@ -48,12 +60,12 @@ public class ClientCredentials extends ConcurrentHashMap<String,String> {
 			String userIntUrl, String orgScriptName, String orgUser, 
 			String orgPass, String clientId, String clientSecret) {
 		super();
-		this.put(USERINT_URL,    (null != userIntUrl)    ? userIntUrl.trim()    : null);
-		this.put(ORG_NAME,       (null != orgScriptName) ? orgScriptName.trim() : null);
-		this.put(ORG_USER,       (null != orgUser)       ? orgUser.trim()       : null);
-		this.put(ORG_PASS,       (null != orgPass)       ? orgPass.trim()       : null);
-		this.put(CLIENT_ID,      (null != clientId)      ? clientId.trim()      : null);
-		this.put(CLIENT_SECRET,  (null != clientSecret)  ? clientSecret.trim()  : null);
+		setFieldWithNull(USERINT_URL,    userIntUrl.trim()    );
+		setFieldWithNull(ORG_NAME,       orgScriptName.trim() );
+		setFieldWithNull(ORG_USER,       orgUser.trim()       );
+		setFieldWithNull(ORG_PASS,       orgPass.trim()       );
+		setFieldWithNull(CLIENT_ID,      clientId.trim()      );
+		setFieldWithNull(CLIENT_SECRET,  clientSecret.trim()  );
 	}
 	
 	/**
@@ -102,20 +114,19 @@ public class ClientCredentials extends ConcurrentHashMap<String,String> {
 		return null;
 	}
 	
-	// Cookie-cutter set()-ers that all trim any strings passed in.
-	
-	public void setGatewayUrl(String arg)   { this.put(GATEWAY_URL,   (null != arg ? arg.trim() : null) ); }
-	public void setUserIntUrl(String arg)   { this.put(USERINT_URL,   (null != arg ? arg.trim() : null) ); }
-	public void setOrgName(String arg)      { this.put(ORG_NAME,      (null != arg ? arg.trim() : null) ); }
-	public void setOrgUser(String arg)      { this.put(ORG_USER,      (null != arg ? arg.trim() : null) ); }
-	public void setOrgPass(String arg)      { this.put(ORG_PASS,      (null != arg ? arg.trim() : null) ); }
-	public void setOrgPassHash(String arg)  { this.put(ORG_PASS_HASH, (null != arg ? arg.trim() : null) ); }
-	public void setClientId(String arg)     { this.put(CLIENT_ID,     (null != arg ? arg.trim() : null) ); }
-	public void setClientSecret(String arg) { this.put(CLIENT_SECRET, (null != arg ? arg.trim() : null) ); }
-	public void setOAuthToken(String arg)   { this.put(OAUTH_TOKEN,   (null != arg ? arg.trim() : null) ); }
-	public void setJWTToken(String arg)     { this.put(JWT_TOKEN,     (null != arg ? arg.trim() : null) ); }
-	public void setExpiresIn(String arg)    { this.put(EXPIRES_IN,    (null != arg ? arg.trim() : null) ); }
-	public void setKbaDefault(String arg)   { this.put(KBA_DEFAULT,   (null != arg ? arg.trim() : null) ); }
+	// Cookie-cutter set()-ers that all trim any strings passed in.	
+	public void setGatewayUrl(String arg)   { setFieldWithNull(GATEWAY_URL,    arg); }
+	public void setUserIntUrl(String arg)   { setFieldWithNull(USERINT_URL,    arg); }
+	public void setOrgName(String arg)      { setFieldWithNull(ORG_NAME,       arg); }
+	public void setOrgUser(String arg)      { setFieldWithNull(ORG_USER,       arg); }
+	public void setOrgPass(String arg)      { setFieldWithNull(ORG_PASS,       arg); }
+	public void setOrgPassHash(String arg)  { setFieldWithNull(ORG_PASS_HASH,  arg); }
+	public void setClientId(String arg)     { setFieldWithNull(CLIENT_ID,      arg); }
+	public void setClientSecret(String arg) { setFieldWithNull(CLIENT_SECRET,  arg); }
+	public void setOAuthToken(String arg)   { setFieldWithNull(OAUTH_TOKEN,    arg); }
+	public void setJWTToken(String arg)     { setFieldWithNull(JWT_TOKEN,      arg); }
+	public void setExpiresIn(String arg)    { setFieldWithNull(EXPIRES_IN,     arg); }
+	public void setKbaDefault(String arg)   { setFieldWithNull(KBA_DEFAULT,    arg); }
 	
 	/** 
 	 * The API Gateway URL for IdentityNow organizations is strictly derived 
@@ -134,7 +145,6 @@ public class ClientCredentials extends ConcurrentHashMap<String,String> {
 		}
 		return null;
 	}
-	
 	
 	/**
 	 * Retrieve the answer for a given KBA question.  Checks the hash map first,

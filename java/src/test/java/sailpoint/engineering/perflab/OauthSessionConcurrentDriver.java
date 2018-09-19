@@ -89,9 +89,12 @@ public class OauthSessionConcurrentDriver {
 							if (null == openOk) {
 								int failCount = failureCount.incrementAndGet();
 								log.error("Failure establising new CC session, failure ratio: " + failCount + "/" + loginCallCount.get());
+								activeThreadCount.decrementAndGet();
+								return;
 							} else {
 								ccSession = openOk.getUniqueId();
 							}
+							
 							if (Boolean.parseBoolean(System.getProperty("skipUiSessionCall", "false"))) {
 								log.debug("Skipping stronglyAuthenticate() due to skipUiSessionCall setting.");
 							} else {

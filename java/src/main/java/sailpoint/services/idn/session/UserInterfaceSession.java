@@ -692,7 +692,7 @@ public class UserInterfaceSession extends SessionBase {
 	 * @param kbaAnswers
 	 * @return the newly gotten session token.
 	 */
-	public String stronglyAuthenticate() {
+	public synchronized String stronglyAuthenticate() {
 		
 		OkHttpClient apiGwClient = getApiGatewayOkClient(); 
 		

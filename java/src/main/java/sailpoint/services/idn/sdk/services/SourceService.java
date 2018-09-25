@@ -4,12 +4,10 @@ import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
-import retrofit2.http.DELETE;
 import retrofit2.http.Field;
 import retrofit2.http.FieldMap;
 import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.GET;
-import retrofit2.http.Headers;
 import retrofit2.http.Multipart;
 import retrofit2.http.POST;
 import retrofit2.http.Part;
@@ -27,13 +25,15 @@ public interface SourceService {
 	/*
 	 * Basics
 	 */
-	
+
+
 	@GET( "/cc/api/source/list" )
 	Call<ResponseBody> list (  );
 	
 	@GET( "/cc/api/source/get" )
 	Call<ResponseBody> get (  );
-	
+
+
 	@POST( "/cc/api/source/create" )
 	@FormUrlEncoded
 	Call<ResponseBody> create (@FieldMap Map<String, String> params);
@@ -43,46 +43,48 @@ public interface SourceService {
 	@FormUrlEncoded
 	Call<ResponseBody> update (@FieldMap Map<String, String> params,
 	                           @Path("sourceId") String sourceId);
-	
-	@POST( "/cc/api/source/delete" )
-	Call<ResponseBody> delete (  );
-	
-	@GET( "/cc/api/source/export" )
-	Call<ResponseBody> exportSource (  );
-	
-	@POST( "/cc/api/source/import" )
-	Call<ResponseBody> importSource (  );
+
+
+//	@POST( "/cc/api/source/delete" )
+//	Call<ResponseBody> delete (  );
+//
+//	@GET( "/cc/api/source/export" )
+//	Call<ResponseBody> exportSource (  );
+//
+//	@POST( "/cc/api/source/import" )
+//	Call<ResponseBody> importSource (  );
 	
 	/*
 	 * Schema
 	 */
-	
-	@GET( "/cc/api/source/getAccountSchema" )
-	Call<ResponseBody> getAccountSchema (  );
-	
+
+
+//	@GET( "/cc/api/source/getAccountSchema" )
+//	Call<ResponseBody> getAccountSchema (  );
+
 	@POST( "/cc/api/source/discoverSchema/{sourceId}" )
 	Call<ResponseBody> discoverSchema ( @Path("sourceId") String sourceId );
-	
-	@POST( "/cc/api/source/createSchemaAttribute" )
-	Call<ResponseBody> createSchemaAttribute (  );
-	
-	@POST( "/cc/api/source/updateSchemaAttributes/{sourceId}" )
-	@FormUrlEncoded
-	Call<ResponseBody> updateSchemaAttributes (@Path("sourceId") String sourceId,
-	                                           @FieldMap Map<String, String> params);
-	
-	@POST( "/cc/api/source/deleteSchemaAttribute" )
-	Call<ResponseBody> deleteSchemaAttribute (  );
+//
+//	@POST( "/cc/api/source/createSchemaAttribute" )
+//	Call<ResponseBody> createSchemaAttribute (  );
+//
+//	@POST( "/cc/api/source/updateSchemaAttributes/{sourceId}" )
+//	@FormUrlEncoded
+//	Call<ResponseBody> updateSchemaAttributes (@Path("sourceId") String sourceId,
+//	                                           @FieldMap Map<String, String> params);
+//
+//	@POST( "/cc/api/source/deleteSchemaAttribute" )
+//	Call<ResponseBody> deleteSchemaAttribute (  );
 
 	/*
 	 * Aggregation
 	 */
 	
-	@GET( "/cc/api/source/supportsAggregation" )
-	Call<ResponseBody> supportsAggregation ( );
-	
-	@GET( "/cc/api/source/getAggregationSchedules" )
-	Call<ResponseBody> getAggregationSchedules ( );
+//	@GET( "/cc/api/source/supportsAggregation" )
+//	Call<ResponseBody> supportsAggregation ( );
+//
+//	@GET( "/cc/api/source/getAggregationSchedules" )
+//	Call<ResponseBody> getAggregationSchedules ( );
 	
 	@POST( "/cc/api/source/testConnection/{id}" )
 	Call<ResponseBody> testConnection(
@@ -98,29 +100,29 @@ public interface SourceService {
 			@Path( "id" ) String id,
 			@Part( "file\"; filename=\"file.csv\" " ) RequestBody file );
 	
-	@POST( "/cc/api/source/cancelAggregation" )
-	Call<ResponseBody> cancelAggregation (  );
+//	@POST( "/cc/api/source/cancelAggregation" )
+//	Call<ResponseBody> cancelAggregation (  );
 	
 	@POST( "/cc/api/source/loadEntitlements/{id}" )
 	Call<ResponseBody> aggregateEntitlements ( 
 			@Path( "id" ) String id );
 	
-	@POST( "/cc/api/source/scheduleAggregation" )
-	Call<ResponseBody> scheduleAggregation (  );
-	
-	@POST( "/cc/api/source/scheduleEntitlementAggregation" )
-	Call<ResponseBody> scheduleEntitlementAggregation (  );
+//	@POST( "/cc/api/source/scheduleAggregation" )
+//	Call<ResponseBody> scheduleAggregation (  );
+//
+//	@POST( "/cc/api/source/scheduleEntitlementAggregation" )
+//	Call<ResponseBody> scheduleEntitlementAggregation (  );
 	
 	/*
 	 * Correlation
 	 */
 	
-	@GET( "/cc/api/source/getUncorrelatedAccounts" )
-	Call<ResponseBody> getUncorrelatedAccounts (  );
-	
-	@GET( "/cc/api/source/getUncorrelatedAccountsCount" )
-	Call<ResponseBody> getUncorrelatedAccountsCount (  );
-	
+//	@GET( "/cc/api/source/getUncorrelatedAccounts" )
+//	Call<ResponseBody> getUncorrelatedAccounts (  );
+//
+//	@GET( "/cc/api/source/getUncorrelatedAccountsCount" )
+//	Call<ResponseBody> getUncorrelatedAccountsCount (  );
+//
 	/*
 	 * Uploads
 	 */
@@ -130,16 +132,16 @@ public interface SourceService {
 	Call<ResponseBody> uploadConnectorFile (@Path("sourceId") String sourceId,
 	                                        @Part MultipartBody.Part filePart);
 	
-	@POST( "/cc/api/source/uploadCustomIcon" )
-	Call<ResponseBody> uploadCustomIcon (  );
-	
-	@POST( "/cc/api/source/importEntitlementsCsv" )
-	Call<ResponseBody> importEntitlementsCsv (  );
+//	@POST( "/cc/api/source/uploadCustomIcon" )
+//	Call<ResponseBody> uploadCustomIcon (  );
+//
+//	@POST( "/cc/api/source/importEntitlementsCsv" )
+//	Call<ResponseBody> importEntitlementsCsv (  );
 	
 	/*
 	 * Reporting
 	 */
-	
+
 	@FormUrlEncoded
 	@POST( "/cc/api/source/runAccountsExportReport" )
 	Call<ResponseBody> runAccountsExportReport(
@@ -151,126 +153,89 @@ public interface SourceService {
 		@Query( "sourceId" ) String sourceId,
 		@Query( "reportName" ) String reportName );
 	
-	@GET( "/cc/api/source/exportAccountFeed" )
-	Call<ResponseBody> exportAccountFeed( );
-	
-	@GET( "/cc/api/source/exportEntitlementsCsv" )
-	Call<ResponseBody> exportEntitlementsCsv( );
-	
-	@GET( "/cc/api/source/getAccountsCsv" )
-	Call<ResponseBody> getAccountsCsv( );
-	
-	@POST( "/cc/api/source/runAccountsExportReport" )
-	Call<ResponseBody> runAccountsExportReport( );
-	
-	@POST( "/cc/api/source/runProvisioningSummary" ) 
-	Call<ResponseBody> runProvisioningSummary( );
-	
-	@POST( "/cc/api/source/runResetSummary" )
-	Call<ResponseBody> runResetSummary( );
+//	@GET( "/cc/api/source/exportAccountFeed" )
+//	Call<ResponseBody> exportAccountFeed( );
+//
+//	@GET( "/cc/api/source/exportEntitlementsCsv" )
+//	Call<ResponseBody> exportEntitlementsCsv( );
+//
+//	@GET( "/cc/api/source/getAccountsCsv" )
+//	Call<ResponseBody> getAccountsCsv( );
+//
+//	@POST( "/cc/api/source/runAccountsExportReport" )
+//	Call<ResponseBody> runAccountsExportReport( );
+//
+//	@POST( "/cc/api/source/runProvisioningSummary" )
+//	Call<ResponseBody> runProvisioningSummary( );
+//
+//	@POST( "/cc/api/source/runResetSummary" )
+//	Call<ResponseBody> runResetSummary( );
 	
 	/*
 	 * Misc
 	 */
 	
-	@GET( "/cc/api/source/connections" )
-	Call<ResponseBody> connections (  );
-	
-	@POST( "/cc/api/source/createNotification" )
-	Call<ResponseBody> createNotification (  );
-	
-	@GET( "/cc/api/source/getDeleteThreshold" )
-	Call<ResponseBody> getDeleteThreshold (  );
-	
-	@POST( "/cc/api/source/updateDeleteThreshold" )
-	Call<ResponseBody> updateDeleteThreshold (  );
-	
-	@GET( "/cc/api/source/getAccountsTemplate" )
-	Call<ResponseBody> getAccountsTemplate (  );
-	
-	@GET( "/cc/api/source/getProvisioningSummary" )
-	Call<ResponseBody> getProvisioningSummary (  );
-	
-	@GET( "/cc/api/source/getApplicationConfig" )
-	Call<ResponseBody> getApplicationConfig (  );
-	
-	@GET( "/cc/api/source/getAttributeSyncConfig" )
-	Call<ResponseBody> getAttributeSyncConfig (  );
-	
-	@GET( "/cc/api/source/getConfig" )
-	Call<ResponseBody> getConfig (  );
-	
-	@GET( "/cc/api/source/getEntitlementAggregationSchedules" )
-	Call<ResponseBody> getEntitlementAggregationSchedules (  );
-	
-	@GET( "/cc/api/source/getEntitlementsTemplate" )
-	Call<ResponseBody> getEntitlementsTemplate (  );
-	
-	@GET( "/cc/api/source/getPasswordSyncInfo" )
-	Call<ResponseBody> getPasswordSyncInfo (  );
-	
-	@GET( "/cc/api/source/getResetSummary" )
-	Call<ResponseBody> getResetSummary (  );
-	
-	@GET( "/cc/api/source/getSourceDefinitions" )
-	Call<ResponseBody> getSourceDefinitions (  );
-	
-	@POST( "/cc/api/source/loadUncorrelatedAccounts" )
-	Call<ResponseBody> loadUncorrelatedAccounts (  );
-	
-	@POST( "/cc/api/source/reset" )
-	Call<ResponseBody> reset (  );
-	
-	@POST( "/cc/api/source/resetAll" )
-	Call<ResponseBody> resetAll (  );
-	
-	@POST( "/cc/api/source/setAttributeSyncConfig" )
-	Call<ResponseBody> setAttributeSyncConfig (  );
-	
-	@POST( "/cc/api/source/setPassword" )
-	Call<ResponseBody> setPassword (  );
-	
-	@GET( "/cc/api/source/status" )
-	Call<ResponseBody> status (  );
-	
-	@POST( "/cc/api/source/syncPassword" )
-	Call<ResponseBody> syncPassword (  );
-
-	//no mantis calls will work, fml
-	@POST("/mantis/sources/sources/addAttributeToGroupSchema")
-	Call<ResponseBody> addAttributeToGroupSchema(@Field ("sourceId") String sourceId,
-	                                             @Field("schemaAttributeRequest") String schemaAttributeRequest);
-
-	@POST("/mantis/sources/sources/deleteAttributesFromGroupSchema")
-	Call<ResponseBody> deleteAttributesFromGroupSchema(@Field("sourceId") String sourceId,
-	                                                   @Field("schemaAttributeRequest") Map schemaAttributeRequest);
-
-	@POST("/mantis/sources/sources/deleteGroupSchema")
-	Call<ResponseBody> deleteGroupSchema(@Field("sourceId") String sourceId);
-
-	@GET("/mantis/sources/sources/{sourceId}/buildMapRule")
-	Call<ResponseBody> getBuildMapRule(@Path("sourceId") String sourceId);
-
-	@GET("/mantis/sources/sources/{sourceId}/JDBCProvisionRule")
-	Call<ResponseBody> getJDBCProvisionRule(@Path("sourceId") String sourceId);
-
-	@Headers("Content-Type:application/json")
-	@POST("/mantis/sources/sources/{sourceId}/buildMapRule")
-	Call<ResponseBody> postBuildMapRule(@Path("sourceId") String sourceId,
-	                                    @Field("sourceCode") String sourceCode);
-
-	@POST("/mantis/sources/sources/{sourceId}/JDBCProvisionRule")
-	Call<ResponseBody> postJDBCProvisionRule(@Path("sourceId") String sourceId,
-	                                         @Field("sourceCode") String sourceCode);
-
-	@DELETE("/mantis/sources/sources/{sourceId}/buildMapRule")
-	Call<ResponseBody> deleteBuildMapRule(@Path("sourceId") String sourceId);
-
-	@DELETE("/mantis/sources/sources/{sourceId}/JDBCProvisionRule")
-	Call<ResponseBody> deleteJDBCProvisionRule(@Path("sourceId") String sourceId);
-
-	@POST("/mantis/provisioning/provisioningPolicies/{sourceId}/discoverCreatePolicy")
-	Call<ResponseBody> discoverCreatePolicy(@Path("sourceId") String sourceId);
-
+//	@GET( "/cc/api/source/connections" )
+//	Call<ResponseBody> connections (  );
+//
+//	@POST( "/cc/api/source/createNotification" )
+//	Call<ResponseBody> createNotification (  );
+//
+//	@GET( "/cc/api/source/getDeleteThreshold" )
+//	Call<ResponseBody> getDeleteThreshold (  );
+//
+//	@POST( "/cc/api/source/updateDeleteThreshold" )
+//	Call<ResponseBody> updateDeleteThreshold (  );
+//
+//	@GET( "/cc/api/source/getAccountsTemplate" )
+//	Call<ResponseBody> getAccountsTemplate (  );
+//
+//	@GET( "/cc/api/source/getProvisioningSummary" )
+//	Call<ResponseBody> getProvisioningSummary (  );
+//
+//	@GET( "/cc/api/source/getApplicationConfig" )
+//	Call<ResponseBody> getApplicationConfig (  );
+//
+//	@GET( "/cc/api/source/getAttributeSyncConfig" )
+//	Call<ResponseBody> getAttributeSyncConfig (  );
+//
+//	@GET( "/cc/api/source/getConfig" )
+//	Call<ResponseBody> getConfig (  );
+//
+//	@GET( "/cc/api/source/getEntitlementAggregationSchedules" )
+//	Call<ResponseBody> getEntitlementAggregationSchedules (  );
+//
+//	@GET( "/cc/api/source/getEntitlementsTemplate" )
+//	Call<ResponseBody> getEntitlementsTemplate (  );
+//
+//	@GET( "/cc/api/source/getPasswordSyncInfo" )
+//	Call<ResponseBody> getPasswordSyncInfo (  );
+//
+//	@GET( "/cc/api/source/getResetSummary" )
+//	Call<ResponseBody> getResetSummary (  );
+//
+//	@GET( "/cc/api/source/getSourceDefinitions" )
+//	Call<ResponseBody> getSourceDefinitions (  );
+//
+//	@POST( "/cc/api/source/loadUncorrelatedAccounts" )
+//	Call<ResponseBody> loadUncorrelatedAccounts (  );
+//
+//	@POST( "/cc/api/source/reset" )
+//	Call<ResponseBody> reset (  );
+//
+//	@POST( "/cc/api/source/resetAll" )
+//	Call<ResponseBody> resetAll (  );
+//
+//	@POST( "/cc/api/source/setAttributeSyncConfig" )
+//	Call<ResponseBody> setAttributeSyncConfig (  );
+//
+//	@POST( "/cc/api/source/setPassword" )
+//	Call<ResponseBody> setPassword (  );
+//
+//	@GET( "/cc/api/source/status" )
+//	Call<ResponseBody> status (  );
+//
+//	@POST( "/cc/api/source/syncPassword" )
+//	Call<ResponseBody> syncPassword (  );
 
 }

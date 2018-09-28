@@ -13,6 +13,8 @@ import sailpoint.services.idn.sdk.interceptor.JwtBearerAuthInterceptor;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;

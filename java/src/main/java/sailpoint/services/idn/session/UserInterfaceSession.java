@@ -6,11 +6,13 @@ import com.google.gson.reflect.TypeToken;
 import okhttp3.ConnectionPool;
 import okhttp3.FormBody;
 import okhttp3.Headers;
+import okhttp3.Interceptor;
 import okhttp3.JavaNetCookieJar;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import okhttp3.Interceptor.Chain;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -113,7 +115,7 @@ public class UserInterfaceSession extends SessionBase {
 	public String getUniqueId() {
 		return ccSessionId;
 	}
-	
+
 	public OkHttpClient getClient() {
 		// There is an ambiguiity here: Do we want the CC client or the API GW client.
 		throw new IllegalArgumentException("TODO: Stub this out for UserInterfaceSession");
@@ -238,20 +240,49 @@ public class UserInterfaceSession extends SessionBase {
 	 * @return
 	 */
 	public OkHttpClient getApiGatewayOkClient () {
-		
+		return getApiGatewayOkClient(null);
+	}
+
+	public OkHttpClient getApiGatewayOkClient (List<Interceptor> interceptorsToApply) {
+	
 		if (null != apiGatewayClient) return apiGatewayClient;
 		
 		OkHttpClient.Builder apiGwClientBuilder = new OkHttpClient.Builder();
 		OkHttpUtils.applyTimeoutSettings(apiGwClientBuilder);
 		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
+		OkHttpUtils.applyProxySettings(apiGwClientBuilder);
 		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
 		
 		// Experiment with re-using a single connection for up to 10 seconds.
 		ConnectionPool apiGwCxnPool = new ConnectionPool(1, 10, TimeUnit.SECONDS);
 		apiGwClientBuilder.connectionPool(apiGwCxnPool);
+
+		if (null != interceptorsToApply) {
+			for (Interceptor icept  : interceptorsToApply) {
+				apiGwClientBuilder.addInterceptor(icept);
+			}	
+		}
+
 		apiGatewayClient = apiGwClientBuilder.build();
 		
 		return apiGatewayClient;
+	}
+	
+	/** 
+	 * Returns an Interceptor that injects a UI Session's JWT token into the call sequence.
+	 * @return
+	 */
+	private Interceptor getJwtTokenBearerInterceptor () {
+		return new Interceptor() {
+				@Override
+				public Response intercept(Chain chain) throws IOException {
+					Request originalReq = chain.request();
+					Request.Builder builder =
+							originalReq.newBuilder().header("Authorization", "Bearer " + accessToken);
+					Request newRequest = builder.build();
+					return chain.proceed(newRequest);
+				}
+		};
 	}
 	
 	/**
@@ -272,14 +303,38 @@ public class UserInterfaceSession extends SessionBase {
 		OkHttpClient.Builder uiClientBuilder = new OkHttpClient.Builder();
 		OkHttpUtils.applyTimeoutSettings(uiClientBuilder);
 		OkHttpUtils.applyLoggingInterceptors(uiClientBuilder);
+		OkHttpUtils.applyProxySettings(uiClientBuilder);
 		uiClientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
 		
 		ConnectionPool uiCxnPool = new ConnectionPool(1, 10, TimeUnit.SECONDS);
 		uiClientBuilder.connectionPool(uiCxnPool);
-		
+		uiClientBuilder.addInterceptor(getJwtTokenBearerInterceptor());
+
 		userInterfaceClient = uiClientBuilder.build();
-		
+
 		return userInterfaceClient;
+	}
+
+	/**
+	 * Return a common http client builder for the general usage.
+	 *
+	 * TODO: Make this the common client builder and also include user agent, etc. in future
+	 * TODO: We need to use this builder in getApiGatewayOkClient and getUserInterfaceOkClient method. This is left over to prevent merge conflict because at this point, the above two methods are modified (being overloaded) in IDNPERF-331 branch.
+	 *
+	 * @return
+	 */
+	public OkHttpClient.Builder getCommonOkClientBuilder () {
+		return getCommonOkClientBuilder(cookieManager);
+	}
+
+	public OkHttpClient.Builder getCommonOkClientBuilder (CookieManager cookieManager) {
+		OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
+		OkHttpUtils.applyTimeoutSettings(clientBuilder);
+		OkHttpUtils.applyLoggingInterceptors(clientBuilder);
+		OkHttpUtils.applyProxySettings(clientBuilder);
+		clientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
+
+		return clientBuilder;
 	}
 	
 	/**
@@ -320,9 +375,10 @@ public class UserInterfaceSession extends SessionBase {
 		//    Then finally to /ui and then /main
 		// 6. Check for KBA map and if present do strong Auth-N.
 		// 7. Check for API credentials and if present then do OAuth token for session.
-		
-		// Use a common client builder that includes user-agents, etc.
-		OkHttpClient client = getUserInterfaceOkClient();
+
+		OkHttpClient.Builder clientBuilder = getCommonOkClientBuilder();
+
+		OkHttpClient client = clientBuilder.build();
 		
 		// STEP 1: Call /login/login and extract the API Gateway URL for the org and other data.
 		
@@ -393,7 +449,10 @@ public class UserInterfaceSession extends SessionBase {
 		//     *.api.identitynow.com/cc/* 
 		//  or *.api.identitynow.com/v2/*
 		// So we build a new cookie manager here:
+
+    //TODO: comment client here?
 		OkHttpClient apiGwClient = getApiGatewayOkClient(); 
+
 
 		//Build the options URLw
 		String optionsUrl = getApiGatewayUrl() + "/cc/" + URL_LOGIN_GET;
@@ -554,7 +613,14 @@ public class UserInterfaceSession extends SessionBase {
 		boolean redirectsDone = false;
 		String nextUrl = response.header("Location");
 		do {
-			response = doGet(nextUrl, manual302Client, null, cookieManager.getCookieStore().getCookies());
+			try{
+				response = doGet(nextUrl, manual302Client, null, cookieManager.getCookieStore().getCookies());
+			}
+			catch (NullPointerException e){
+				log.error("A null pointer exception has occurred. Did the post to SSO return all headers?");
+				if(nextUrl == null)
+					log.error("The Location header was null.");
+			}
 			switch (response.code()) {
 			case 302:
 				nextUrl = response.header("Location");
@@ -643,9 +709,10 @@ public class UserInterfaceSession extends SessionBase {
 	
 	@Override
 	public void close() {
-		
-		// Use a common client builder that includes user-agents, etc.
-		OkHttpClient client = getUserInterfaceOkClient();
+
+		OkHttpClient.Builder clientBuilder = getCommonOkClientBuilder();
+			
+		OkHttpClient client = clientBuilder.build();
 		
 		long logoutStart = 0;
 		long logoutEnd = 0;

@@ -3,6 +3,7 @@ package sailpoint.services.idn.session;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import okhttp3.ConnectionPool;
 import okhttp3.FormBody;
 import okhttp3.Headers;
 import okhttp3.Interceptor;
@@ -53,6 +54,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -250,11 +252,17 @@ public class UserInterfaceSession extends SessionBase {
 		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
 		OkHttpUtils.applyProxySettings(apiGwClientBuilder);
 		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
+		
+		// Experiment with re-using a single connection for up to 10 seconds.
+		ConnectionPool apiGwCxnPool = new ConnectionPool(1, 10, TimeUnit.SECONDS);
+		apiGwClientBuilder.connectionPool(apiGwCxnPool);
+
 		if (null != interceptorsToApply) {
 			for (Interceptor icept  : interceptorsToApply) {
 				apiGwClientBuilder.addInterceptor(icept);
 			}	
 		}
+
 		apiGatewayClient = apiGwClientBuilder.build();
 		
 		return apiGatewayClient;
@@ -297,7 +305,11 @@ public class UserInterfaceSession extends SessionBase {
 		OkHttpUtils.applyLoggingInterceptors(uiClientBuilder);
 		OkHttpUtils.applyProxySettings(uiClientBuilder);
 		uiClientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
+		
+		ConnectionPool uiCxnPool = new ConnectionPool(1, 10, TimeUnit.SECONDS);
+		uiClientBuilder.connectionPool(uiCxnPool);
 		uiClientBuilder.addInterceptor(getJwtTokenBearerInterceptor());
+
 		userInterfaceClient = uiClientBuilder.build();
 
 		return userInterfaceClient;
@@ -437,8 +449,10 @@ public class UserInterfaceSession extends SessionBase {
 		//     *.api.identitynow.com/cc/* 
 		//  or *.api.identitynow.com/v2/*
 		// So we build a new cookie manager here:
-		OkHttpClient.Builder apiGwClientBuilder = getCommonOkClientBuilder(new CookieManager());
-		OkHttpClient apiGwClient = apiGwClientBuilder.build();
+
+    //TODO: comment client here?
+		OkHttpClient apiGwClient = getApiGatewayOkClient(); 
+
 
 		//Build the options URLw
 		String optionsUrl = getApiGatewayUrl() + "/cc/" + URL_LOGIN_GET;
@@ -477,6 +491,8 @@ public class UserInterfaceSession extends SessionBase {
 			String acam = optionsResponse.header("access-control-allow-methods").toString();
 			log.debug("access-control-allow-methods: " + acam);
 		}
+		optionsResponse.close();
+		optionsResponse = null;
 		
 		// STEP 3: Make a POST to /login/get to get the properties for the user.
 		String jsonContent = "{username=" + getCredentials().getOrgUser() + "}";
@@ -485,6 +501,7 @@ public class UserInterfaceSession extends SessionBase {
 		response = doPost(uiUrl, jsonContent, apiGwClient, null, null);
 		String responseBody = response.body().string();
 		log.debug(responseBody);
+		response.close();
 		
 		UiLoginGetResponse apiLoginGetResponse = gson.fromJson(responseBody, UiLoginGetResponse.class);
 		log.debug("encryption type = " + apiLoginGetResponse.getApiAuth().getEncryptionType());
@@ -561,8 +578,22 @@ public class UserInterfaceSession extends SessionBase {
 		// Add the ccSessionId cookie to the POST request to the SSO server.
 		// This is "interesting" in OkHttp3 due to the 302s that follow.
 		// For more info: https://github.com/request/request/issues/1502
-		// Instead we roll our own redirect handler here.
-		OkHttpClient manual302Client = clientBuilder.followRedirects(false).build();
+		// Instead we roll our own redirect handler here. Just like the 
+		// regular ui client builder, with fllow redirects set to false.
+		OkHttpClient manual302Client = null;
+		{
+			OkHttpClient.Builder uiClientBuilder = new OkHttpClient.Builder();
+			OkHttpUtils.applyTimeoutSettings(uiClientBuilder);
+			OkHttpUtils.applyLoggingInterceptors(uiClientBuilder);
+			uiClientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
+			
+			ConnectionPool uiCxnPool = new ConnectionPool(1, 10, TimeUnit.SECONDS);
+			uiClientBuilder.connectionPool(uiCxnPool);
+			uiClientBuilder.followRedirects(false);
+			
+			manual302Client = uiClientBuilder.build();
+		}
+		
 		response = doPost(ssoUrl, formBody, manual302Client, headers, cookieManager.getCookieStore().getCookies());
 		
 		// TODO: Support encryption types other than "hash".
@@ -593,8 +624,10 @@ public class UserInterfaceSession extends SessionBase {
 			switch (response.code()) {
 			case 302:
 				nextUrl = response.header("Location");
+				response.close();
 				break;
 			case 403:
+				response.close();
 				String errMsg = "Failure while following redirects from SSO; unable to login";
 				log.error(errMsg);
 				throw new IOException(errMsg);
@@ -607,12 +640,13 @@ public class UserInterfaceSession extends SessionBase {
 				oauthToken  = nextUrl.substring(nextUrl.lastIndexOf(callbackToken) + 1);
 				log.debug("oauthToken: " + oauthToken);
 			}
-				
 			
 		} while (!redirectsDone);
 		
 		String loginResponse = response.body().string();
 		log.debug("Login Response Body:" + loginResponse);
+		response.close();
+		response = null;
 		
 		// Parse the /ui/main page to get the CSRF Token.
 		String csrfTokenRegex = "SLPT.globalContext.csrf\\s=\\s'(\\w+)'";
@@ -622,7 +656,13 @@ public class UserInterfaceSession extends SessionBase {
 			csrfToken = m.group(1);
 			log.debug("Parsed CSRF Token: " + csrfToken);
 		} else {
-			log.warn("Failed to parse CSRF token from 'SLPT.globalContext.csrf' for CCSESSIONID: " + ccSessionId + " HTML was: " + loginResponse);	
+			if (log.isDebugEnabled()) {
+				log.warn("Failed to parse CSRF token from 'SLPT.globalContext.csrf' for CCSESSIONID: " + ccSessionId + " HTML was: " + loginResponse);
+			} else {
+				log.warn("Failed to parse CSRF token from 'SLPT.globalContext.csrf' for CCSESSIONID: " + ccSessionId);
+			}
+			
+			return null;
 		}
 		
 		Document uiMainDoc = Jsoup.parse(loginResponse);
@@ -641,7 +681,12 @@ public class UserInterfaceSession extends SessionBase {
 //		this.setApiGatewayUrl(apiSlptGlobals.getApi().getBaseUrl());
 //		log.debug("API URL:" + this.getApiGatewayUrl());
 		
-		getNewSessionToken();
+		// Allow the environment to turn off the /ui/session call for testing.
+		if (Boolean.parseBoolean(System.getProperty("skipUiSessionCall", "false"))) {
+			log.debug("Skipping /ui/session call by config request.");
+		} else {
+			getNewSessionToken();
+		}
 		
 		loginSequenceDuration = System.currentTimeMillis() - loginSequenceStartTime;
 		log.debug("Login sequence completed in " + loginSequenceDuration + " msecs.");
@@ -699,6 +744,9 @@ public class UserInterfaceSession extends SessionBase {
 			break;
 		}
 		
+		response.close();
+		response = null;
+		
 		logoutSequenceDuration = logoutEnd - logoutStart;
 		log.debug("Logout processed in " + logoutSequenceDuration  + " msecs.");
 
@@ -732,7 +780,13 @@ public class UserInterfaceSession extends SessionBase {
 			return null;
 		}
 		
-		// TODO: Handle non-200 responses here!
+		// Handle non-200 responses here!
+		if (!response.isSuccessful()) {
+			response.close();
+			return null;
+		}
+		response.close();
+		response = null;
 		
 		Gson gson = new Gson();
 		
@@ -765,7 +819,15 @@ public class UserInterfaceSession extends SessionBase {
 			return null;
 		}
 		
-		// TODO: Handle non-200 responses here!
+		// Handle non-200 responses here!
+		if (!response.isSuccessful()) {
+			response.close();
+			return null;
+		}
+		response.close();
+		response = null;
+
+		
 		Type listTypeChallengeQuestion = new TypeToken<ArrayList<UiKbaQuestion>>(){}.getType();
 		List<UiKbaQuestion> availableKbaQuestions = new Gson().fromJson(apiChallengeListJsonArray, listTypeChallengeQuestion);
 		
@@ -778,6 +840,12 @@ public class UserInterfaceSession extends SessionBase {
 		}
 		
 		log.debug("User has " + answeredKbaQuestions.size() + " answered KBA questions.");
+		
+		// Sanity check before trying to Strong-Authn.
+		if (0 == answeredKbaQuestions.size()) {
+			log.error("User " + creds.getOrgUser() + " has no KBA questions answered; unable to Strong-AuthN!");
+			return null;
+		}
 		
 		// The user interface presents N strongAuthn questions to answer.  A user typically
 		// must answer a sub-set of these to strongly authenticate.  Say there are 5 questions
@@ -794,6 +862,14 @@ public class UserInterfaceSession extends SessionBase {
 			log.error("Failure while calling " + userGetUrl, e);
 			return null;
 		}
+		
+		// Handle non-200 response.
+		if (!response.isSuccessful()) {
+			response.close();
+			return null;
+		}
+		response.close();
+		response = null;
 		
 		User user = gson.fromJson(userGetJson, User.class);
 		log.debug("kbaReqForAuthn: " + user.getKbaReqForAuthn());
@@ -827,7 +903,10 @@ public class UserInterfaceSession extends SessionBase {
 
 		// Build out JSON string here:
 		String scrubbedQJsonArrayString = gson.toJson(scrubbedQuestions);
-		log.debug("scrubbedQJsonArrayString: ", scrubbedQJsonArrayString);
+		log.debug("scrubbedQJsonArrayString: '" + scrubbedQJsonArrayString + "'");
+		if (10 > scrubbedQJsonArrayString.length()) {
+			log.error("Extremely short scrubbedQJsonArrayString: '" + scrubbedQJsonArrayString + "', probably invalid.");
+		}
 		
 		// Submit the Strong Authn payload.  Note that this call is made directly
 		// to the user interface URL and not to the API Gateway's URL.  This means we
@@ -845,13 +924,32 @@ public class UserInterfaceSession extends SessionBase {
 			strongAuthnResponseStr = response.body().string();
 			log.debug("api/user/strongAuthn: " + strongAuthnResponseStr);
 		} catch (IOException e) {
-			log.error("Failure while calling " + apiStronAuthn, e);
+			log.error("Failure while calling " + apiStronAuthn + " with [" + scrubbedQJsonArrayString + "]", e);
 			return null;
 		}
 		
-		// TODO: Handle non-200 response.
+		// Handle non-200 response.
+		if (!response.isSuccessful()) {
+			response.close();
+			int responseCode = response.code();
+			switch(responseCode) {
+			case 400:
+			case 403:
+				log.error("HTTP error " + responseCode + " while calling " + apiStronAuthn + " with  payload: " + scrubbedQJsonArrayString);
+				break;
+			default:
+				break;
+			}
+			return null;
+		}
+		response.close();
 		
 		// Get a new session token to reflect the strongly authenticated status of the session.
+		if (Boolean.parseBoolean(System.getProperty("skipUiSessionCall", "false"))) {
+			log.debug("Skipping /ui/session call by config request.");
+			return accessToken;
+		} 
+		
 		return getNewSessionToken();
 		
 	}
@@ -879,7 +977,13 @@ public class UserInterfaceSession extends SessionBase {
 			return null;
 		}
 		
-		// TODO: Handle non-200 responses here!
+		// Handle non-200 response.
+		if (!response.isSuccessful()) {
+			response.close();
+			return null;
+		}
+		response.close();
+		response = null;
 		
 		Gson gson = new Gson();
 		
@@ -889,7 +993,6 @@ public class UserInterfaceSession extends SessionBase {
 		this.csrfToken = uiSessToken.getCsrfToken();
 		this.oauthToken = uiSessToken.getAccessToken();
 		this.accessToken = uiSessToken.getAccessToken();
-		
 		
 		return uiSessToken.getAccessToken();
 	}
@@ -921,7 +1024,11 @@ public class UserInterfaceSession extends SessionBase {
 				log.error(response.code() + " while calling " + apiUrl);
 			}
 			String responseJson = response.body().string();
-			log.debug(apiUrlSuffix + ": " + responseJson);
+			response.body().close();
+			// Spare the expensive string concat if we can:
+			if (log.isDebugEnabled()) {
+				log.debug(apiUrlSuffix + ": " + responseJson);
+			}
 			return responseJson;
 		} catch (IOException e) {
 			log.error("Failure while calling " + apiUrl, e);

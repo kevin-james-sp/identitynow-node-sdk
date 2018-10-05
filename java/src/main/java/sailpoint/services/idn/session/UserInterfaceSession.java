@@ -247,11 +247,7 @@ public class UserInterfaceSession extends SessionBase {
 	
 		if (null != apiGatewayClient) return apiGatewayClient;
 		
-		OkHttpClient.Builder apiGwClientBuilder = new OkHttpClient.Builder();
-		OkHttpUtils.applyTimeoutSettings(apiGwClientBuilder);
-		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
-		OkHttpUtils.applyProxySettings(apiGwClientBuilder);
-		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
+		OkHttpClient.Builder apiGwClientBuilder = getCommonOkClientBuilder(new CookieManager());
 		
 		// Experiment with re-using a single connection for up to 10 seconds.
 		ConnectionPool apiGwCxnPool = new ConnectionPool(1, 10, TimeUnit.SECONDS);
@@ -300,11 +296,7 @@ public class UserInterfaceSession extends SessionBase {
 		
 		if (null != userInterfaceClient) return userInterfaceClient;
 		
-		OkHttpClient.Builder uiClientBuilder = new OkHttpClient.Builder();
-		OkHttpUtils.applyTimeoutSettings(uiClientBuilder);
-		OkHttpUtils.applyLoggingInterceptors(uiClientBuilder);
-		OkHttpUtils.applyProxySettings(uiClientBuilder);
-		uiClientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
+		OkHttpClient.Builder uiClientBuilder = getCommonOkClientBuilder();
 		
 		ConnectionPool uiCxnPool = new ConnectionPool(1, 10, TimeUnit.SECONDS);
 		uiClientBuilder.connectionPool(uiCxnPool);
@@ -319,7 +311,6 @@ public class UserInterfaceSession extends SessionBase {
 	 * Return a common http client builder for the general usage.
 	 *
 	 * TODO: Make this the common client builder and also include user agent, etc. in future
-	 * TODO: We need to use this builder in getApiGatewayOkClient and getUserInterfaceOkClient method. This is left over to prevent merge conflict because at this point, the above two methods are modified (being overloaded) in IDNPERF-331 branch.
 	 *
 	 * @return
 	 */

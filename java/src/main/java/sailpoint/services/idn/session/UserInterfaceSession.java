@@ -756,7 +756,6 @@ public class UserInterfaceSession extends SessionBase {
 	
 	/**
 	 * Strongly authenticate the User Interface session by submitting answers to KBA questions.
-	 * @param kbaAnswers
 	 * @return the newly gotten session token.
 	 */
 	public String stronglyAuthenticate() {
@@ -1020,21 +1019,45 @@ public class UserInterfaceSession extends SessionBase {
 		// apiHeadersMap.put("User-Agent", OkHttpUtils.getUserAgent());
 		
 		try (Response response = doGet(apiUrl, getApiGatewayOkClient(), apiHeadersMap, null)) {
-			if (!response.isSuccessful()) {
-				log.error(response.code() + " while calling " + apiUrl);
-			}
-			String responseJson = response.body().string();
-			response.body().close();
-			// Spare the expensive string concat if we can:
-			if (log.isDebugEnabled()) {
-				log.debug(apiUrlSuffix + ": " + responseJson);
-			}
-			return responseJson;
+			return extractResponseString(response);
 		} catch (IOException e) {
 			log.error("Failure while calling " + apiUrl, e);
 			return null;
 		}
 		
+	}
+
+	public String doApiPost (String apiUrlSuffix, Map<String,String> form) {
+		String apiUrl = getApiGatewayUrl() + apiUrlSuffix;
+
+		HashMap<String,String> apiHeadersMap = new HashMap<String,String>();
+		apiHeadersMap.put("Authorization", "Bearer " + this.accessToken);
+
+		FormBody.Builder formBodyBuilder = new FormBody.Builder();
+		for (String key : form.keySet()) {
+			formBodyBuilder.add(key, form.get(key));
+		}
+
+		try(Response response = doPost(apiUrl, formBodyBuilder.build(), getApiGatewayOkClient(), apiHeadersMap, null)) {
+			return extractResponseString(response);
+		} catch (IOException e) {
+			log.error("Failure while calling " + apiUrl, e);
+			return null;
+		}
+
+	}
+
+	private String extractResponseString(Response response) throws IOException {
+		if (!response.isSuccessful()) {
+			log.error(response.code() + " while calling " + response.request().url().toString());
+		}
+		String responseJson = response.body().string();
+		response.body().close();
+		// Spare the expensive string concat if we can:
+		if (log.isDebugEnabled()) {
+			log.debug(response.request().url().toString() + ": " + responseJson);
+		}
+		return responseJson;
 	}
 
 }

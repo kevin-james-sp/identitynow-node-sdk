@@ -33,12 +33,12 @@ public class EmailTemplateConcurrentDriver {
             return;
         }
 
-        int numWorkerThreads = 5;
+        int numWorkerThreads = 12;
         log.info("Making Bulk api/emailTemplate/sendTestEmail calls into " + envCreds.getOrgName() + " using " + numWorkerThreads + " threads.");
 
         ConcurrentLinkedQueue<UserInterfaceSession> sessionPool = new ConcurrentLinkedQueue<UserInterfaceSession>();
 
-        AtomicInteger desiredCalls = new AtomicInteger(200);
+        AtomicInteger desiredCalls = new AtomicInteger(1000);
         AtomicInteger callCount = new AtomicInteger(0);
         AtomicInteger failureCount = new AtomicInteger(0);
 

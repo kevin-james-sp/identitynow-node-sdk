@@ -99,6 +99,10 @@ public interface SourceService {
 	Call<ResponseBody> aggregateAccounts(
 			@Path( "id" ) String id,
 			@Part( "file\"; filename=\"file.csv\" " ) RequestBody file );
+
+	@POST("/cc/api/source/loadAccounts/{id}?disableOptimization=true")
+	Call<ResponseBody> aggregateAccountsUnoptimized(
+			@Path("id") String id);
 	
 //	@POST( "/cc/api/source/cancelAggregation" )
 //	Call<ResponseBody> cancelAggregation (  );
@@ -238,4 +242,7 @@ public interface SourceService {
 //	@POST( "/cc/api/source/syncPassword" )
 //	Call<ResponseBody> syncPassword (  );
 
+	//TODO: Make an event service if/when we start making other event calls
+	@GET("/cc/api/event/list?_dc=1538364868842&page=1&start=0&limit=25&sort=[{\"property\":\"timestamp\",\"direction\":\"DESC\"}]&filter=[{\"property\":\"type\",\"value\":\"CLOUD_ACCOUNT_AGGREGATION\"},{\"property\":\"objectType\",\"value\":\"source\"},{\"property\":\"objectId\",\"value\":\"656411\"}]")
+	Call<ResponseBody> getAccountAggregations();
 }

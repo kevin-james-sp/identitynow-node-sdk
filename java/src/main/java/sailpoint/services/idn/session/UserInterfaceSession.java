@@ -247,11 +247,7 @@ public class UserInterfaceSession extends SessionBase {
 	
 		if (null != apiGatewayClient) return apiGatewayClient;
 		
-		OkHttpClient.Builder apiGwClientBuilder = new OkHttpClient.Builder();
-		OkHttpUtils.applyTimeoutSettings(apiGwClientBuilder);
-		OkHttpUtils.applyLoggingInterceptors(apiGwClientBuilder);
-		OkHttpUtils.applyProxySettings(apiGwClientBuilder);
-		apiGwClientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
+		OkHttpClient.Builder apiGwClientBuilder = getCommonOkClientBuilder(new CookieManager());
 		
 		// Experiment with re-using a single connection for up to 10 seconds.
 		ConnectionPool apiGwCxnPool = new ConnectionPool(1, 10, TimeUnit.SECONDS);
@@ -300,11 +296,7 @@ public class UserInterfaceSession extends SessionBase {
 		
 		if (null != userInterfaceClient) return userInterfaceClient;
 		
-		OkHttpClient.Builder uiClientBuilder = new OkHttpClient.Builder();
-		OkHttpUtils.applyTimeoutSettings(uiClientBuilder);
-		OkHttpUtils.applyLoggingInterceptors(uiClientBuilder);
-		OkHttpUtils.applyProxySettings(uiClientBuilder);
-		uiClientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
+		OkHttpClient.Builder uiClientBuilder = getCommonOkClientBuilder();
 		
 		ConnectionPool uiCxnPool = new ConnectionPool(1, 10, TimeUnit.SECONDS);
 		uiClientBuilder.connectionPool(uiCxnPool);
@@ -319,7 +311,6 @@ public class UserInterfaceSession extends SessionBase {
 	 * Return a common http client builder for the general usage.
 	 *
 	 * TODO: Make this the common client builder and also include user agent, etc. in future
-	 * TODO: We need to use this builder in getApiGatewayOkClient and getUserInterfaceOkClient method. This is left over to prevent merge conflict because at this point, the above two methods are modified (being overloaded) in IDNPERF-331 branch.
 	 *
 	 * @return
 	 */
@@ -756,7 +747,6 @@ public class UserInterfaceSession extends SessionBase {
 	
 	/**
 	 * Strongly authenticate the User Interface session by submitting answers to KBA questions.
-	 * @param kbaAnswers
 	 * @return the newly gotten session token.
 	 */
 	public String stronglyAuthenticate() {
@@ -1020,21 +1010,45 @@ public class UserInterfaceSession extends SessionBase {
 		// apiHeadersMap.put("User-Agent", OkHttpUtils.getUserAgent());
 		
 		try (Response response = doGet(apiUrl, getApiGatewayOkClient(), apiHeadersMap, null)) {
-			if (!response.isSuccessful()) {
-				log.error(response.code() + " while calling " + apiUrl);
-			}
-			String responseJson = response.body().string();
-			response.body().close();
-			// Spare the expensive string concat if we can:
-			if (log.isDebugEnabled()) {
-				log.debug(apiUrlSuffix + ": " + responseJson);
-			}
-			return responseJson;
+			return extractResponseString(response);
 		} catch (IOException e) {
 			log.error("Failure while calling " + apiUrl, e);
 			return null;
 		}
 		
+	}
+
+	public String doApiPost (String apiUrlSuffix, Map<String,String> form) {
+		String apiUrl = getApiGatewayUrl() + apiUrlSuffix;
+
+		HashMap<String,String> apiHeadersMap = new HashMap<String,String>();
+		apiHeadersMap.put("Authorization", "Bearer " + this.accessToken);
+
+		FormBody.Builder formBodyBuilder = new FormBody.Builder();
+		for (String key : form.keySet()) {
+			formBodyBuilder.add(key, form.get(key));
+		}
+
+		try(Response response = doPost(apiUrl, formBodyBuilder.build(), getApiGatewayOkClient(), apiHeadersMap, null)) {
+			return extractResponseString(response);
+		} catch (IOException e) {
+			log.error("Failure while calling " + apiUrl, e);
+			return null;
+		}
+
+	}
+
+	private String extractResponseString(Response response) throws IOException {
+		if (!response.isSuccessful()) {
+			log.error(response.code() + " while calling " + response.request().url().toString());
+		}
+		String responseJson = response.body().string();
+		response.body().close();
+		// Spare the expensive string concat if we can:
+		if (log.isDebugEnabled()) {
+			log.debug(response.request().url().toString() + ": " + responseJson);
+		}
+		return responseJson;
 	}
 
 }

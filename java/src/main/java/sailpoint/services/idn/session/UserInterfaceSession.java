@@ -2,7 +2,6 @@ package sailpoint.services.idn.session;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-
 import okhttp3.FormBody;
 import okhttp3.Headers;
 import okhttp3.Interceptor;
@@ -11,14 +10,11 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-import okhttp3.Interceptor.Chain;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
-
 import sailpoint.services.idn.sdk.ClientCredentials;
 import sailpoint.services.idn.sdk.object.UiKbaQuestion;
 import sailpoint.services.idn.sdk.object.UiLoginGetResponse;
@@ -114,10 +110,13 @@ public class UserInterfaceSession extends SessionBase {
 		return ccSessionId;
 	}
 
+	//Commented out to ease consumption by other projects. Feel free to uncomment once an implementation is made.
+	/*
 	public OkHttpClient getClient() {
 		// There is an ambiguiity here: Do we want the CC client or the API GW client.
 		throw new IllegalArgumentException("TODO: Stub this out for UserInterfaceSession");
 	}
+	*?
 	
 	/**
 	 * This routine applies an SHA-256 has to the given string.
@@ -708,7 +707,6 @@ public class UserInterfaceSession extends SessionBase {
 	
 	/**
 	 * Strongly authenticate the User Interface session by submitting answers to KBA questions.
-	 * @param kbaAnswers
 	 * @return the newly gotten session token.
 	 */
 	public String stronglyAuthenticate() {

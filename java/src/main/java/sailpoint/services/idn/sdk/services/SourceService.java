@@ -68,10 +68,10 @@ public interface SourceService {
 //	@POST( "/cc/api/source/createSchemaAttribute" )
 //	Call<ResponseBody> createSchemaAttribute (  );
 //
-//	@POST( "/cc/api/source/updateSchemaAttributes/{sourceId}" )
-//	@FormUrlEncoded
-//	Call<ResponseBody> updateSchemaAttributes (@Path("sourceId") String sourceId,
-//	                                           @FieldMap Map<String, String> params);
+	@POST( "/cc/api/source/updateSchemaAttributes/{sourceId}" )
+	@FormUrlEncoded
+	Call<ResponseBody> updateSchemaAttributes (@Path("sourceId") String sourceId,
+	                                           @FieldMap Map<String, String> params);
 //
 //	@POST( "/cc/api/source/deleteSchemaAttribute" )
 //	Call<ResponseBody> deleteSchemaAttribute (  );

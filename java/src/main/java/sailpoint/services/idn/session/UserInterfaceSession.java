@@ -116,7 +116,6 @@ public class UserInterfaceSession extends SessionBase {
 		// There is an ambiguiity here: Do we want the CC client or the API GW client.
 		throw new IllegalArgumentException("TODO: Stub this out for UserInterfaceSession");
 	}
-	*?
 	
 	/**
 	 * This routine applies an SHA-256 has to the given string.

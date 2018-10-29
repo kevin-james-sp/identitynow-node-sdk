@@ -68,10 +68,10 @@ public interface SourceService {
 //	@POST( "/cc/api/source/createSchemaAttribute" )
 //	Call<ResponseBody> createSchemaAttribute (  );
 //
-//	@POST( "/cc/api/source/updateSchemaAttributes/{sourceId}" )
-//	@FormUrlEncoded
-//	Call<ResponseBody> updateSchemaAttributes (@Path("sourceId") String sourceId,
-//	                                           @FieldMap Map<String, String> params);
+	@POST( "/cc/api/source/updateSchemaAttributes/{sourceId}" )
+	@FormUrlEncoded
+	Call<ResponseBody> updateSchemaAttributes (@Path("sourceId") String sourceId,
+	                                           @FieldMap Map<String, String> params);
 //
 //	@POST( "/cc/api/source/deleteSchemaAttribute" )
 //	Call<ResponseBody> deleteSchemaAttribute (  );
@@ -99,6 +99,10 @@ public interface SourceService {
 	Call<ResponseBody> aggregateAccounts(
 			@Path( "id" ) String id,
 			@Part( "file\"; filename=\"file.csv\" " ) RequestBody file );
+
+	@POST("/cc/api/source/loadAccounts/{id}?disableOptimization=true")
+	Call<ResponseBody> aggregateAccountsUnoptimized(
+			@Path("id") String id);
 	
 //	@POST( "/cc/api/source/cancelAggregation" )
 //	Call<ResponseBody> cancelAggregation (  );
@@ -152,7 +156,7 @@ public interface SourceService {
 	Call<ResponseBody> getAccountsExportReport(
 		@Query( "sourceId" ) String sourceId,
 		@Query( "reportName" ) String reportName );
-	
+
 //	@GET( "/cc/api/source/exportAccountFeed" )
 //	Call<ResponseBody> exportAccountFeed( );
 //

@@ -2,7 +2,6 @@ package sailpoint.services.idn.session;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-
 import okhttp3.FormBody;
 import okhttp3.Headers;
 import okhttp3.Interceptor;
@@ -11,14 +10,11 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-import okhttp3.Interceptor.Chain;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
-
 import sailpoint.services.idn.sdk.ClientCredentials;
 import sailpoint.services.idn.sdk.object.UiKbaQuestion;
 import sailpoint.services.idn.sdk.object.UiLoginGetResponse;
@@ -708,7 +704,6 @@ public class UserInterfaceSession extends SessionBase {
 	
 	/**
 	 * Strongly authenticate the User Interface session by submitting answers to KBA questions.
-	 * @param kbaAnswers
 	 * @return the newly gotten session token.
 	 */
 	public String stronglyAuthenticate() {
@@ -867,20 +862,25 @@ public class UserInterfaceSession extends SessionBase {
 		OkHttpClient uiClient = getUserInterfaceOkClient();
 		
 		String uiSessionUrl = getUserInterfaceUrl() + "ui/session";
-		
+
+		int retries = 0;
 		Response response;
 		String uiSessionResponseJson;
 		try {
 			response = doGet(uiSessionUrl, uiClient, null, null);
 			uiSessionResponseJson = response.body().string();
+			System.out.println(uiSessionResponseJson);
 			log.debug("UiSessionToken: " + uiSessionResponseJson);
 		} catch (IOException e) {
 			log.error("Failure while calling " + uiSessionUrl, e);
 			return null;
 		}
 		
-		// TODO: Handle non-200 responses here!
-		
+		// recursive 3x retry for non-200 responses *cough* OpenAM's crosstalk's null id token *cough*
+		if(!response.isSuccessful() && retries < 3){
+			retries++;
+			return getNewSessionToken();
+		}
 		Gson gson = new Gson();
 		
 		UiSessionToken uiSessToken = gson.fromJson(uiSessionResponseJson, UiSessionToken.class);

@@ -125,10 +125,10 @@ public class SessionBase implements java.lang.AutoCloseable {
 	protected Response doGet (String url, OkHttpClient client, Map<String,String> optionalHeaders, List<HttpCookie> optionalCookies) throws IOException {
 		Request.Builder builder = new Request.Builder();
 		builder.url(url);
-		builder.addHeader("User-Agent", OkHttpUtils.getUserAgent());
 		if ((null != optionalHeaders) && (!optionalHeaders.isEmpty())) {
 			OkHttpUtils.appendHeaders(builder, optionalHeaders);
 		}
+		builder.addHeader("User-Agent", OkHttpUtils.getUserAgent());
 		if ((null != optionalCookies) && (!optionalCookies.isEmpty())) {
 			for (HttpCookie cookie: optionalCookies) {
 				builder.addHeader("Cookie", getCookieString(cookie));
@@ -170,6 +170,7 @@ public class SessionBase implements java.lang.AutoCloseable {
 		if ((null != optionalHeaders) && (!optionalHeaders.isEmpty())) {
 			OkHttpUtils.appendHeaders(builder, optionalHeaders);
 		}
+		builder.addHeader("User-Agent", OkHttpUtils.getUserAgent());
 		if ((null != optionalCookies) && (!optionalCookies.isEmpty())) {
 			for (HttpCookie cookie: optionalCookies) {
 				builder.addHeader("Cookie", getCookieString(cookie));
@@ -196,6 +197,7 @@ public class SessionBase implements java.lang.AutoCloseable {
 		if ((null != headers) && (!headers.isEmpty())) {
 			OkHttpUtils.appendHeaders(builder, headers);
 		}
+		builder.addHeader("User-Agent", OkHttpUtils.getUserAgent());
 		if ((null != optionalCookies) && (!optionalCookies.isEmpty())) {
 			for (HttpCookie cookie: optionalCookies) {
 				builder.addHeader("Cookie", getCookieString(cookie));

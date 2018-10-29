@@ -879,6 +879,7 @@ public class UserInterfaceSession extends SessionBase {
 		// recursive 3x retry for non-200 responses *cough* OpenAM's crosstalk's null id token *cough*
 		if(!response.isSuccessful() && retries < 3){
 			retries++;
+			response.close();
 			return getNewSessionToken();
 		}
 		Gson gson = new Gson();

@@ -966,7 +966,6 @@ public class UserInterfaceSession extends SessionBase {
 		try {
 			response = doGet(uiSessionUrl, uiClient, null, null);
 			uiSessionResponseJson = response.body().string();
-			System.out.println(uiSessionResponseJson);
 			log.debug("UiSessionToken: " + uiSessionResponseJson);
 		} catch (IOException e) {
 			log.error("Failure while calling " + uiSessionUrl, e);
@@ -976,6 +975,7 @@ public class UserInterfaceSession extends SessionBase {
 		// recursive 3x retry for non-200 responses *cough* OpenAM's crosstalk's null id token *cough*
 		//TODO: Remove this retry once the OpenAm bug is fixed
 		if(!response.isSuccessful() && retryNum < 3){
+			log.warn("The server failed to send a new token, retry number: " + retryNum);
 			retryNum++;
 			response.close();
 			return getNewSessionToken(retryNum);

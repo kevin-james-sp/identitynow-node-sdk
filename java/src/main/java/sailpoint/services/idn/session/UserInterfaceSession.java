@@ -940,20 +940,27 @@ public class UserInterfaceSession extends SessionBase {
 		return getNewSessionToken();
 		
 	}
+
+	/**
+	 * A helper method to keep backwards compatibility
+	 * @return The new session token.
+	 */
+	public String getNewSessionToken(){
+		return getNewSessionToken(0);
+	}
 	
 	/**
 	 * Retrieves a new JWT session token for user interface session.  This is used by
-	 * user interface sessions to call into the API gateway.
+	 * user interface sessions to call into the API gateway. Now with retry capability!
 	 * 
 	 * @return
 	 */
-	public String getNewSessionToken() {
+	public String getNewSessionToken(int retryNum) {
 		
 		OkHttpClient uiClient = getUserInterfaceOkClient();
 		
 		String uiSessionUrl = getUserInterfaceUrl() + "ui/session";
 
-		int retries = 0;
 		Response response;
 		String uiSessionResponseJson;
 		try {
@@ -967,10 +974,11 @@ public class UserInterfaceSession extends SessionBase {
 		}
 		
 		// recursive 3x retry for non-200 responses *cough* OpenAM's crosstalk's null id token *cough*
-		if(!response.isSuccessful() && retries < 3){
-			retries++;
+		//TODO: Remove this retry once the OpenAm bug is fixed
+		if(!response.isSuccessful() && retryNum < 3){
+			retryNum++;
 			response.close();
-			return getNewSessionToken();
+			return getNewSessionToken(retryNum);
 		}
 
 		Gson gson = new Gson();

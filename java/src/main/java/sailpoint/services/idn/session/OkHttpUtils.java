@@ -50,6 +50,11 @@ public class OkHttpUtils {
 			Boolean.parseBoolean((System.getProperty("exposeHostUser", "true")))
 	);
 	
+	// Configurable option for exposing thread name in User-Agent strings.
+	public static AtomicBoolean exposeThreadName = new AtomicBoolean(
+			Boolean.parseBoolean((System.getProperty("exposeThreadName", "false")))
+	);
+	
 	// Calculated 1 time and then re-used for the remainder of calls.
 	private static String userAgent = null;
 
@@ -70,13 +75,18 @@ public class OkHttpUtils {
 	// Return the Chandlery user agent for other HTTP clients to use.
 	public static String getUserAgent() {
 		
-		// Short circuit if we have already calculated the User-Agent string.
-		if (null != userAgent) return userAgent;
+		if (exposeThreadName.get()) {
+			// User-agent is re-evaluated every time, fall through to code below.
+		} else {
+			// Short circuit if we have already calculated the User-Agent string.
+			if (null != userAgent) return userAgent;
+		}
 		
 		StringBuilder sb = new StringBuilder();		
 		sb.append("Mozilla/5.0 (IdentityNow Services Chandlery SDK Client on ");
 		sb.append(System.getProperty("os.name") + " " + System.getProperty("os.version"));
 		sb.append(" java:" + System.getProperty("java.version"));
+		
 		if (exposeHostName.get()) {
 			String hostName = "unspecified";
 			try {
@@ -86,10 +96,20 @@ public class OkHttpUtils {
 			}
 			sb.append(" host:" + hostName);
 		}
+		
 		if (exposeHostUser.get()) {
 			sb.append(" user:" + System.getProperty("user.name"));
 		}
-		sb.append(")");
+		
+		// This blows away all previous settings.
+		if (exposeThreadName.get()) {
+			sb = new StringBuilder();
+			sb.append("Chandlery-"+ Thread.currentThread().getName());
+		} else {
+			sb.append(")");
+		}
+		
+		
 		
 		userAgent = sb.toString();
 		
@@ -284,9 +304,10 @@ public class OkHttpUtils {
 				if ((null != retryAfter) && (0 != retryAfter.length())) {
 					retryDelay = 1000 * (Integer.parseInt(retryAfter));
 				}
-
+				
 				String reponseBody = response.body().toString();
-
+				response.close(); // Close the response and free its resources.
+				
 				if (attemptCount < MAX_429_RETRIES) {
 					log.warn("429 - Rate Limit Exceeded: " + reponseBody + " retrying in " + retryDelay
 							+ " msecs, attemptCount:" + attemptCount);

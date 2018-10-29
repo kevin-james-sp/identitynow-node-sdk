@@ -21,7 +21,7 @@ public interface CampaignService {
 	@POST("cc/api/campaign/create")
 	@FormUrlEncoded
 	Call<ResponseBody> campaignCreate(
-			@FieldMap Map<String,Object> params);
+			@FieldMap Map<String,String> params);
 
 	@GET("cc/api/campaignFilter/list")
 	Call<ResponseBody> campaignFilterList();

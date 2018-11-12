@@ -1,13 +1,11 @@
 package sailpoint.services.idn.sdk;
 
 import retrofit2.Call;
-import sailpoint.services.idn.sdk.services.ConnectorService;
-import sailpoint.services.idn.sdk.services.IdentityService;
-import sailpoint.services.idn.sdk.services.ReportService;
-import sailpoint.services.idn.sdk.services.TransformService;
+import sailpoint.services.idn.sdk.services.*;
 import sailpoint.services.idn.session.SessionBase;
 import sailpoint.services.idn.session.SessionFactory;
 import sailpoint.services.idn.session.SessionType;
+import sailpoint.services.idn.session.UserInterfaceSession;
 
 public final class IdentityNowService {
 	
@@ -66,13 +64,34 @@ public final class IdentityNowService {
 	 * Methods
 	 */
 	public SessionBase createSession() throws Exception {
-		return this.session = SessionFactory.createSession(this.creds, SessionType.SESSION_TYPE_API_ONLY);
+		return createSession(SessionType.SESSION_TYPE_API_ONLY);
 	}
+
+	public SessionBase createSession(SessionType sessionType) throws Exception {
+		return createSession(sessionType, false);
+	}
+
+	public SessionBase createSession(SessionType sessionType, boolean stronglyAuthenticate) throws Exception {
+		this.session = SessionFactory.createSession(this.creds, sessionType);
+		if (stronglyAuthenticate) {
+			this.session.open();
+			((UserInterfaceSession)this.session).stronglyAuthenticate();
+		}
+		return this.session;
+	}
+
+
   
-	public <S> S getService ( Class<S> serviceClass ) throws Exception {		
+	public <S> S getService ( Class<S> serviceClass ) throws Exception {
+		return getService(serviceClass, ServiceTypes.UI);
+	}
+
+	public <S> S getService ( Class<S> serviceClass, ServiceTypes serviceTypes) throws Exception {
 		if ( session == null )
-			createSession();		
-		return ServiceFactory.getService( serviceClass, this.creds, this.session );
+			createSession();
+
+		String url = serviceTypes == ServiceTypes.UI ? this.creds.getUserIntUrl() : this.creds.getGatewayUrl();
+		return ServiceFactory.getService( serviceClass, url, this.session.getAccessToken());
 	}
 	
 	/*
@@ -93,9 +112,21 @@ public final class IdentityNowService {
 	public TransformService getTransformService() throws Exception {
 		return getService( TransformService.class );
 	}
+
+	public RoleService getRoleService() throws Exception {
+		return getService(RoleService.class, ServiceTypes.GATEWAY);
+	}
   
 	public static <T> T execute ( Call<T> call ) throws Exception {	
 		return call.execute().body();
+	}
+
+	/*
+	 * Service types
+	 */
+	enum ServiceTypes {
+		UI,
+		GATEWAY
 	}
   
 }

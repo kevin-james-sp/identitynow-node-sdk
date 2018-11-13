@@ -10,6 +10,9 @@ public class UiLoginGetResponse {
 	@SerializedName("goToOnFail")
 	String goToOnFail;
 
+	@SerializedName("loginUrl")
+	String loginUrl;
+
 	@SerializedName("auth")
 	UiAuthData apiAuth;
 
@@ -57,6 +60,10 @@ public class UiLoginGetResponse {
 	public void setSsoServerUrl(String ssoServerUrl) {
 		this.ssoServerUrl = ssoServerUrl;
 	}
+
+	public String getLoginUrl() { return loginUrl; }
+
+	public void setLoginUrl(String loginUrl) { this.loginUrl = loginUrl; }
 
 }
 

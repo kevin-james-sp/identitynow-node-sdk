@@ -1,16 +1,16 @@
 package sailpoint.services.idn.session;
 
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-import sailpoint.services.idn.sdk.ClientCredentials;
-
 import java.io.IOException;
 import java.net.HttpCookie;
 import java.util.List;
 import java.util.Map;
+
+import okhttp3.OkHttpClient;
+import sailpoint.services.idn.sdk.ClientCredentials;
+import okhttp3.MediaType;
+import okhttp3.Response;
+import okhttp3.RequestBody;
+import okhttp3.Request;
 
 /**
  * The top level class from which all other Session types derive. 

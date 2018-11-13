@@ -325,8 +325,6 @@ public class UserInterfaceSession extends SessionBase {
 
 		return clientBuilder;
 	}
-
-
 	
 	/**
 	 * Connect to the IdentityNow service and establish the session.  This "logs in"
@@ -367,75 +365,151 @@ public class UserInterfaceSession extends SessionBase {
 		// 6. Check for KBA map and if present do strong Auth-N.
 		// 7. Check for API credentials and if present then do OAuth token for session.
 
-		// The yet newer sequence (with shared auth service) looks like:
-		// 1. GET  /login/login -- pulls back the org login parameters and API Gateway URL.
-		// 2. OPTIONS to API Gateway host to /cc/login/get URL suffix.
-		// 3. POST API Gateway host /login/get   -- pulls back specific properties for the user logging in (hash vs. key password, etc).
-		// 4. POST to /auth endpoint to allow shared login service to authorize the user.
-		// 5. Follow the redirects from the auth service.
-		//    This usually takes the browser through /ui/ then to /oauth/authorize? and /oauth/callback?
-		//    Then finally to /ui and then /main
-		// 6. Check for KBA map and if present do strong Auth-N.
-		// 7. Check for API credentials and if present then do OAuth token for session.
-
-		//Vars
 		OkHttpClient.Builder clientBuilder = getCommonOkClientBuilder();
-		OkHttpClient client = clientBuilder.build();
-		Gson gson = new Gson();
-		UiSailpointGlobals apiSlptGlobals;
-		Response response;
-		long loginSequenceStartTime = System.currentTimeMillis();
 
+		OkHttpClient client = clientBuilder.build();
+		
 		// STEP 1: Call /login/login and extract the API Gateway URL for the org and other data.
-		response = getLoginLoginHtml(client);
+		
+		String uiUrl = getUserInterfaceUrl() + URL_LOGIN_LOGIN;
+		log.debug("Attempting to login to: " + uiUrl);
+		
+		long loginSequenceStartTime = System.currentTimeMillis();
+		
+		Response response = doGet(uiUrl, client, null, null);
+		
+		Gson gson = new Gson();
+		UiSailpointGlobals apiSlptGlobals = null;
+		
 		String respHtml = response.body().string();
 		log.trace("respString: " + respHtml);
-
+		
+		// Handle various response / error conditions.
+		switch (response.code()) {
+		default:
+			String defMsg = response.code() + " while GET'ing " + uiUrl + " - HTTP communication error."; 
+			log.error(defMsg);
+			throw new IOException(defMsg);
+		case 403:
+			String errMsg = "403 while GET'ing " + uiUrl + " - Invalid client regional IP or VPN disconnected?"; 
+			log.error(errMsg);
+			throw new IOException(errMsg);
+		case 200:
+			// fall through to logic below.
+			break;
+		}
+		response.close();
+		
+		// Pull out the CCSESSIONID cookie, we need to pass this to the SSO server.
+		HttpCookie ccSessionCookie = null;
+		for (HttpCookie cookie : cookieManager.getCookieStore().getCookies()) {
+			if ( !"CCSESSIONID".equals(cookie.getName())) continue;
+			ccSessionCookie = cookie;
+		}
+		ccSessionId = ccSessionCookie.getValue();
+		log.debug("ccSessionId: " + ccSessionCookie.toString());
+		
 		// Parse out the several fields from a JSON field that comes back in HTTP.
 		Document doc = Jsoup.parse(respHtml);
-
+		
 		String selectorString = "script[id='slpt-globals-json']";
 		Elements slptScript = doc.select(selectorString);
 		if (null == slptScript) {
 			log.error("Failure extracting slpt-globals-json with selector: " + selectorString);
 			return null;
 		}
-
+		
 		String jsonBody = slptScript.html();
 		log.debug("slptScript:" + jsonBody);
-
+		
 		apiSlptGlobals = gson.fromJson(jsonBody, UiSailpointGlobals.class);
 		this.setApiGatewayUrl(apiSlptGlobals.getApi().getBaseUrl());
 		log.debug("API URL:" + this.getApiGatewayUrl());
-
-		//TODO: comment client here?
-		OkHttpClient apiGwClient = getApiGatewayOkClient();
-
+		
 		// STEP 2: Make an OPTIONS call to the API Gateway URL.
-		optionLoginGet(apiGwClient);
+		// The API Gateway is a _different_ URL that the browser uses a CORS 
+		// request to access. In this code we will use a second, different,
+		// client object.  Here's why:
+		// When calling CC via the API gateway the gateway drops all cookies. 
+		// So when CC gets the request it's like oh, cool I've never seen you 
+		// before lets create a session together and it creates an new CCSESSIONID.		
+		// You can safely ignore ccsessionid returned by all the API GW CC calls.
+		// You can ignore any cookie from: 
+		//     *.api.identitynow.com/cc/* 
+		//  or *.api.identitynow.com/v2/*
+		// So we build a new cookie manager here:
 
+    //TODO: comment client here?
+		OkHttpClient apiGwClient = getApiGatewayOkClient(); 
+
+
+		//Build the options URLw
+		String optionsUrl = getApiGatewayUrl() + "/cc/" + URL_LOGIN_GET;
+		
+		String apiGwHostHeader = getApiGatewayUrl();
+		if (apiGwHostHeader.contains("//")) {
+			apiGwHostHeader = apiGwHostHeader.split("\\/\\/")[1];
+			apiGwHostHeader = apiGwHostHeader.split("\\/")[0];
+		}
+		
+		Headers optionsRequestHeaders = new Headers.Builder()
+			.add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+			.add("Accept-Encodign", "identity")
+			.add("Accept-Language", "en-US,en;q=0.5")
+			.add("Access-Control-Request-Headers", "content-type")
+			.add("Access-Control-Request-Method", "POST")
+			.add("Host", apiGwHostHeader)
+			.add("Origin", getUserInterfaceUrl())
+			.add("User-Agent", OkHttpUtils.getUserAgent())
+			.build();
+		
+		Request optionsRequest = new Request.Builder()
+			.url(optionsUrl)
+			.headers(optionsRequestHeaders)
+			.method("OPTIONS", null)
+			.build();
+		
+		Response optionsResponse = apiGwClient.newCall(optionsRequest).execute();
+		if (!optionsResponse.isSuccessful()) {
+			String errMsg = optionsResponse.code() + " in OPTIONS call to " + optionsUrl + " - Wrong API Gateway URL?"; 
+			log.error(errMsg);
+			throw new IOException(errMsg);
+		}
+		
+		if (log.isDebugEnabled()) {
+			String acam = optionsResponse.header("access-control-allow-methods").toString();
+			log.debug("access-control-allow-methods: " + acam);
+		}
+		optionsResponse.close();
+		optionsResponse = null;
+		
 		// STEP 3: Make a POST to /login/get to get the properties for the user.
-		response = postLoginGet(apiGwClient);
+		String jsonContent = "{username=" + getCredentials().getOrgUser() + "}";
+		uiUrl = getApiGatewayUrl() + "/cc/" + URL_LOGIN_GET;
+		
+		response = doPost(uiUrl, jsonContent, apiGwClient, null, null);
 		String responseBody = response.body().string();
 		log.debug(responseBody);
+		response.close();
+		
 		UiLoginGetResponse apiLoginGetResponse = gson.fromJson(responseBody, UiLoginGetResponse.class);
 		log.debug("encryption type = " + apiLoginGetResponse.getApiAuth().getEncryptionType());
-
+		
 		this.ssoUrl = apiLoginGetResponse.getSsoServerUrl() + "/login";
 		log.debug("ssoUrl = " + ssoUrl );
-
+		
 		String onFailUrl = apiLoginGetResponse.getGoToOnFail();
 		if (null == onFailUrl) {
 			onFailUrl = apiSlptGlobals.getGotoOnFail();
 		}
-
+		
 		// Host header should be the SSO server's host name to make CloudFront happy.
 		String hostHeader = apiLoginGetResponse.getSsoServerUrl();
 		if (hostHeader.contains("//")) {
 			hostHeader = hostHeader.split("\\/\\/")[1];
 			hostHeader = hostHeader.split("\\/")[0];
 		}
-
+		
 		String originHeader = creds.getUserIntUrl();
 		String originSuffix = "/" + apiSlptGlobals.getOrgScriptName() + "/";
 		if (originHeader.endsWith(originSuffix)) {
@@ -443,10 +517,57 @@ public class UserInterfaceSession extends SessionBase {
 		}
 		
 		// STEP 4: Make a POST to the SSO path for the org.
+		// This makes a POST to the SSO login service which at one point was implemented on OpenAM.  
+		// This requires Form formatted inputs and some obtuse-ly named fields like "IDToken2".
+
+		// Emulate the request properties that Firefox or Chrome post the the server.
+		// OkHttpUtils okUtils = new OkHttpUtils(this);
+		
+		HashMap<String, String> headers = OkHttpUtils.getDefaultHeaders();		
+		headers.put("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+		headers.put("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+		// headers.put("Accept-Encoding", "gzip, deflate, br");
+		headers.put("Accept-Encoding", "identity");
+		headers.put("Cache-Control", "no-cache");
+		headers.put("Host", hostHeader);
+		headers.put("Origin", originHeader);
+		headers.put("Pragma", "no-cache");
+		headers.put("Referer", creds.getUserIntUrl() + "login/login?prompt=true");
+		headers.put("DNT", "1");
+		headers.put("Upgrade-Insecure-Requests", "1");
+
+		RequestBody formBody = null;
+		String IDToken2 = null;
+		String publicKey = null;
+		if(apiLoginGetResponse.getApiAuth().getEncryptionType().equals("pki")){
+			IDToken2 = encryptPayload(creds.getOrgUser(), creds.getOrgPass(), apiLoginGetResponse.getApiAuth().getPublicKey());
+			publicKey = apiLoginGetResponse.getApiAuth().getPublicKey();
+		} else{
+			IDToken2 = applySaltedHash(creds.getOrgUser(), creds.getOrgPass());
+		}
+		
+		FormBody.Builder formBodyBuilder = new FormBody.Builder()
+				.add("encryption", apiLoginGetResponse.getApiAuth().getEncryptionType())
+				.add("service",    apiLoginGetResponse.getApiAuth().getService())
+				.add("IDToken1",   creds.getOrgUser())
+				.add("IDToken2",   IDToken2)
+				.add("realm",      apiSlptGlobals.getOrgScriptName())
+				.add("goto",       creds.getUserIntUrl() + URL_UI)
+				.add("gotoOnFail", onFailUrl)
+				.add("openam.session.persist_am_cookie", "true");
+		
+		if (null != publicKey) { 
+			formBodyBuilder.add("publicKey",  publicKey);
+		}
+		
+		formBody = formBodyBuilder.build();
+		
+		log.debug("formBody: " + formBody.contentLength() + " " + formBody.contentType());
+		
 		// Add the ccSessionId cookie to the POST request to the SSO server.
 		// This is "interesting" in OkHttp3 due to the 302s that follow.
 		// For more info: https://github.com/request/request/issues/1502
-		// Instead we roll our own redirect handler here. Just like the
+		// Instead we roll our own redirect handler here. Just like the 
 		// regular ui client builder, with fllow redirects set to false.
 		OkHttpClient manual302Client = null;
 		{
@@ -454,14 +575,15 @@ public class UserInterfaceSession extends SessionBase {
 			OkHttpUtils.applyTimeoutSettings(uiClientBuilder);
 			OkHttpUtils.applyLoggingInterceptors(uiClientBuilder);
 			uiClientBuilder.cookieJar(new JavaNetCookieJar(cookieManager));
-
+			
 			ConnectionPool uiCxnPool = new ConnectionPool(1, 10, TimeUnit.SECONDS);
 			uiClientBuilder.connectionPool(uiCxnPool);
 			uiClientBuilder.followRedirects(false);
-
+			
 			manual302Client = uiClientBuilder.build();
 		}
-		postSsoLogin(manual302Client, apiLoginGetResponse, apiSlptGlobals, onFailUrl, hostHeader, originHeader);
+		
+		response = doPost(ssoUrl, formBody, manual302Client, headers, cookieManager.getCookieStore().getCookies());
 		
 		// TODO: Support encryption types other than "hash".
 		// TODO: Check for basic success/failure of the authentication.
@@ -572,157 +694,6 @@ public class UserInterfaceSession extends SessionBase {
 		// TODO: Make an API Gateway call to CC's api/user/get interface.
 		
 		return this;
-	}
-
-	private Response getLoginLoginHtml(OkHttpClient client) throws IOException{
-		String uiUrl = getUserInterfaceUrl() + URL_LOGIN_LOGIN;
-		log.debug("Attempting to login to: " + uiUrl);
-
-		Response response = doGet(uiUrl, client, null, null);
-
-		// Handle various response / error conditions.
-		switch (response.code()) {
-			default:
-				String defMsg = response.code() + " while GET'ing " + uiUrl + " - HTTP communication error.";
-				log.error(defMsg);
-				throw new IOException(defMsg);
-			case 403:
-				String errMsg = "403 while GET'ing " + uiUrl + " - Invalid client regional IP or VPN disconnected?";
-				log.error(errMsg);
-				throw new IOException(errMsg);
-			case 200:
-				// fall through to logic below.
-				break;
-		}
-		response.close();
-
-		return response;
-	}
-
-	private HttpCookie getCcSessionCookie(){
-		HttpCookie ccSessionCookie = null;
-
-		// Pull out the CCSESSIONID cookie, we need to pass this to the SSO server.
-		for (HttpCookie cookie : cookieManager.getCookieStore().getCookies()) {
-			if ( !"CCSESSIONID".equals(cookie.getName())) continue;
-			ccSessionCookie = cookie;
-		}
-		ccSessionId = ccSessionCookie.getValue();
-		log.debug("ccSessionId: " + ccSessionCookie.toString());
-		return ccSessionCookie;
-	}
-
-	private void optionLoginGet(OkHttpClient apiGwClient) throws IOException{
-		// The API Gateway is a _different_ URL that the browser uses a CORS
-		// request to access. In this code we will use a second, different,
-		// client object.  Here's why:
-		// When calling CC via the API gateway the gateway drops all cookies.
-		// So when CC gets the request it's like oh, cool I've never seen you
-		// before lets create a session together and it creates an new CCSESSIONID.
-		// You can safely ignore ccsessionid returned by all the API GW CC calls.
-		// You can ignore any cookie from:
-		//     *.api.identitynow.com/cc/*
-		//  or *.api.identitynow.com/v2/*
-		// So we build a new cookie manager here:
-
-		//Build the options URLw
-		String optionsUrl = getApiGatewayUrl() + "/cc/" + URL_LOGIN_GET;
-
-		String apiGwHostHeader = getApiGatewayUrl();
-		if (apiGwHostHeader.contains("//")) {
-			apiGwHostHeader = apiGwHostHeader.split("\\/\\/")[1];
-			apiGwHostHeader = apiGwHostHeader.split("\\/")[0];
-		}
-
-		Headers optionsRequestHeaders = new Headers.Builder()
-				.add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-				.add("Accept-Encodign", "identity")
-				.add("Accept-Language", "en-US,en;q=0.5")
-				.add("Access-Control-Request-Headers", "content-type")
-				.add("Access-Control-Request-Method", "POST")
-				.add("Host", apiGwHostHeader)
-				.add("Origin", getUserInterfaceUrl())
-				.add("User-Agent", OkHttpUtils.getUserAgent())
-				.build();
-
-		Request optionsRequest = new Request.Builder()
-				.url(optionsUrl)
-				.headers(optionsRequestHeaders)
-				.method("OPTIONS", null)
-				.build();
-
-		Response optionsResponse = apiGwClient.newCall(optionsRequest).execute();
-		if (!optionsResponse.isSuccessful()) {
-			String errMsg = optionsResponse.code() + " in OPTIONS call to " + optionsUrl + " - Wrong API Gateway URL?";
-			log.error(errMsg);
-			throw new IOException(errMsg);
-		}
-
-		if (log.isDebugEnabled()) {
-			String acam = optionsResponse.header("access-control-allow-methods").toString();
-			log.debug("access-control-allow-methods: " + acam);
-		}
-		optionsResponse.close();
-	}
-
-	private Response postLoginGet(OkHttpClient apiGwClient) throws IOException {
-		String jsonContent = "{username=" + getCredentials().getOrgUser() + "}";
-		String uiUrl = getApiGatewayUrl() + "/cc/" + URL_LOGIN_GET;
-
-		Response response = doPost(uiUrl, jsonContent, apiGwClient, null, null);
-		response.close();
-		return response;
-	}
-
-	private Response postSsoLogin(OkHttpClient manual302Client, UiLoginGetResponse apiLoginGetResponse, UiSailpointGlobals apiSlptGlobals, String onFailUrl, String hostHeader, String originHeader) throws IOException{
-		// This makes a POST to the SSO login service which at one point was implemented on OpenAM.
-		// This requires Form formatted inputs and some obtuse-ly named fields like "IDToken2".
-
-		// Emulate the request properties that Firefox or Chrome post the the server.
-		// OkHttpUtils okUtils = new OkHttpUtils(this);
-
-		HashMap<String, String> headers = OkHttpUtils.getDefaultHeaders();
-		headers.put("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-		headers.put("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
-		// headers.put("Accept-Encoding", "gzip, deflate, br");
-		headers.put("Accept-Encoding", "identity");
-		headers.put("Cache-Control", "no-cache");
-		headers.put("Host", hostHeader);
-		headers.put("Origin", originHeader);
-		headers.put("Pragma", "no-cache");
-		headers.put("Referer", creds.getUserIntUrl() + "login/login?prompt=true");
-		headers.put("DNT", "1");
-		headers.put("Upgrade-Insecure-Requests", "1");
-
-		RequestBody formBody = null;
-		String IDToken2 = null;
-		String publicKey = null;
-		if(apiLoginGetResponse.getApiAuth().getEncryptionType().equals("pki")){
-			IDToken2 = encryptPayload(creds.getOrgUser(), creds.getOrgPass(), apiLoginGetResponse.getApiAuth().getPublicKey());
-			publicKey = apiLoginGetResponse.getApiAuth().getPublicKey();
-		} else{
-			IDToken2 = applySaltedHash(creds.getOrgUser(), creds.getOrgPass());
-		}
-
-		FormBody.Builder formBodyBuilder = new FormBody.Builder()
-				.add("encryption", apiLoginGetResponse.getApiAuth().getEncryptionType())
-				.add("service",    apiLoginGetResponse.getApiAuth().getService())
-				.add("IDToken1",   creds.getOrgUser())
-				.add("IDToken2",   IDToken2)
-				.add("realm",      apiSlptGlobals.getOrgScriptName())
-				.add("goto",       creds.getUserIntUrl() + URL_UI)
-				.add("gotoOnFail", onFailUrl)
-				.add("openam.session.persist_am_cookie", "true");
-
-		if (null != publicKey) {
-			formBodyBuilder.add("publicKey",  publicKey);
-		}
-
-		formBody = formBodyBuilder.build();
-
-		log.debug("formBody: " + formBody.contentLength() + " " + formBody.contentType());
-
-		return doPost(ssoUrl, formBody, manual302Client, headers, cookieManager.getCookieStore().getCookies());
 	}
 	
 	@Override

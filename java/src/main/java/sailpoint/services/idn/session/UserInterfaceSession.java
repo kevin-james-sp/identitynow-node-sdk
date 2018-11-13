@@ -421,33 +421,6 @@ public class UserInterfaceSession extends SessionBase {
 		UiLoginGetResponse apiLoginGetResponse = gson.fromJson(responseBody, UiLoginGetResponse.class);
 		log.debug("encryption type = " + apiLoginGetResponse.getApiAuth().getEncryptionType());
 
-		this.ssoUrl = apiLoginGetResponse.getSsoServerUrl() + "/login";
-		log.debug("ssoUrl = " + ssoUrl );
-
-		String onFailUrl = apiLoginGetResponse.getGoToOnFail();
-		if (null == onFailUrl) {
-			onFailUrl = apiSlptGlobals.getGotoOnFail();
-		}
-
-		// Host header should be the SSO server's host name to make CloudFront happy.
-		String hostHeader = apiLoginGetResponse.getSsoServerUrl();
-		if (hostHeader.contains("//")) {
-			hostHeader = hostHeader.split("\\/\\/")[1];
-			hostHeader = hostHeader.split("\\/")[0];
-		}
-
-		String originHeader = creds.getUserIntUrl();
-		String originSuffix = "/" + apiSlptGlobals.getOrgScriptName() + "/";
-		if (originHeader.endsWith(originSuffix)) {
-			originHeader = originHeader.replace(originSuffix, "");
-		}
-		
-		// STEP 4: Make a POST to the SSO path for the org.
-		// Add the ccSessionId cookie to the POST request to the SSO server.
-		// This is "interesting" in OkHttp3 due to the 302s that follow.
-		// For more info: https://github.com/request/request/issues/1502
-		// Instead we roll our own redirect handler here. Just like the
-		// regular ui client builder, with fllow redirects set to false.
 		OkHttpClient manual302Client = null;
 		{
 			OkHttpClient.Builder uiClientBuilder = new OkHttpClient.Builder();
@@ -461,117 +434,151 @@ public class UserInterfaceSession extends SessionBase {
 
 			manual302Client = uiClientBuilder.build();
 		}
-		postSsoLogin(manual302Client, apiLoginGetResponse, apiSlptGlobals, onFailUrl, hostHeader, originHeader);
-		
-		// TODO: Support encryption types other than "hash".
-		// TODO: Check for basic success/failure of the authentication.
-		
-		// Extract the cookies from the SSO call.
-		Map<String, List<String>> cookieHdrs = new HashMap<String, List<String>>();
-		cookieHdrs.put("Cookie", new ArrayList<String>(response.headers("Set-Cookie")));
-		try {
-			cookieManager.put(new URI(ssoUrl), cookieHdrs);
-		} catch (URISyntaxException e) {
-			log.error("cookie error", e);
+
+		if(apiLoginGetResponse.getLoginUrl().equals("")) {
+			this.ssoUrl = apiLoginGetResponse.getSsoServerUrl() + "/login";
+			log.debug("ssoUrl = " + ssoUrl);
+
+			String onFailUrl = apiLoginGetResponse.getGoToOnFail();
+			if (null == onFailUrl) {
+				onFailUrl = apiSlptGlobals.getGotoOnFail();
+			}
+
+			// Host header should be the SSO server's host name to make CloudFront happy.
+			String hostHeader = apiLoginGetResponse.getSsoServerUrl();
+			if (hostHeader.contains("//")) {
+				hostHeader = hostHeader.split("\\/\\/")[1];
+				hostHeader = hostHeader.split("\\/")[0];
+			}
+
+			String originHeader = creds.getUserIntUrl();
+			String originSuffix = "/" + apiSlptGlobals.getOrgScriptName() + "/";
+			if (originHeader.endsWith(originSuffix)) {
+				originHeader = originHeader.replace(originSuffix, "");
+			}
+
+			// STEP 4: Make a POST to the SSO path for the org.
+			// Add the ccSessionId cookie to the POST request to the SSO server.
+			// This is "interesting" in OkHttp3 due to the 302s that follow.
+			// For more info: https://github.com/request/request/issues/1502
+			// Instead we roll our own redirect handler here. Just like the
+			// regular ui client builder, with fllow redirects set to false.
+
+			postSsoLogin(manual302Client, apiLoginGetResponse, apiSlptGlobals, onFailUrl, hostHeader, originHeader);
+
+			// TODO: Support encryption types other than "hash".
+			// TODO: Check for basic success/failure of the authentication.
+
+			// Extract the cookies from the SSO call.
+			Map<String, List<String>> cookieHdrs = new HashMap<String, List<String>>();
+			cookieHdrs.put("Cookie", new ArrayList<String>(response.headers("Set-Cookie")));
+			try {
+				cookieManager.put(new URI(ssoUrl), cookieHdrs);
+			} catch (URISyntaxException e) {
+				log.error("cookie error", e);
+			}
+
 		}
-		
-		// Follow 302s from the user interface to the Launchpad / Dashboard screen.
-		// Parse out various useful bits of OAuth information along the way.
-		boolean redirectsDone = false;
-		String nextUrl = response.header("Location");
-		do {
-			try{
-				response = doGet(nextUrl, manual302Client, null, cookieManager.getCookieStore().getCookies());
-			}
-			catch (NullPointerException e){
-				log.error("A null pointer exception has occurred. Did the post to SSO return all headers?");
-				if(nextUrl == null)
-					log.error("The Location header was null.");
-			}
-			switch (response.code()) {
-			case 302:
-				nextUrl = response.header("Location");
-				response.close();
-				break;
-			case 403:
-				response.close();
-				String errMsg = "Failure while following redirects from SSO; unable to login";
-				log.error(errMsg);
-				throw new IOException(errMsg);
-			default:
-				redirectsDone = true;
-				break;
-			}
-			final String callbackToken = "oauth/callback?code="; 
-			if (nextUrl.contains(callbackToken)) {
-				oauthToken  = nextUrl.substring(nextUrl.lastIndexOf(callbackToken) + 1);
-				log.debug("oauthToken: " + oauthToken);
-			}
-			
-		} while (!redirectsDone);
-		
-		String loginResponse = response.body().string();
-		log.debug("Login Response Body:" + loginResponse);
-		response.close();
-		response = null;
-		
-		// Parse the /ui/main page to get the CSRF Token.
-		String csrfTokenRegex = "SLPT.globalContext.csrf\\s=\\s'(\\w+)'";
-		Pattern p = Pattern.compile(csrfTokenRegex);
-		Matcher m = p.matcher(loginResponse);
-		if (m.find()) {
-			csrfToken = m.group(1);
-			log.debug("Parsed CSRF Token: " + csrfToken);
-		} else {
-			if (log.isDebugEnabled()) {
-				log.warn("Failed to parse CSRF token from 'SLPT.globalContext.csrf' for CCSESSIONID: " + ccSessionId + " HTML was: " + loginResponse);
+		else{
+
+		}
+			// Follow 302s from the user interface to the Launchpad / Dashboard screen.
+			// Parse out various useful bits of OAuth information along the way.
+			boolean redirectsDone = false;
+			String nextUrl = response.header("Location");
+			do {
+				try{
+					response = doGet(nextUrl, manual302Client, null, cookieManager.getCookieStore().getCookies());
+				}
+				catch (NullPointerException e){
+					log.error("A null pointer exception has occurred. Did the post to SSO return all headers?");
+					if(nextUrl == null)
+						log.error("The Location header was null.");
+				}
+				switch (response.code()) {
+					case 302:
+						nextUrl = response.header("Location");
+						response.close();
+						break;
+					case 403:
+						response.close();
+						String errMsg = "Failure while following redirects from SSO; unable to login";
+						log.error(errMsg);
+						throw new IOException(errMsg);
+					default:
+						redirectsDone = true;
+						break;
+				}
+				final String callbackToken = "oauth/callback?code=";
+				if (nextUrl.contains(callbackToken)) {
+					oauthToken  = nextUrl.substring(nextUrl.lastIndexOf(callbackToken) + 1);
+					log.debug("oauthToken: " + oauthToken);
+				}
+
+			} while (!redirectsDone);
+
+			String loginResponse = response.body().string();
+			log.debug("Login Response Body:" + loginResponse);
+			response.close();
+			response = null;
+
+			// Parse the /ui/main page to get the CSRF Token.
+			String csrfTokenRegex = "SLPT.globalContext.csrf\\s=\\s'(\\w+)'";
+			Pattern p = Pattern.compile(csrfTokenRegex);
+			Matcher m = p.matcher(loginResponse);
+			if (m.find()) {
+				csrfToken = m.group(1);
+				log.debug("Parsed CSRF Token: " + csrfToken);
 			} else {
-				log.warn("Failed to parse CSRF token from 'SLPT.globalContext.csrf' for CCSESSIONID: " + ccSessionId);
+				if (log.isDebugEnabled()) {
+					log.warn("Failed to parse CSRF token from 'SLPT.globalContext.csrf' for CCSESSIONID: " + ccSessionId + " HTML was: " + loginResponse);
+				} else {
+					log.warn("Failed to parse CSRF token from 'SLPT.globalContext.csrf' for CCSESSIONID: " + ccSessionId);
+				}
+
+				return null;
 			}
-			
-			return null;
-		}
-		
-		Document uiMainDoc = Jsoup.parse(loginResponse);
-		String globalContextSelector = "script[contains(., 'SLPT.globalContext.api')]";
-		Elements globalContextScript = uiMainDoc.select(globalContextSelector);
-		if (null == globalContextScript) {
-			log.error("Failure extracting SLPT.globalContext.api with selector: " + globalContextSelector);
-			return null;
-		}
-		
-		String gcJsonBody = globalContextScript.html();
-		log.debug("gcJsonBody:" + gcJsonBody);
-		
-		// TODO: Implement a class for this:
+
+			Document uiMainDoc = Jsoup.parse(loginResponse);
+			String globalContextSelector = "script[contains(., 'SLPT.globalContext.api')]";
+			Elements globalContextScript = uiMainDoc.select(globalContextSelector);
+			if (null == globalContextScript) {
+				log.error("Failure extracting SLPT.globalContext.api with selector: " + globalContextSelector);
+				return null;
+			}
+
+			String gcJsonBody = globalContextScript.html();
+			log.debug("gcJsonBody:" + gcJsonBody);
+
+			// TODO: Implement a class for this:
 //		apiSlptGlobals = gson.fromJson(jsonBody, UiSailpointGlobals.class);
 //		this.setApiGatewayUrl(apiSlptGlobals.getApi().getBaseUrl());
 //		log.debug("API URL:" + this.getApiGatewayUrl());
-		
-		// Allow the environment to turn off the /ui/session call for testing.
-		if (Boolean.parseBoolean(System.getProperty("skipUiSessionCall", "false"))) {
-			log.debug("Skipping /ui/session call by config request.");
-		} else {
-			getNewSessionToken();
-		}
-		
-		loginSequenceDuration = System.currentTimeMillis() - loginSequenceStartTime;
-		log.debug("Login sequence completed in " + loginSequenceDuration + " msecs.");
-		
-		// TODO Parse out user interface version information from the HTTP:
-		// This might be useful for internal debugging later.
-		/**
-	Built on: 2018/07/03 10:34:37
-	Built by: Jenkins Pipeline
-	Built Number: build103
-	Built Target: prod
-	Git branch: master
-	Git commit: cd3c37a34516c35254e5eb13d37f8b93e6260480 
-		 */
-		
-		// TODO: Make an API Gateway call to CC's api/user/get interface.
-		
-		return this;
+
+			// Allow the environment to turn off the /ui/session call for testing.
+			if (Boolean.parseBoolean(System.getProperty("skipUiSessionCall", "false"))) {
+				log.debug("Skipping /ui/session call by config request.");
+			} else {
+				getNewSessionToken();
+			}
+
+			loginSequenceDuration = System.currentTimeMillis() - loginSequenceStartTime;
+			log.debug("Login sequence completed in " + loginSequenceDuration + " msecs.");
+
+			// TODO Parse out user interface version information from the HTTP:
+			// This might be useful for internal debugging later.
+			/**
+			 Built on: 2018/07/03 10:34:37
+			 Built by: Jenkins Pipeline
+			 Built Number: build103
+			 Built Target: prod
+			 Git branch: master
+			 Git commit: cd3c37a34516c35254e5eb13d37f8b93e6260480
+			 */
+
+			// TODO: Make an API Gateway call to CC's api/user/get interface.
+
+			return this;
 	}
 
 	private Response getLoginLoginHtml(OkHttpClient client) throws IOException{

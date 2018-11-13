@@ -7,45 +7,43 @@ import java.util.List;
 public class Role {
 
     @SerializedName("name")
-    String name;
+    public String name;
 
     @SerializedName("description")
-    String description;
+    public String description;
 
     @SerializedName("id")
-    String id;
+    public String id;
 
     @SerializedName("owner")
-    String owner;
+    public String owner;
 
     @SerializedName("disabled")
-    boolean disabled;
+    public boolean disabled;
 
     @SerializedName("displayName")
-    String displayName;
+    public String displayName;
 
     @SerializedName("identityCount")
-    int identityCount;
+    public int identityCount;
 
     @SerializedName("approvalSchemes")
-    String approvalSchemes;
+    public String approvalSchemes;
 
     @SerializedName("deniedCommentsRequired")
-    boolean deniedCommentsRequired;
+    public boolean deniedCommentsRequired;
 
     @SerializedName("requestable")
-    boolean requestable;
+    public boolean requestable;
 
     @SerializedName("requestCommentsRequired")
-    boolean requestCommentsRequired;
+    public boolean requestCommentsRequired;
 
     @SerializedName("accessProfileIds")
-    List<Object> accessProfileIds;
+    public List<Object> accessProfileIds;
 
     @SerializedName("selector")
-    Selector selector;
-
-
+    public Selector selector;
 
     public Role(String name, String description) {
         this.name = name;
@@ -57,21 +55,3 @@ public class Role {
     }
 
 }
-
-
-/* Leftover json from actual response
-
-{
-    "accessProfileIds": null,
-    "selector": {
-        "aliasList": [],
-        "complexRoleCriterion": null,
-        "entitlementIds": [],
-        "ruleId": null,
-        "sourceId": null,
-        "type": "UNDEFINED",
-        "valueMap": []
-    }
-}
-
- */

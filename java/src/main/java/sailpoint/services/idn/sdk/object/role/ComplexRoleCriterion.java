@@ -6,10 +6,10 @@ import java.util.List;
 
 public class ComplexRoleCriterion {
     @SerializedName("operation")
-    String operation;
+    public String operation;
 
     @SerializedName("children")
-    List<RoleCriterion> children;
+    public List<RoleCriterion> children;
 
     public ComplexRoleCriterion (String operation, List<RoleCriterion> children) {
         this.operation = operation;

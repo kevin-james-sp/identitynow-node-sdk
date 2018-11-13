@@ -4,13 +4,13 @@ import com.google.gson.annotations.SerializedName;
 
 public class RoleCriterionKey {
     @SerializedName("type")
-    String type;
+    public String type;
 
     @SerializedName("property")
-    String property;
+    public String property;
 
     @SerializedName("sourceId")
-    String sourceId;
+    public String sourceId;
 
     public RoleCriterionKey (String type, String property, String sourceId) {
         this.type = type;

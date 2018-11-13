@@ -53,7 +53,6 @@ public final class IdentityNowService {
 	
 	/**
      * Construct an IdentityNow service using environment supplied ClientCredentials.
-     * @param clientCredentials
      */
 	public IdentityNowService() {
 		this.creds = EnvironmentCredentialer.getEnvironmentCredentials();
@@ -115,6 +114,14 @@ public final class IdentityNowService {
 
 	public RoleService getRoleService() throws Exception {
 		return getService(RoleService.class, ServiceTypes.GATEWAY);
+	}
+
+	public SourceService getSourceService() throws Exception {
+		return getService(SourceService.class, ServiceTypes.GATEWAY);
+	}
+
+	public EntitlementService getEntitlementService() throws Exception {
+		return getService(EntitlementService.class, ServiceTypes.GATEWAY);
 	}
   
 	public static <T> T execute ( Call<T> call ) throws Exception {	

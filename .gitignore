@@ -3,3 +3,4 @@
 java/out
 java/.gradle
 Java/.idea
+java/build/**

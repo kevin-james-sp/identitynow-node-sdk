@@ -50,8 +50,4 @@ public class Role {
         this.description = description;
     }
 
-    public void setSelector (Selector selector) {
-        this.selector = selector;
-    }
-
 }

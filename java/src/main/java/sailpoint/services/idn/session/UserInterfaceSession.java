@@ -17,6 +17,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import sailpoint.services.idn.sdk.ClientCredentials;
+import sailpoint.services.idn.sdk.EnvironmentCredentialer;
 import sailpoint.services.idn.sdk.object.UiKbaQuestion;
 import sailpoint.services.idn.sdk.object.UiLoginGetResponse;
 import sailpoint.services.idn.sdk.object.UiSailpointGlobals;
@@ -68,6 +69,7 @@ public class UserInterfaceSession extends SessionBase {
 	public static final String URL_LOGIN_GET   = "login/get";
 	public static final String URL_UI          = "ui";
 	public static final String URL_LOGOUT      = "logout";
+	public static final String URL_AUTH        = "auth";
 	
 	// Max token age: 5 minutes in milliseconds.
 	public static final long MAX_JWT_TOKEN_AGE = 300000;
@@ -76,6 +78,7 @@ public class UserInterfaceSession extends SessionBase {
 	public String ccSessionId = null;
 	public String csrfToken = null;
 	public String oauthToken = null;
+	public String testSharedAuthUrl = ".test-login.sailpoint.com";
 	
 	// Durations for performance analysis.
 	public long loginSequenceDuration = 0;
@@ -87,7 +90,7 @@ public class UserInterfaceSession extends SessionBase {
 	// Two clients used to talk to different edge interfaces of IdentityNow.
 	protected OkHttpClient userInterfaceClient = null;
 	protected OkHttpClient apiGatewayClient = null;
-	
+
 	public UserInterfaceSession (ClientCredentials clientCredentials) {
 		
 		super (clientCredentials);
@@ -389,6 +392,7 @@ public class UserInterfaceSession extends SessionBase {
 		// STEP 1: Call /login/login and extract the API Gateway URL for the org and other data.
 		response = getLoginLoginHtml(client);
 		String respHtml = response.body().string();
+		response.close();
 		log.trace("respString: " + respHtml);
 
 		// Parse out the several fields from a JSON field that comes back in HTTP.
@@ -417,6 +421,7 @@ public class UserInterfaceSession extends SessionBase {
 		// STEP 3: Make a POST to /login/get to get the properties for the user.
 		response = postLoginGet(apiGwClient);
 		String responseBody = response.body().string();
+		response.close();
 		log.debug(responseBody);
 		UiLoginGetResponse apiLoginGetResponse = gson.fromJson(responseBody, UiLoginGetResponse.class);
 		log.debug("encryption type = " + apiLoginGetResponse.getApiAuth().getEncryptionType());
@@ -435,7 +440,8 @@ public class UserInterfaceSession extends SessionBase {
 			manual302Client = uiClientBuilder.build();
 		}
 
-		if(apiLoginGetResponse.getLoginUrl().equals("")) {
+		//Check for auth service url. Use sso url if it isn't there, else use auth url
+		if(apiLoginGetResponse.getLoginUrl() == null) {
 			this.ssoUrl = apiLoginGetResponse.getSsoServerUrl() + "/login";
 			log.debug("ssoUrl = " + ssoUrl);
 
@@ -464,7 +470,7 @@ public class UserInterfaceSession extends SessionBase {
 			// Instead we roll our own redirect handler here. Just like the
 			// regular ui client builder, with fllow redirects set to false.
 
-			postSsoLogin(manual302Client, apiLoginGetResponse, apiSlptGlobals, onFailUrl, hostHeader, originHeader);
+			response = postSsoLogin(manual302Client, apiLoginGetResponse, apiSlptGlobals, onFailUrl, hostHeader, originHeader);
 
 			// TODO: Support encryption types other than "hash".
 			// TODO: Check for basic success/failure of the authentication.
@@ -480,7 +486,12 @@ public class UserInterfaceSession extends SessionBase {
 
 		}
 		else{
+			String onFailUrl = apiLoginGetResponse.getGoToOnFail();
+			if (null == onFailUrl) {
+				onFailUrl = apiSlptGlobals.getGotoOnFail();
+			}
 
+			postAuthLogin(manual302Client, apiLoginGetResponse, apiSlptGlobals, onFailUrl, creds.getOrgName() + testSharedAuthUrl + "/" + URL_AUTH);
 		}
 			// Follow 302s from the user interface to the Launchpad / Dashboard screen.
 			// Parse out various useful bits of OAuth information along the way.
@@ -581,6 +592,53 @@ public class UserInterfaceSession extends SessionBase {
 			return this;
 	}
 
+	private Response postAuthLogin(OkHttpClient manual302Client, UiLoginGetResponse apiLoginGetResponse, UiSailpointGlobals apiSlptGlobals, String onFailUrl, String hostHeader) throws IOException{
+		// This makes a POST to the shared auth login service.
+
+		HashMap<String, String> headers = OkHttpUtils.getDefaultHeaders();
+		headers.put("Content-Type", "application/x-www-form-urlencoded;");
+		headers.put("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+		headers.put("Accept-Encoding", "gzip, deflate, br");
+		//headers.put("Accept-Encoding", "identity");
+		//headers.put("Cache-Control", "no-cache");
+		headers.put("Host", hostHeader);
+		// headers.put("Origin", originHeader);
+		//headers.put("Pragma", "no-cache");
+		headers.put("Referer", creds.getUserIntUrl() + "login/login?prompt=true");
+		//headers.put("DNT", "1");
+		headers.put("Upgrade-Insecure-Requests", "1");
+
+		RequestBody formBody = null;
+		String IDToken2 = null;
+		String publicKey = null;
+		if(apiLoginGetResponse.getApiAuth().getEncryptionType().equals("pki")){
+			IDToken2 = encryptPayload(creds.getOrgUser(), creds.getOrgPass(), apiLoginGetResponse.getApiAuth().getPublicKey());
+			publicKey = apiLoginGetResponse.getApiAuth().getPublicKey();
+		} else{
+			IDToken2 = applySaltedHash(creds.getOrgUser(), creds.getOrgPass());
+		}
+
+		FormBody.Builder formBodyBuilder = new FormBody.Builder()
+				.add("encryption", apiLoginGetResponse.getApiAuth().getEncryptionType())
+				.add("service",    apiLoginGetResponse.getApiAuth().getService())
+				.add("IDToken1",   creds.getOrgUser())
+				.add("IDToken2",   IDToken2)
+				.add("realm",      apiSlptGlobals.getOrgScriptName())
+				.add("goto",       getOrgLocation())
+				.add("gotoOnFail", onFailUrl)
+				.add("openam.session.persist_am_cookie", "true");
+
+		if (null != publicKey) {
+			formBodyBuilder.add("publicKey",  publicKey);
+		}
+
+		formBody = formBodyBuilder.build();
+
+		log.debug("formBody: " + formBody.contentLength() + " " + formBody.contentType());
+
+		return doPost(creds.getOrgName() + testSharedAuthUrl, formBody, manual302Client, headers, cookieManager.getCookieStore().getCookies());
+	}
+
 	private Response getLoginLoginHtml(OkHttpClient client) throws IOException{
 		String uiUrl = getUserInterfaceUrl() + URL_LOGIN_LOGIN;
 		log.debug("Attempting to login to: " + uiUrl);
@@ -601,9 +659,14 @@ public class UserInterfaceSession extends SessionBase {
 				// fall through to logic below.
 				break;
 		}
-		response.close();
-
 		return response;
+	}
+
+	private String getOrgLocation() throws IOException {
+		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
+		Response response = doGet(envCreds.getUserIntUrl(), new OkHttpClient(), null, null);
+		Headers headers = response.headers();
+		return headers.get("Location");
 	}
 
 	private HttpCookie getCcSessionCookie(){
@@ -677,7 +740,6 @@ public class UserInterfaceSession extends SessionBase {
 		String uiUrl = getApiGatewayUrl() + "/cc/" + URL_LOGIN_GET;
 
 		Response response = doPost(uiUrl, jsonContent, apiGwClient, null, null);
-		response.close();
 		return response;
 	}
 

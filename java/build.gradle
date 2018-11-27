@@ -71,8 +71,7 @@ jar {
 
 		testCompile group: 'junit', name: 'junit', version: '4.12'
 
-		deployer 'org.kuali.maven.wagons:maven-s3-wagon:1.2.1'
-
+		deployer 'com.allogy.maven.wagon:maven-s3-wagon:1.1.0'
 	}
 
 	test {

@@ -22,9 +22,10 @@ public class UiLoginGetResponse {
 	public UiLoginGetResponse() {
 	}
 
-	public UiLoginGetResponse(String ssoServerUrl, String goToOnFail, UiAuthData apiAuth, UiOrgData apiOrg) {
+	public UiLoginGetResponse(String ssoServerUrl, String goToOnFail, String loginUrl, UiAuthData apiAuth, UiOrgData apiOrg) {
 		this.ssoServerUrl = ssoServerUrl;
 		this.goToOnFail = goToOnFail;
+		this.loginUrl = loginUrl;
 		this.apiAuth = apiAuth;
 		this.apiOrg = apiOrg;
 	}

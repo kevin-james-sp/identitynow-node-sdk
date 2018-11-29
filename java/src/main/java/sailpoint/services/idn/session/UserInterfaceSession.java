@@ -491,7 +491,7 @@ public class UserInterfaceSession extends SessionBase {
 				onFailUrl = apiSlptGlobals.getGotoOnFail();
 			}
 
-			postAuthLogin(manual302Client, apiLoginGetResponse, apiSlptGlobals, onFailUrl, creds.getOrgName() + testSharedAuthUrl + "/" + URL_AUTH);
+			response = postAuthLogin(manual302Client, apiLoginGetResponse, apiSlptGlobals, onFailUrl, creds.getOrgName() + testSharedAuthUrl);
 		}
 			// Follow 302s from the user interface to the Launchpad / Dashboard screen.
 			// Parse out various useful bits of OAuth information along the way.
@@ -636,7 +636,7 @@ public class UserInterfaceSession extends SessionBase {
 
 		log.debug("formBody: " + formBody.contentLength() + " " + formBody.contentType());
 
-		return doPost(creds.getOrgName() + testSharedAuthUrl, formBody, manual302Client, headers, cookieManager.getCookieStore().getCookies());
+		return doPost("https://" + creds.getOrgName() + testSharedAuthUrl + "/auth", formBody, manual302Client, headers, cookieManager.getCookieStore().getCookies());
 	}
 
 	private Response getLoginLoginHtml(OkHttpClient client) throws IOException{
@@ -665,7 +665,7 @@ public class UserInterfaceSession extends SessionBase {
 	private String getOrgLocation() throws IOException {
 		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
 		Response response = doGet(envCreds.getUserIntUrl(), new OkHttpClient(), null, null);
-		Headers headers = response.headers();
+		Headers headers = response.priorResponse().headers();
 		return headers.get("Location");
 	}
 

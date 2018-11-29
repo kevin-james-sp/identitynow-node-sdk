@@ -350,6 +350,11 @@ public class UserInterfaceSession extends SessionBase {
 	 */
 	@Override 
 	public UserInterfaceSession open() throws IOException {
+
+		//The code has been expanded to check which of the three paths it should follow below.
+		// 1. GET Org location.
+		// 2. Follow redirects to login/login
+		// 3. Follow one of the below:
 		
 		// The old (pre-oauth) sequence looks like the following:
 		// 1. GET  /login/login -- pulls back the org login parameters.

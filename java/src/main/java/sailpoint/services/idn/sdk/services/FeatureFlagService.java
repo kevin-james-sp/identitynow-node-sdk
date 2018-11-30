@@ -49,6 +49,7 @@ public class FeatureFlagService {
 	private static CloseableHttpClient _client;
 
 	//All Feature Flags as of 11/30/2018 except for va-live, because java doesn't like that as an enum name
+	//WARNING: SOME OF THESE MAY BE PRODUCTION FLAGS (like va-live)! YOU HAVE BEEN WARNED!
 	enum FEATURE_FLAGS{
 		ACTIVE_DIRECTORY_MULTIFOREST,
 		ANGULAR_RESET_UI,

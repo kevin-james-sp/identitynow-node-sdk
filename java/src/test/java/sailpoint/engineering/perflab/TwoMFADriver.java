@@ -15,7 +15,7 @@ public class TwoMFADriver {
 
     private static final String SSH_USERNAME = "fangmingning";
     private static final String JUMP_BOX_URL = "jb1-dev02-useast1.cloud.sailpoint.com";
-    private static final String CC_INSTANCE_URL = "10.0.38.254";// Make sure the CC instance exist. It will change if it's recreated
+    private static final String CC_INSTANCE_URL = "10.0.38.254";// Make sure the CC instance exists. It will change if it's recreated
     private static final String CC_RDS_MYSQL_URL = "dev02-useast1-cc.ce7gg2eo7hdc.us-east-1.rds.amazonaws.com";
     private static final String CC_RDS_MYSQL_USERNAME = "admin20170151";
     private static final String CC_RDS_MYSQL_PASSWORD = "a946c53336";
@@ -24,7 +24,7 @@ public class TwoMFADriver {
 
     public static void main(String[] args) throws Exception {
 
-        //TODO: Concurrent driver to drive wither the kiba route or the code route
+        //TODO: Concurrent driver to drive either the kba route or the code route
         twoMfaThroughKbaAnswer();
 
     }

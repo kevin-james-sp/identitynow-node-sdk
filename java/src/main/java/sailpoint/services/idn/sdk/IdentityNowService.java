@@ -7,6 +7,8 @@ import sailpoint.services.idn.session.SessionFactory;
 import sailpoint.services.idn.session.SessionType;
 import sailpoint.services.idn.session.UserInterfaceSession;
 
+import java.io.IOException;
+
 public final class IdentityNowService {
 	
 	/*
@@ -28,7 +30,7 @@ public final class IdentityNowService {
      * @param apiKey
      * @throws Exception
      */
-    public IdentityNowService( String url, String username, String password, String apiUser, String apiKey ) throws Exception {
+    public IdentityNowService( String url, String username, String password, String apiUser, String apiKey ) {
     	this.creds = new ClientCredentials();
     	
     	// String userIntUrl, String orgName, String orgUser, 
@@ -62,15 +64,15 @@ public final class IdentityNowService {
 	/*
 	 * Methods
 	 */
-	public SessionBase createSession() throws Exception {
+	public SessionBase createSession() throws IOException {
 		return createSession(SessionType.SESSION_TYPE_API_ONLY);
 	}
 
-	public SessionBase createSession(SessionType sessionType) throws Exception {
+	public SessionBase createSession(SessionType sessionType) throws IOException {
 		return createSession(sessionType, false);
 	}
 
-	public SessionBase createSession(SessionType sessionType, boolean stronglyAuthenticate) throws Exception {
+	public SessionBase createSession(SessionType sessionType, boolean stronglyAuthenticate) throws IOException {
 		this.session = SessionFactory.createSession(this.creds, sessionType);
 		if (stronglyAuthenticate) {
 			this.session.open();
@@ -81,11 +83,11 @@ public final class IdentityNowService {
 
 
   
-	public <S> S getService ( Class<S> serviceClass ) throws Exception {
+	public <S> S getService ( Class<S> serviceClass ) throws IOException {
 		return getService(serviceClass, ServiceTypes.UI);
 	}
 
-	public <S> S getService ( Class<S> serviceClass, ServiceTypes serviceTypes) throws Exception {
+	public <S> S getService ( Class<S> serviceClass, ServiceTypes serviceTypes) throws IOException {
 		if ( session == null )
 			createSession();
 
@@ -96,39 +98,39 @@ public final class IdentityNowService {
 	/*
 	 * Services
 	 */
-	public ConnectorService getConnectorService() throws Exception {
+	public ConnectorService getConnectorService() throws IOException {
 		return getService( ConnectorService.class );
 	}
 	
-	public IdentityService getIdentityService() throws Exception {
+	public IdentityService getIdentityService() throws IOException {
 		return getService( IdentityService.class );
 	}
 	
-	public ReportService getReportService() throws Exception {
+	public ReportService getReportService() throws IOException {
 		return getService( ReportService.class );
 	}
 	
-	public TransformService getTransformService() throws Exception {
+	public TransformService getTransformService() throws IOException {
 		return getService( TransformService.class );
 	}
 
-	public RoleService getRoleService() throws Exception {
+	public RoleService getRoleService() throws IOException {
 		return getService(RoleService.class, ServiceTypes.GATEWAY);
 	}
 
-	public SourceService getSourceService() throws Exception {
+	public SourceService getSourceService() throws IOException {
 		return getService(SourceService.class, ServiceTypes.GATEWAY);
 	}
 
-	public EntitlementService getEntitlementService() throws Exception {
+	public EntitlementService getEntitlementService() throws IOException {
 		return getService(EntitlementService.class, ServiceTypes.GATEWAY);
 	}
 
-	public AccountService getAccountService () throws Exception {
+	public AccountService getAccountService () throws IOException {
 		return getService(AccountService.class, ServiceTypes.GATEWAY);
 	}
   
-	public static <T> T execute ( Call<T> call ) throws Exception {	
+	public static <T> T execute ( Call<T> call ) throws IOException {
 		return call.execute().body();
 	}
 

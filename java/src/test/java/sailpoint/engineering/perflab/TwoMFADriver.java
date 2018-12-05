@@ -1,17 +1,25 @@
 package sailpoint.engineering.perflab;
 
 import com.jcraft.jsch.*;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import retrofit2.Response;
+import sailpoint.services.idn.console.Log4jUtils;
 import sailpoint.services.idn.sdk.EnvironmentCredentialer;
 import sailpoint.services.idn.sdk.IdentityNowService;
 import sailpoint.services.idn.sdk.object.account.*;
 import sailpoint.services.idn.sdk.services.AccountService;
 import sailpoint.services.idn.session.SessionType;
+import sailpoint.services.idn.util.PasswordUtil;
 
 import java.io.IOException;
 import java.sql.*;
 import java.util.Collections;
 
 public class TwoMFADriver {
+
+    private final static Logger log = LogManager.getLogger(TwoMFADriver.class);
 
     private static final String SSH_USERNAME = "fangmingning";
     private static final String JUMP_BOX_URL = "jb1-dev02-useast1.cloud.sailpoint.com";
@@ -20,23 +28,24 @@ public class TwoMFADriver {
     private static final String CC_RDS_MYSQL_USERNAME = "admin20170151";
     private static final String CC_RDS_MYSQL_PASSWORD = "a946c53336";
 
-
+    private static final String PERF_DEFAULT_PWD = "p@sSw04d!4AD4me-001";
+    private static final String PERF_KBA_ANSWER = "test";
 
     public static void main(String[] args) throws Exception {
+        Log4jUtils.boostrapLog4j(Level.INFO);
 
         //TODO: Concurrent driver to drive either the kba route or the code route
-        twoMfaThroughKbaAnswer();
-
+        twoMfaThroughKbaAnswer("1057");
     }
 
-    private static void twoMfaThroughKbaAnswer() throws IOException {
+    private static void twoMfaThroughKbaAnswer(String username) throws Exception {
 
         IdentityNowService ids = new IdentityNowService(EnvironmentCredentialer.getEnvironmentCredentials());
         ids.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC);
 
         AccountService accountService = ids.getAccountService();
 
-        JPTResult jptResult = accountService.pwdStart(new PasswordStart("1057", "perflab-05121458", "pswd-reset")).execute().body();
+        JPTResult jptResult = accountService.pwdStart(new PasswordStart(username, "perflab-05121458", "pswd-reset")).execute().body();
 
         PasswordIsReady passwordIsReady = accountService.pwdIsReady(jptResult.JPT).execute().body();
 
@@ -44,11 +53,32 @@ public class TwoMFADriver {
 
         MFAChallenge kbaCityBornChallenge = mfaDetails.data.challenges.stream().filter(mfaChallenge -> mfaChallenge.text.equals("What city were you born in?")).findAny().orElse(null);
 
-        kbaCityBornChallenge.answer = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"; //sha256 hash of "test" as the answer of the kba answer
+        kbaCityBornChallenge.answer = PasswordUtil.encodeSha256String(PERF_KBA_ANSWER);
 
         JPTResult mfaVerifyResult = accountService.mfaVerify(mfaDetails.JPT, new MFAVerify("KBA", Collections.singletonList(kbaCityBornChallenge))).execute().body();
 
-        System.out.println(1);
+        PasswordPolicy passwordPolicy = accountService.getPasswordPolicy(mfaVerifyResult.JPT).execute().body();
+
+        Org orgKeyInfo = passwordPolicy.org;
+
+        JPTResult passwordChangeResult = accountService.pwdReset(mfaVerifyResult.JPT, new PasswordReset(username,
+                PasswordUtil.encodeSha256String(PERF_DEFAULT_PWD),
+                PasswordUtil.getPassthroughHash(username, orgKeyInfo.encryptionKey),
+                PasswordUtil.getPassthroughHash(PERF_DEFAULT_PWD, orgKeyInfo.encryptionKey),
+                orgKeyInfo.encryptionKeyId)).execute().body();
+
+        PasswordPoll pollingResult;
+
+        pollingResult = accountService.pwdPoll(passwordChangeResult.JPT).execute().body();
+
+        while (!pollingResult.state.equals("FINISHED")) {
+            log.info("Polling password reset result");
+            Thread.sleep(9000);
+            pollingResult = accountService.pwdPoll(pollingResult.JPT).execute().body();
+        }
+
+
+        log.info("Done");
 
     }
 

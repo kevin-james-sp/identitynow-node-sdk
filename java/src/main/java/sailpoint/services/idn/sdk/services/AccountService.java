@@ -12,8 +12,14 @@ public interface AccountService {
     @GET("/cc/password/isReady" )
     Call<PasswordIsReady> pwdIsReady (@Header("Slpt-Jpt") String jptToken);
 
+    @GET("/cc/password/getPswdPolicy" )
+    Call<PasswordPolicy> getPasswordPolicy (@Header("Slpt-Jpt") String jptToken);
+
     @POST("/cc/password/reset")
-    Call<JPTResult> pwdReset (@Header("Slpt-Jpt") String jptToken, @Body MFAVerify mfaVerify);
+    Call<JPTResult> pwdReset (@Header("Slpt-Jpt") String jptToken, @Body PasswordReset passwordReset);
+
+    @GET("/cc/password/poll" )
+    Call<PasswordPoll> pwdPoll (@Header("Slpt-Jpt") String jptToken);
 
     @GET("/cc/mfa/details" )
     Call<MFADetails> mfaDetails (@Query("id") String id, @Header("Slpt-Jpt") String jptToken);

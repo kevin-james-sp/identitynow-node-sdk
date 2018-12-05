@@ -123,6 +123,10 @@ public final class IdentityNowService {
 	public EntitlementService getEntitlementService() throws Exception {
 		return getService(EntitlementService.class, ServiceTypes.GATEWAY);
 	}
+
+	public AccountService getAccountService () throws Exception {
+		return getService(AccountService.class, ServiceTypes.GATEWAY);
+	}
   
 	public static <T> T execute ( Call<T> call ) throws Exception {	
 		return call.execute().body();

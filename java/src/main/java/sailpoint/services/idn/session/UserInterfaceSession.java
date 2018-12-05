@@ -504,6 +504,7 @@ public class UserInterfaceSession extends SessionBase {
 			// Parse out various useful bits of OAuth information along the way.
 			boolean redirectsDone = false;
 			String nextUrl = response.header("Location");
+			response.close();
 			do {
 				try{
 					response = doGet(nextUrl, manual302Client, null, cookieManager.getCookieStore().getCookies());
@@ -538,7 +539,6 @@ public class UserInterfaceSession extends SessionBase {
 			String loginResponse = response.body().string();
 			log.debug("Login Response Body:" + loginResponse);
 			response.close();
-			response = null;
 
 			// Parse the /ui/main page to get the CSRF Token.
 			String csrfTokenRegex = "SLPT.globalContext.csrf\\s=\\s'(\\w+)'";
@@ -679,6 +679,7 @@ public class UserInterfaceSession extends SessionBase {
 		Response response = doGet(envCreds.getUserIntUrl(), new OkHttpClient(), null, null);
 		Headers headers = response.priorResponse().headers();
 		String location = headers.get("Location");
+		response.close();
 		return location.substring(location.indexOf("=") + 1);
 	}
 
@@ -1101,6 +1102,7 @@ public class UserInterfaceSession extends SessionBase {
 		this.csrfToken = uiSessToken.getCsrfToken();
 		this.oauthToken = uiSessToken.getAccessToken();
 		this.accessToken = uiSessToken.getAccessToken();
+		response.close();
 		
 		return uiSessToken.getAccessToken();
 	}

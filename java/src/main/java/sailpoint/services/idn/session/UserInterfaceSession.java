@@ -350,6 +350,11 @@ public class UserInterfaceSession extends SessionBase {
 	 */
 	@Override 
 	public UserInterfaceSession open() throws IOException {
+
+		//The code has been expanded to check which of the three paths it should follow below.
+		// 1. GET Org location.
+		// 2. Follow redirects to login/login
+		// 3. Follow one of the below:
 		
 		// The old (pre-oauth) sequence looks like the following:
 		// 1. GET  /login/login -- pulls back the org login parameters.
@@ -389,8 +394,10 @@ public class UserInterfaceSession extends SessionBase {
 		Response response;
 		long loginSequenceStartTime = System.currentTimeMillis();
 
+		String location = creds.getUserIntUrl();
+
 		// STEP 1: Call /login/login and extract the API Gateway URL for the org and other data.
-		response = getLoginLoginHtml(client);
+		response = getLoginLoginHtml(client, location);
 		String respHtml = response.body().string();
 		response.close();
 		log.trace("respString: " + respHtml);
@@ -497,6 +504,7 @@ public class UserInterfaceSession extends SessionBase {
 			// Parse out various useful bits of OAuth information along the way.
 			boolean redirectsDone = false;
 			String nextUrl = response.header("Location");
+			response.close();
 			do {
 				try{
 					response = doGet(nextUrl, manual302Client, null, cookieManager.getCookieStore().getCookies());
@@ -531,7 +539,6 @@ public class UserInterfaceSession extends SessionBase {
 			String loginResponse = response.body().string();
 			log.debug("Login Response Body:" + loginResponse);
 			response.close();
-			response = null;
 
 			// Parse the /ui/main page to get the CSRF Token.
 			String csrfTokenRegex = "SLPT.globalContext.csrf\\s=\\s'(\\w+)'";
@@ -592,6 +599,10 @@ public class UserInterfaceSession extends SessionBase {
 			return this;
 	}
 
+	private Response getLoginLoginLocation(OkHttpClient client) throws IOException {
+		return doGet(creds.getUserIntUrl(), client, null, null);
+	}
+
 	private Response postAuthLogin(OkHttpClient manual302Client, UiLoginGetResponse apiLoginGetResponse, UiSailpointGlobals apiSlptGlobals, String onFailUrl, String hostHeader) throws IOException{
 		// This makes a POST to the shared auth login service.
 
@@ -639,20 +650,21 @@ public class UserInterfaceSession extends SessionBase {
 		return doPost("https://" + creds.getOrgName() + testSharedAuthUrl + "/auth", formBody, manual302Client, headers, cookieManager.getCookieStore().getCookies());
 	}
 
-	private Response getLoginLoginHtml(OkHttpClient client) throws IOException{
-		String uiUrl = getUserInterfaceUrl() + URL_LOGIN_LOGIN;
-		log.debug("Attempting to login to: " + uiUrl);
+	//Client is the client to use (OkHttp recommends reusing clients as much as possible to reduce latency and memory usage)
+	//Location is the url location. This can vary depending on what the /ui call returns. Ie. is this org using the shared auth service or no?
+	private Response getLoginLoginHtml(OkHttpClient client, String location) throws IOException{
+		log.debug("Attempting to login to: " + location);
 
-		Response response = doGet(uiUrl, client, null, null);
+		Response response = doGet(location, client, null, null);
 
 		// Handle various response / error conditions.
 		switch (response.code()) {
 			default:
-				String defMsg = response.code() + " while GET'ing " + uiUrl + " - HTTP communication error.";
+				String defMsg = response.code() + " while GET'ing " + location + " - HTTP communication error.";
 				log.error(defMsg);
 				throw new IOException(defMsg);
 			case 403:
-				String errMsg = "403 while GET'ing " + uiUrl + " - Invalid client regional IP or VPN disconnected?";
+				String errMsg = "403 while GET'ing " + location + " - Invalid client regional IP or VPN disconnected?";
 				log.error(errMsg);
 				throw new IOException(errMsg);
 			case 200:
@@ -666,7 +678,9 @@ public class UserInterfaceSession extends SessionBase {
 		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
 		Response response = doGet(envCreds.getUserIntUrl(), new OkHttpClient(), null, null);
 		Headers headers = response.priorResponse().headers();
-		return headers.get("Location");
+		String location = headers.get("Location");
+		response.close();
+		return location.substring(location.indexOf("=") + 1);
 	}
 
 	private HttpCookie getCcSessionCookie(){
@@ -1088,6 +1102,7 @@ public class UserInterfaceSession extends SessionBase {
 		this.csrfToken = uiSessToken.getCsrfToken();
 		this.oauthToken = uiSessToken.getAccessToken();
 		this.accessToken = uiSessToken.getAccessToken();
+		response.close();
 		
 		return uiSessToken.getAccessToken();
 	}

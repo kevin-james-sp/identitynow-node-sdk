@@ -24,6 +24,9 @@ public interface AccountService {
     @GET("/cc/mfa/details" )
     Call<MFADetails> mfaDetails (@Query("id") String id, @Header("Slpt-Jpt") String jptToken);
 
+    @POST("/cc/mfa/send" )
+    Call<JPTResult> mfaSend (@Query("id") String id, @Header("Slpt-Jpt") String jptToken);
+
     @POST("/cc/mfa/verify")
     Call<JPTResult> mfaVerify (@Header("Slpt-Jpt") String jptToken, @Body MFAVerify mfaVerify);
 }

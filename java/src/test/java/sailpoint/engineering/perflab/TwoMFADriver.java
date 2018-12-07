@@ -34,7 +34,7 @@ public class TwoMFADriver {
     private static String CC_INSTANCE_URL;
     private static String CC_DB_PASSWORD;
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         Log4jUtils.boostrapLog4j(Level.INFO);
 
         ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();

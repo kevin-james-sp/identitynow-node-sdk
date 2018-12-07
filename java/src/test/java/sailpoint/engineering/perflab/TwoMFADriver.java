@@ -30,20 +30,16 @@ public class TwoMFADriver {
     private static final String PERF_DEFAULT_PWD = "p@sSw04d!4AD4me-001";
     private static final String PERF_KBA_ANSWER = "test";
 
-    private static String SSH_USERNAME;
-    private static String CC_INSTANCE_URL;
-    private static String CC_DB_PASSWORD;
+    // Example JVM options: -DsshUsername=fangmingning -DccInstanceIp=10.0.38.80 -DccDbPassword=thePassword
+    private static final String SSH_USERNAME = System.getProperty("sshUsername");
+    private static final String CC_INSTANCE_URL = System.getProperty("ccInstanceIp");
+    private static final String CC_DB_PASSWORD = System.getProperty("ccDbPassword");
 
     public static void main(String[] args) {
         Log4jUtils.boostrapLog4j(Level.INFO);
 
-        ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
-        SSH_USERNAME = envCreds.getSshUsername();
-        CC_INSTANCE_URL = envCreds.getCcInstanceIp();
-        CC_DB_PASSWORD = envCreds.getCcDbPassword();
-
         if (SSH_USERNAME == null || CC_INSTANCE_URL == null || CC_DB_PASSWORD == null) {//TODO: This is only needed for reset code.
-            log.error("Failed to run KBA test. Please make sure \"sshUsername\", \"ccInstanceIp\" and \"ccDbPassword\" are set in system properties or local cred file");
+            log.error("Failed to run KBA test. Please make sure \"sshUsername\", \"ccInstanceIp\" and \"ccDbPassword\" are set in system properties by JVM options");
             return;
         }
 

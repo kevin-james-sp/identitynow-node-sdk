@@ -86,9 +86,6 @@ public class EnvironmentCredentialer {
 		creds.setClientId    (System.getProperty("clientId",     cfProps.getProperty("clientId")));
 		creds.setClientSecret(System.getProperty("clientSecret", cfProps.getProperty("clientSecret")));
 		creds.setKbaDefault  (System.getProperty("kbaDefault",   cfProps.getProperty("kbaDefault")));
-		creds.setSshUsername (System.getProperty("sshUsername",  cfProps.getProperty("sshUsername")));
-		creds.setCcInstanceIp(System.getProperty("ccInstanceIp", cfProps.getProperty("ccInstanceIp")));
-		creds.setCcDbPassword(System.getProperty("ccDbPassword", cfProps.getProperty("ccDbPassword")));
 
 
 		// The 'password' property for some reason needs to be treated specially.

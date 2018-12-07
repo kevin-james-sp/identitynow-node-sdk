@@ -44,9 +44,9 @@ public class TwoMFADriver {
         }
 
         //TODO: Concurrent driver to drive either the kba route or the code route
-        //twoMfaThroughKbaAnswer("10002");
+        twoMfaThroughKbaAnswer("10002");
 
-        twoMfaThroughCode("1057");
+        //twoMfaThroughCode("1057");
     }
 
     /**

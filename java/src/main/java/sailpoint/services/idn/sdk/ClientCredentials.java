@@ -50,7 +50,7 @@ public class ClientCredentials extends ConcurrentHashMap<String,String> {
 	/**
 	 * Constructor passing all known properties for an org.
 	 * @param userIntUrl    - The user interface URL.  Specifiable to support vanity URLs.
-	 * @param ScriptName    - The script name of the organization.  A 16 or fewer character unique string for the Org
+	 * @param orgScriptName    - The script name of the organization.  A 16 or fewer character unique string for the Org
 	 * @param orgUser       - A user to login to the interface of the organization.
 	 * @param orgPass       - A password to login to the interface of the organization.
 	 * @param clientId      - A Client ID for API based interactions to the org.

@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import retrofit2.Response;
 import sailpoint.services.idn.console.Log4jUtils;
+import sailpoint.services.idn.sdk.ClientCredentials;
 import sailpoint.services.idn.sdk.EnvironmentCredentialer;
 import sailpoint.services.idn.sdk.IdentityNowService;
 import sailpoint.services.idn.sdk.object.account.*;
@@ -21,18 +22,30 @@ public class TwoMFADriver {
 
     private final static Logger log = LogManager.getLogger(TwoMFADriver.class);
 
-    private static final String SSH_USERNAME = "fangmingning";
+    private static final String TEST_ORG = "perflab-05121458";
+    private static final String SSH_PRIV_KEY_FILE_PATH = "~/.ssh/id_rsa";
     private static final String JUMP_BOX_URL = "jb1-dev02-useast1.cloud.sailpoint.com";
-    private static final String CC_INSTANCE_URL = "10.0.38.229";// Make sure the CC instance exists. It will change if it's recreated
     private static final String CC_RDS_MYSQL_URL = "dev02-useast1-cc.ce7gg2eo7hdc.us-east-1.rds.amazonaws.com";
     private static final String CC_RDS_MYSQL_USERNAME = "admin20170151";
-    private static final String CC_RDS_MYSQL_PASSWORD = "a946c53336";
-
     private static final String PERF_DEFAULT_PWD = "p@sSw04d!4AD4me-001";
     private static final String PERF_KBA_ANSWER = "test";
 
+    private static String SSH_USERNAME;
+    private static String CC_INSTANCE_URL;
+    private static String CC_DB_PASSWORD;
+
     public static void main(String[] args) throws Exception {
         Log4jUtils.boostrapLog4j(Level.INFO);
+
+        ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
+        SSH_USERNAME = envCreds.getSshUsername();
+        CC_INSTANCE_URL = envCreds.getCcInstanceIp();
+        CC_DB_PASSWORD = envCreds.getCcDbPassword();
+
+        if (SSH_USERNAME == null || CC_INSTANCE_URL == null || CC_DB_PASSWORD == null) {//TODO: This is only needed for reset code.
+            log.error("Failed to run KBA test. Please make sure \"sshUsername\", \"ccInstanceIp\" and \"ccDbPassword\" are set in system properties or local cred file");
+            return;
+        }
 
         //TODO: Concurrent driver to drive either the kba route or the code route
         //twoMfaThroughKbaAnswer("10002");
@@ -53,7 +66,7 @@ public class TwoMFADriver {
             AccountService accountService = ids.getAccountService();
 
             //Password reset request with kba
-            JPTResult jptResult = accountService.pwdStart(new PasswordStart(username, "perflab-05121458", "pswd-reset")).execute().body();
+            JPTResult jptResult = accountService.pwdStart(new PasswordStart(username, TEST_ORG, "pswd-reset")).execute().body();
             PasswordIsReady passwordIsReady = accountService.pwdIsReady(jptResult.JPT).execute().body();
             MFADetails mfaDetails = accountService.mfaDetails("KBA", passwordIsReady.JPT).execute().body();
             MFAChallenge kbaCityBornChallenge = mfaDetails.data.challenges.stream().filter(mfaChallenge -> mfaChallenge.text.equals("What city were you born in?")).findAny().orElse(null);
@@ -106,7 +119,7 @@ public class TwoMFADriver {
 
         try {
             JSch jsch=new JSch();
-            jsch.addIdentity("~/.ssh/id_rsa");
+            jsch.addIdentity(SSH_PRIV_KEY_FILE_PATH);
             Class.forName("com.mysql.cj.jdbc.Driver");
 
             //Connecting to jump box
@@ -135,13 +148,13 @@ public class TwoMFADriver {
             AccountService accountService = ids.getAccountService();
 
             //Send password reset code
-            JPTResult jptResult = accountService.pwdStart(new PasswordStart(username, "perflab-05121458", "pswd-reset")).execute().body();
+            JPTResult jptResult = accountService.pwdStart(new PasswordStart(username, TEST_ORG, "pswd-reset")).execute().body();
             PasswordIsReady passwordIsReady = accountService.pwdIsReady(jptResult.JPT).execute().body();
             JPTResult mfaSend = accountService.mfaSend("SMS_PERSONAL", passwordIsReady.JPT).execute().body();
 
             //Read the code from cc database
             String passwordResetCode = null;
-            try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:" + mysqlPort, CC_RDS_MYSQL_USERNAME, CC_RDS_MYSQL_PASSWORD)){
+            try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:" + mysqlPort, CC_RDS_MYSQL_USERNAME, CC_DB_PASSWORD)){
                 try (Statement statement = connection.createStatement()) {
 
                     ResultSet resultSet = statement.executeQuery("select passwd_reset_key from cloudcommander.user where alias = '"
@@ -188,7 +201,8 @@ public class TwoMFADriver {
              * ************************************************************************************************************/
 
         } catch (JSchException e) {
-            log.error("Failed while resetting password for " + username + ". Cannot establish ssh tunnel.", e);
+            log.error("Failed while resetting password for " + username + ". Cannot establish ssh tunnel."
+                    + "Please make sure the CC instance IP defined in local cred file exists on AWS EC2", e);
         } catch (ClassNotFoundException e) {
             log.error("Failed while resetting password for " + username + ". Cannot find mysql driver.", e);
         } catch (NullPointerException e) {

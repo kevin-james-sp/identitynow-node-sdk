@@ -29,6 +29,10 @@ public class ClientCredentials extends ConcurrentHashMap<String,String> {
 	public static final String JWT_TOKEN     = "jwtToken";     // The JWT Token created for the client when authenticated.
 	public static final String EXPIRES_IN    = "expiresIn";    // The expiration time for the JWT token.
 	public static final String KBA_DEFAULT   = "kbaDefault";   // The default answer to Knowledge Based Authentication questions for strong auth-n.
+
+	public static final String SSH_USERNAME  = "sshUsername";  // The username for a SSH connection
+	public static final String CC_INSTANCE_IP= "ccInstanceIp"; // The IP address of a CC instance
+	public static final String CC_DB_PASSWORD= "ccDbPassword"; // The password for CC rds mysql database
 	
 	// Maintain a mapping of Knowledge Based Authentication question substring to answer text.
 	// Environment parameters like: kbaQ_1, kbaA_1, kbaQ_2, kbaA_2, etc.
@@ -50,7 +54,7 @@ public class ClientCredentials extends ConcurrentHashMap<String,String> {
 	/**
 	 * Constructor passing all known properties for an org.
 	 * @param userIntUrl    - The user interface URL.  Specifiable to support vanity URLs.
-	 * @param ScriptName    - The script name of the organization.  A 16 or fewer character unique string for the Org
+	 * @param orgScriptName    - The script name of the organization.  A 16 or fewer character unique string for the Org
 	 * @param orgUser       - A user to login to the interface of the organization.
 	 * @param orgPass       - A password to login to the interface of the organization.
 	 * @param clientId      - A Client ID for API based interactions to the org.
@@ -87,6 +91,9 @@ public class ClientCredentials extends ConcurrentHashMap<String,String> {
 	public String getJWTToken()     { return this.get(JWT_TOKEN);     }
 	public String getExpiresIn()    { return this.get(EXPIRES_IN);    }
 	public String getKbaDefault()   { return this.get(KBA_DEFAULT);   }
+	public String getSshUsername()  { return this.get(SSH_USERNAME);  }
+	public String getCcInstanceIp() { return this.get(CC_INSTANCE_IP);}
+	public String getCcDbPassword() { return this.get(CC_DB_PASSWORD);}
 	
 	/**
 	 * Returns the org's script name to the caller.  
@@ -127,6 +134,9 @@ public class ClientCredentials extends ConcurrentHashMap<String,String> {
 	public void setJWTToken(String arg)     { setFieldWithNull(JWT_TOKEN,      arg); }
 	public void setExpiresIn(String arg)    { setFieldWithNull(EXPIRES_IN,     arg); }
 	public void setKbaDefault(String arg)   { setFieldWithNull(KBA_DEFAULT,    arg); }
+	public void setSshUsername(String arg)  { setFieldWithNull(SSH_USERNAME,   arg); }
+	public void setCcInstanceIp(String arg) { setFieldWithNull(CC_INSTANCE_IP, arg); }
+	public void setCcDbPassword(String arg) { setFieldWithNull(CC_DB_PASSWORD, arg); }
 	
 	/** 
 	 * The API Gateway URL for IdentityNow organizations is strictly derived 

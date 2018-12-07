@@ -40,10 +40,10 @@ public class TwoMFADriver {
     public static void main(String[] args) {
         Log4jUtils.boostrapLog4j(Level.INFO);
 
-        log.info("Starting 2MFA load test with " + (TEST_USER_COUNT == null ? "KBA Answer" : TEST_USER_COUNT) + "with " + TEST_USER_COUNT + " users.");
+        log.info("Starting 2MFA load test with " + (TEST_USER_COUNT == null ? "KBA_Answer" : TEST_USER_COUNT) + "with " + TEST_USER_COUNT + " users.");
 
         //TODO: Concurrent driver to drive either the kba route or the code route
-        if (TEST_USER_COUNT == null || PWD_RESET_METHOD.equals("KBA Answer")) {
+        if (TEST_USER_COUNT == null || PWD_RESET_METHOD.equals("KBA_Answer")) {
             twoMfaThroughKbaAnswer("10002");
         } else {
             if (SSH_USERNAME == null || CC_INSTANCE_URL == null || CC_DB_PASSWORD == null) {//TODO: This is only needed for reset code.

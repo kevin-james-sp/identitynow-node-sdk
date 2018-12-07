@@ -1,6 +1,7 @@
 package sailpoint.engineering.perflab;
 
 import com.jcraft.jsch.*;
+import com.oracle.tools.packager.Log;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -35,18 +36,26 @@ public class TwoMFADriver {
     private static final String CC_INSTANCE_URL = System.getProperty("ccInstanceIp");
     private static final String CC_DB_PASSWORD = System.getProperty("ccDbPassword");
 
+    // Jenkins options. Can also be set while running locally
+    private static final String PWD_RESET_METHOD = System.getProperty("pwdResetMethod");
+    private static final String TEST_USER_COUNT = System.getProperty("testUserCount");
+
     public static void main(String[] args) {
         Log4jUtils.boostrapLog4j(Level.INFO);
 
-        if (SSH_USERNAME == null || CC_INSTANCE_URL == null || CC_DB_PASSWORD == null) {//TODO: This is only needed for reset code.
-            log.error("Failed to run KBA test. Please make sure \"sshUsername\", \"ccInstanceIp\" and \"ccDbPassword\" are set in system properties by JVM options");
-            return;
-        }
+        Log.info("Starting 2MFA load test with " + (TEST_USER_COUNT == null ? "KBA Answer" : TEST_USER_COUNT) + "with " + TEST_USER_COUNT + " users.");
 
         //TODO: Concurrent driver to drive either the kba route or the code route
-        twoMfaThroughKbaAnswer("10002");
+        if (TEST_USER_COUNT == null || PWD_RESET_METHOD.equals("KBA Answer")) {
+            twoMfaThroughKbaAnswer("10002");
+        } else {
+            if (SSH_USERNAME == null || CC_INSTANCE_URL == null || CC_DB_PASSWORD == null) {//TODO: This is only needed for reset code.
+                log.error("Failed to run KBA test. Please make sure \"sshUsername\", \"ccInstanceIp\" and \"ccDbPassword\" are set in system properties by JVM options");
+            } else {
+                twoMfaThroughCode("1057");
+            }
+        }
 
-        //twoMfaThroughCode("1057");
     }
 
     /**

@@ -1,13 +1,10 @@
 package sailpoint.engineering.perflab;
 
 import com.jcraft.jsch.*;
-import com.oracle.tools.packager.Log;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import retrofit2.Response;
 import sailpoint.services.idn.console.Log4jUtils;
-import sailpoint.services.idn.sdk.ClientCredentials;
 import sailpoint.services.idn.sdk.EnvironmentCredentialer;
 import sailpoint.services.idn.sdk.IdentityNowService;
 import sailpoint.services.idn.sdk.object.account.*;
@@ -43,7 +40,7 @@ public class TwoMFADriver {
     public static void main(String[] args) {
         Log4jUtils.boostrapLog4j(Level.INFO);
 
-        Log.info("Starting 2MFA load test with " + (TEST_USER_COUNT == null ? "KBA Answer" : TEST_USER_COUNT) + "with " + TEST_USER_COUNT + " users.");
+        log.info("Starting 2MFA load test with " + (TEST_USER_COUNT == null ? "KBA Answer" : TEST_USER_COUNT) + "with " + TEST_USER_COUNT + " users.");
 
         //TODO: Concurrent driver to drive either the kba route or the code route
         if (TEST_USER_COUNT == null || PWD_RESET_METHOD.equals("KBA Answer")) {

@@ -1,5 +1,12 @@
 package sailpoint.engineering.perflab;
 
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.lambda.AWSLambda;
+import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
+import com.amazonaws.services.lambda.model.InvokeRequest;
+import com.amazonaws.services.lambda.model.InvokeResult;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jcraft.jsch.*;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -14,9 +21,13 @@ import sailpoint.services.idn.util.PasswordUtil;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.sql.*;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 public class TwoMFADriver {
 
@@ -40,23 +51,45 @@ public class TwoMFADriver {
     private static final String TEST_USER_COUNT = System.getProperty("testUserCount");
     private static String SSH_PRIV_KEY_FILE_PATH = System.getProperty("sshPrivkeyPath");
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws JsonProcessingException {
         Log4jUtils.boostrapLog4j(Level.INFO);
 
         log.info("Starting 2MFA load test with " + (PWD_RESET_METHOD == null ? "KBA_Answer" : PWD_RESET_METHOD) + " for " + TEST_USER_COUNT + " users.");
         System.out.println(SSH_PRIV_KEY_FILE_PATH);
         //twoMfaThroughCode("1057");
 
-        //TODO: Concurrent driver to drive either the kba route or the code route
-        if (PWD_RESET_METHOD == null || PWD_RESET_METHOD.equals("KBA_Answer")) {
-            twoMfaThroughKbaAnswer("10002");
+        Map<String, String> map = new HashMap<>();
+        map.put("host", CC_RDS_MYSQL_URL);
+        map.put("db_user", CC_RDS_MYSQL_USERNAME);
+        map.put("db_pass", "a946c53336");
+        map.put("db", "cloudcommander");
+        map.put("query", "select passwd_reset_key from user where alias = '1057' and passwd_reset_key is not null");
+        ObjectMapper mapperObj = new ObjectMapper();
+        String jsonResp = mapperObj.writeValueAsString(map);
+        System.out.println(jsonResp);
+
+        AWSLambda lambdaClient = AWSLambdaClientBuilder.standard().withRegion(Regions.US_EAST_1).build();
+        InvokeRequest req = new InvokeRequest().withFunctionName("infra-db-client-dev-select").withPayload(jsonResp);
+        InvokeResult requestResult = lambdaClient.invoke(req);
+        ByteBuffer byteBuf = requestResult.getPayload();
+        if (byteBuf != null) {
+            String result = StandardCharsets.UTF_8.decode(byteBuf).toString();
+            System.out.println("testLambdaFunction::Lambda result: " + result);
         } else {
-            if (SSH_USERNAME == null || CC_INSTANCE_URL == null || CC_DB_PASSWORD == null) {//TODO: This is only needed for reset code.
-                log.error("Failed to run KBA test. Please make sure \"sshUsername\", \"ccInstanceIp\" and \"ccDbPassword\" are set in system properties by JVM options");
-            } else {
-                twoMfaThroughCode("1057");
-            }
+            System.out.println("testLambdaFunction: result payload is null");
         }
+        System.out.println("");
+
+//        //TODO: Concurrent driver to drive either the kba route or the code route
+//        if (PWD_RESET_METHOD == null || PWD_RESET_METHOD.equals("KBA_Answer")) {
+//            twoMfaThroughKbaAnswer("10002");
+//        } else {
+//            if (SSH_USERNAME == null || CC_INSTANCE_URL == null || CC_DB_PASSWORD == null) {//TODO: This is only needed for reset code.
+//                log.error("Failed to run KBA test. Please make sure \"sshUsername\", \"ccInstanceIp\" and \"ccDbPassword\" are set in system properties by JVM options");
+//            } else {
+//                twoMfaThroughCode("1057");
+//            }
+//        }
 
     }
 

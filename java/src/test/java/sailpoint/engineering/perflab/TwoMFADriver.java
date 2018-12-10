@@ -1,12 +1,14 @@
 package sailpoint.engineering.perflab;
 
-import com.jcraft.jsch.*;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.lambda.AWSLambda;
+import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
+import com.amazonaws.services.lambda.model.InvokeRequest;
+import com.amazonaws.services.lambda.model.InvokeResult;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import retrofit2.Response;
 import sailpoint.services.idn.console.Log4jUtils;
-import sailpoint.services.idn.sdk.ClientCredentials;
 import sailpoint.services.idn.sdk.EnvironmentCredentialer;
 import sailpoint.services.idn.sdk.IdentityNowService;
 import sailpoint.services.idn.sdk.object.account.*;
@@ -15,7 +17,8 @@ import sailpoint.services.idn.session.SessionType;
 import sailpoint.services.idn.util.PasswordUtil;
 
 import java.io.IOException;
-import java.sql.*;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 
 public class TwoMFADriver {
@@ -23,30 +26,42 @@ public class TwoMFADriver {
     private final static Logger log = LogManager.getLogger(TwoMFADriver.class);
 
     private static final String TEST_ORG = "perflab-05121458";
-    private static final String SSH_PRIV_KEY_FILE_PATH = "~/.ssh/id_rsa";
-    private static final String JUMP_BOX_URL = "jb1-dev02-useast1.cloud.sailpoint.com";
     private static final String CC_RDS_MYSQL_URL = "dev02-useast1-cc.ce7gg2eo7hdc.us-east-1.rds.amazonaws.com";
     private static final String CC_RDS_MYSQL_USERNAME = "admin20170151";
     private static final String PERF_DEFAULT_PWD = "p@sSw04d!4AD4me-001";
     private static final String PERF_KBA_ANSWER = "test";
 
-    // Example JVM options: -DsshUsername=fangmingning -DccInstanceIp=10.0.38.80 -DccDbPassword=thePassword
-    private static final String SSH_USERNAME = System.getProperty("sshUsername");
-    private static final String CC_INSTANCE_URL = System.getProperty("ccInstanceIp");
+    // Example JVM & Jenkins options: -DccDbPassword=thePassword -DpwdResetMethod=KBA_Answer -DtestUserCount=10000 -DtestThreadCount=20
     private static final String CC_DB_PASSWORD = System.getProperty("ccDbPassword");
+    private static final String PWD_RESET_METHOD = System.getProperty("pwdResetMethod");
+    private static final String TEST_USER_COUNT = System.getProperty("testUserCount");
+    private static final String TEST_THREAD_COUNT = System.getProperty("testThreadCount");
 
     public static void main(String[] args) {
         Log4jUtils.boostrapLog4j(Level.INFO);
 
-        if (SSH_USERNAME == null || CC_INSTANCE_URL == null || CC_DB_PASSWORD == null) {//TODO: This is only needed for reset code.
-            log.error("Failed to run KBA test. Please make sure \"sshUsername\", \"ccInstanceIp\" and \"ccDbPassword\" are set in system properties by JVM options");
+        log.info("Starting 2MFA load test with " + (PWD_RESET_METHOD == null ? "KBA_Answer" : PWD_RESET_METHOD) + " for " + TEST_USER_COUNT +
+                " users with " + TEST_THREAD_COUNT + " threads.");
+
+        //TODO: Concurrent driver to drive either the kba route or the code route
+        try {
+            Integer.parseInt(TEST_USER_COUNT);
+            Integer.parseInt(TEST_THREAD_COUNT);
+        } catch (NumberFormatException e) {
+            log.error("User and thread count must be integer");
             return;
         }
 
-        //TODO: Concurrent driver to drive either the kba route or the code route
-        //twoMfaThroughKbaAnswer("10002");
+        if (PWD_RESET_METHOD == null || PWD_RESET_METHOD.equals("KBA_Answer")) {
+            twoMfaThroughKbaAnswer("10002");
+        } else {
+            if (CC_DB_PASSWORD == null) {
+                log.error("Failed to run KBA test. Please make sure \"sshUsername\", \"ccInstanceIp\" and \"ccDbPassword\" are set in system properties by JVM options");
+            } else {
+                twoMfaThroughCode("1057");
+            }
+        }
 
-        twoMfaThroughCode("1057");
     }
 
     /**
@@ -110,34 +125,8 @@ public class TwoMFADriver {
      * @param username the user name to reset password for
      */
     private static void twoMfaThroughCode(String username){
-        Session jumpBoxSession = null;
-        Session serverSession = null;
 
         try {
-            JSch jsch=new JSch();
-            jsch.addIdentity(SSH_PRIV_KEY_FILE_PATH);
-            Class.forName("com.mysql.cj.jdbc.Driver");
-
-            //Connecting to jump box
-            jumpBoxSession = jsch.getSession(SSH_USERNAME, JUMP_BOX_URL);
-            jumpBoxSession.setConfig("StrictHostKeyChecking", "no");
-            jumpBoxSession.connect();
-
-            //Port forwarding to the ssh port on CC instance
-            int ccSshPort = jumpBoxSession.setPortForwardingL(0, CC_INSTANCE_URL, 22);
-
-            //Connecting to CC instance
-            serverSession = jsch.getSession(SSH_USERNAME, "localhost", ccSshPort);
-            serverSession.setConfig("StrictHostKeyChecking", "no");
-            serverSession.connect();
-
-            //Port forwarding to the mysql port on mysql instance
-            int mysqlPort = serverSession.setPortForwardingL(0, CC_RDS_MYSQL_URL, 3306);
-
-            /* ************************************************************************************************************
-             *                                   Start of multi thread-able part
-             * ************************************************************************************************************/
-
             //Create account service (No session or access token)
             IdentityNowService ids = new IdentityNowService(EnvironmentCredentialer.getEnvironmentCredentials());
             ids.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC);
@@ -149,20 +138,23 @@ public class TwoMFADriver {
             JPTResult mfaSend = accountService.mfaSend("SMS_PERSONAL", passwordIsReady.JPT).execute().body();
 
             //Read the code from cc database
+            String query = "{\"db_user\":\"" + CC_RDS_MYSQL_USERNAME + "\",\"query\":\"select passwd_reset_key from user where alias = '" +
+                    username + "' and passwd_reset_key is not null\",\"host\":\"" + CC_RDS_MYSQL_URL + "\",\"db_pass\":\"" + CC_DB_PASSWORD +
+                    "\",\"db\":\"cloudcommander\"}\n";
             String passwordResetCode = null;
-            try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:" + mysqlPort, CC_RDS_MYSQL_USERNAME, CC_DB_PASSWORD)){
-                try (Statement statement = connection.createStatement()) {
-
-                    ResultSet resultSet = statement.executeQuery("select passwd_reset_key from cloudcommander.user where alias = '"
-                            + username + "' and passwd_reset_key is not null");
-                    while(resultSet.next() && passwordResetCode == null) {
-                        passwordResetCode = resultSet.getString(1);
-                    }
-                    if (passwordResetCode == null)
-                        throw new IllegalStateException("Cannot find password reset code from database for " + username + ".");
+            AWSLambda lambdaClient = AWSLambdaClientBuilder.standard().withRegion(Regions.US_EAST_1).build();
+            InvokeRequest req = new InvokeRequest().withFunctionName("infra-db-client-dev-select").withPayload(query);
+            InvokeResult requestResult = lambdaClient.invoke(req);
+            ByteBuffer byteBuf = requestResult.getPayload();
+            if (byteBuf != null) {
+                String resetCode = "" + Integer.parseInt(StandardCharsets.UTF_8.decode(byteBuf).toString().replaceAll("[\\D]", ""));
+                if (resetCode.length() != 6) {
+                    throw new IllegalStateException("The password reset code from lambda is not in correct format for " + username + ". The code is " + resetCode);
+                } else {
+                    passwordResetCode = resetCode;
                 }
-            } catch (SQLException e) {
-                throw new IllegalStateException("Failed while retriveing password reset code from database for " + username + ". " + e.getMessage());
+            } else {
+                throw new IllegalStateException("Failed to retrieve password reset code from aws lambda for " + username + ".");
             }
 
             //Verify answer and reset password
@@ -192,15 +184,6 @@ public class TwoMFADriver {
 
             log.info("Successfully reset password for user " + username);
 
-            /* ************************************************************************************************************
-             *                                   End of multi thread-able part
-             * ************************************************************************************************************/
-
-        } catch (JSchException e) {
-            log.error("Failed while resetting password for " + username + ". Cannot establish ssh tunnel."
-                    + "Please make sure the CC instance IP defined in local cred file exists on AWS EC2", e);
-        } catch (ClassNotFoundException e) {
-            log.error("Failed while resetting password for " + username + ". Cannot find mysql driver.", e);
         } catch (NullPointerException e) {
             log.error("Failed while resetting password for " + username + ". Server response is missing required parameters.", e);
         } catch (IOException e) {
@@ -211,10 +194,6 @@ public class TwoMFADriver {
             log.error(e.getMessage(), e);
         } catch (Exception e) {
             log.error("Failed while resetting password for " + username + ".", e);
-        } finally {
-            //Disconnect session in order
-            serverSession.disconnect();
-            jumpBoxSession.disconnect();
         }
 
     }

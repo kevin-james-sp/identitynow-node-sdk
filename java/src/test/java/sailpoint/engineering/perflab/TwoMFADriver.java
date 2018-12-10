@@ -12,7 +12,9 @@ import sailpoint.services.idn.sdk.services.AccountService;
 import sailpoint.services.idn.session.SessionType;
 import sailpoint.services.idn.util.PasswordUtil;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.sql.*;
 import java.util.Collections;
 
@@ -21,7 +23,7 @@ public class TwoMFADriver {
     private final static Logger log = LogManager.getLogger(TwoMFADriver.class);
 
     private static final String TEST_ORG = "perflab-05121458";
-    private static final String SSH_PRIV_KEY_FILE_PATH = "~/.ssh/id_rsa";
+    //private static final String SSH_PRIV_KEY_FILE_PATH = "~/.ssh/id_rsa";
     private static final String JUMP_BOX_URL = "jb1-dev02-useast1.cloud.sailpoint.com";
     private static final String CC_RDS_MYSQL_URL = "dev02-useast1-cc.ce7gg2eo7hdc.us-east-1.rds.amazonaws.com";
     private static final String CC_RDS_MYSQL_USERNAME = "admin20170151";
@@ -36,11 +38,14 @@ public class TwoMFADriver {
     // Jenkins options. Can also be set while running locally
     private static final String PWD_RESET_METHOD = System.getProperty("pwdResetMethod");
     private static final String TEST_USER_COUNT = System.getProperty("testUserCount");
+    private static String SSH_PRIV_KEY_FILE_PATH = System.getProperty("sshPrivkeyPath");
 
     public static void main(String[] args) {
         Log4jUtils.boostrapLog4j(Level.INFO);
 
         log.info("Starting 2MFA load test with " + (PWD_RESET_METHOD == null ? "KBA_Answer" : PWD_RESET_METHOD) + " for " + TEST_USER_COUNT + " users.");
+        System.out.println(SSH_PRIV_KEY_FILE_PATH);
+        //twoMfaThroughCode("1057");
 
         //TODO: Concurrent driver to drive either the kba route or the code route
         if (PWD_RESET_METHOD == null || PWD_RESET_METHOD.equals("KBA_Answer")) {
@@ -121,7 +126,11 @@ public class TwoMFADriver {
 
         try {
             JSch jsch=new JSch();
-            jsch.addIdentity(SSH_PRIV_KEY_FILE_PATH);
+            if (SSH_PRIV_KEY_FILE_PATH == null) SSH_PRIV_KEY_FILE_PATH = "~/.ssh/id_rsa";
+            byte[] fileContent = Files.readAllBytes(new File(SSH_PRIV_KEY_FILE_PATH).toPath());
+            System.out.println(SSH_PRIV_KEY_FILE_PATH);
+            jsch.addIdentity("fangmingning", fileContent, null, null);
+            //jsch.addIdentity(SSH_PRIV_KEY_FILE_PATH);
             Class.forName("com.mysql.cj.jdbc.Driver");
 
             //Connecting to jump box

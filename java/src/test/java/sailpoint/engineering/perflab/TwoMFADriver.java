@@ -19,8 +19,8 @@ public class TwoMFADriver {
 
     private final static Logger log = LogManager.getLogger(TwoMFADriver.class);
 
-    private static final String PERF_DEFAULT_PWD = "p@sSw04d!4AD4me-001";
     private static final String TEST_ORG = "perflab-05121458";
+    private static final String PERF_DEFAULT_PWD = "p@sSw04d!4AD4me-001";
 
     // Example JVM & Jenkins options: -DccDbPassword=thePassword -DtestUserCount=10000 -DtestThreadCount=20
     private static final String CC_DB_PASSWORD = System.getProperty("ccDbPassword");

@@ -7,8 +7,6 @@ import sailpoint.services.idn.util.PasswordUtil;
 import java.io.IOException;
 import java.util.Collections;
 
-import static sailpoint.engineering.perflab.TwoMFADriver.PERF_DEFAULT_PWD;
-
 public class MFAKbaDriver implements MFADriver {
 
     private static final String PERF_KBA_ANSWER = "test";
@@ -27,12 +25,12 @@ public class MFAKbaDriver implements MFADriver {
             throws NullPointerException, IOException, IllegalStateException {
 
         //Request for password reset through KBA question
-        MFADetails mfaDetails = accountService.mfaDetails(mfaType.toString(), jptToken).execute().body();
+        MFADetails mfaDetails = accountService.mfaDetails(mfaType.name(), jptToken).execute().body();
         MFAChallenge kbaCityBornChallenge = mfaDetails.data.challenges.stream().filter(mfaChallenge -> mfaChallenge.text.equals("What city were you born in?")).findAny().orElse(null);
         kbaCityBornChallenge.answer = PasswordUtil.encodeSha256String(PERF_KBA_ANSWER);
 
-        //Verify answer and reset password
-        JPTResult mfaVerifyResult = accountService.mfaVerify(mfaDetails.JPT, new MFAVerify(mfaType.toString(), Collections.singletonList(kbaCityBornChallenge))).execute().body();
+        //Verify answer and return the JPT token
+        JPTResult mfaVerifyResult = accountService.mfaVerify(mfaDetails.JPT, new MFAVerify(mfaType.name(), Collections.singletonList(kbaCityBornChallenge))).execute().body();
         return mfaVerifyResult.JPT;
     }
 }

@@ -13,6 +13,10 @@ public enum MFAType {
         this.friendlyName = friendlyName;
     }
 
+    /**
+     * Return the friendly name of MFA type for logging purposes
+     * @return the readable friendly name
+     */
     public String getFriendlyName () {
         return friendlyName;
     }

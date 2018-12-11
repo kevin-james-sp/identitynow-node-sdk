@@ -7,14 +7,11 @@ import com.amazonaws.services.lambda.model.InvokeRequest;
 import com.amazonaws.services.lambda.model.InvokeResult;
 import sailpoint.services.idn.sdk.object.account.*;
 import sailpoint.services.idn.sdk.services.AccountService;
-import sailpoint.services.idn.util.PasswordUtil;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
-
-import static sailpoint.engineering.perflab.TwoMFADriver.PERF_DEFAULT_PWD;
 
 public class MFAResetCodeDriver implements MFADriver {
 
@@ -38,9 +35,10 @@ public class MFAResetCodeDriver implements MFADriver {
     public String execute(AccountService accountService, String jptToken, String username)
             throws NullPointerException, IOException, IllegalStateException {
 
-        JPTResult mfaSend = accountService.mfaSend(mfaType.toString(), jptToken).execute().body();
+        //Request for password reset through password reset code
+        JPTResult mfaSend = accountService.mfaSend(mfaType.name(), jptToken).execute().body();
 
-        //Read the code from cc database
+        //Read the code from cc database for the code
         String query = "{\"db_user\":\"" + CC_RDS_MYSQL_USERNAME + "\",\"query\":\"select passwd_reset_key from user where alias = '" +
                 username + "' and passwd_reset_key is not null\",\"host\":\"" + CC_RDS_MYSQL_URL + "\",\"db_pass\":\"" + ccPassword +
                 "\",\"db\":\"cloudcommander\"}\n";
@@ -50,8 +48,7 @@ public class MFAResetCodeDriver implements MFADriver {
         InvokeResult requestResult = lambdaClient.invoke(req);
         ByteBuffer byteBuf = requestResult.getPayload();
         if (byteBuf != null) {
-            String response = StandardCharsets.UTF_8.decode(byteBuf).toString();
-            String resetCode = "" + Integer.parseInt(response.replaceAll("[\\D]", ""));
+            String resetCode = StandardCharsets.UTF_8.decode(byteBuf).toString().replaceAll("[\\D]", "");
             if (resetCode.length() != 6) {
                 throw new IllegalStateException("The password reset code from lambda is not in correct format for " + username + ". The code is " + resetCode);
             } else {
@@ -61,10 +58,10 @@ public class MFAResetCodeDriver implements MFADriver {
             throw new IllegalStateException("Failed to retrieve password reset code from aws lambda for " + username + ".");
         }
 
-        //Verify answer and reset password
+        //Verify answer and return the JPT token
         MFAChallenge resetCodeChallenge = new MFAChallenge("code", passwordResetCode);
         JPTResult mfaVerifyResult = accountService.mfaVerify(mfaSend.JPT,
-                new MFAVerify(mfaType.toString(), Collections.singletonList(resetCodeChallenge))).execute().body();
+                new MFAVerify(mfaType.name(), Collections.singletonList(resetCodeChallenge))).execute().body();
         return mfaVerifyResult.JPT;
     }
 }

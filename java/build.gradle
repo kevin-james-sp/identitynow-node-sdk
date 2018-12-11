@@ -25,6 +25,13 @@ task testJar(type: Jar) {
 	from sourceSets.test.output.classesDirs
 }
 
+// Support a gradle task of 'execute' that runs test class without building jar file
+task execute(type: JavaExec) {
+	main = testClass
+	systemProperties System.getProperties()
+	classpath = sourceSets.test.runtimeClasspath
+}
+
 jar {
 	manifest {
 		attributes 'Main-Class': 'sailpoint.services.idn.console.EnvironmentReport'

@@ -27,8 +27,11 @@ task testJar(type: Jar) {
 
 // Support a gradle task of 'execute' that runs test class without building jar file
 task execute(type: JavaExec) {
+	systemProperties = System.getProperties()
+	if(systemProperties.get('testClass') == null){
+		return;
+	}
 	main = testClass
-	systemProperties System.getProperties()
 	classpath = sourceSets.test.runtimeClasspath
 }
 

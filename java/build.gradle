@@ -27,8 +27,8 @@ task testJar(type: Jar) {
 
 // Support a gradle task of 'execute' that runs test class without building jar file
 task execute(type: JavaExec) {
-	main = testClass
 	systemProperties System.getProperties()
+	main = systemProperties.hasProperty('testClass') ? systemProperties.get('testClass') : 'sailpoint.engineering.perflab.TwoMFADriver'
 	classpath = sourceSets.test.runtimeClasspath
 }
 

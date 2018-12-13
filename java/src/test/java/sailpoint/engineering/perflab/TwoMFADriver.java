@@ -61,16 +61,16 @@ public class TwoMFADriver {
     }
 
     /**
-     * Code to reset password using "n" MFA.
-     * It loops through the available MFA drivers and randomly execute for the password reset.
-     * @param username the user name to reset password for
-     * @return true if the reset is successful. false otherwise
+     * Code to reset password or unlock account using "n" MFA.
+     * It loops through the available MFA drivers and randomly execute for the password reset or unlock account.
+     * @param username the user name to reset password or unlock account for
+     * @return true if the reset or unlock is successful. false otherwise
      */
     private static boolean execute(String username){
+        String goalName = GOAL.equals("pswd-reset") ? "reset password" : "unlocked account";
 
         try {
             //Success message. Might be interrupted by any error message.
-            String goalName = GOAL.equals("pswd-reset") ? "reset password" : "unlocked account";
             String successMsg = "Successfully " + goalName + " for user " + username + " with ";
 
             //Initiate list of available drivers
@@ -88,7 +88,7 @@ public class TwoMFADriver {
             ids.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC);
             AccountService accountService = ids.getAccountService();
 
-            //Request for password reset
+            //Request for password reset or unlock account
             JPTResult jptResult = accountService.pwdStart(new PasswordStart(username, clientCredentials.getOrgName(), GOAL)).execute().body();
             PasswordIsReady passwordIsReady = accountService.pwdIsReady(jptResult.JPT).execute().body();
 
@@ -106,7 +106,6 @@ public class TwoMFADriver {
 
             String pollingJPTToken;
             if (GOAL.equals("pswd-reset")) {
-
                 //Getting password policy and send reset password request
                 PasswordPolicy passwordPolicy = accountService.getPasswordPolicy(passwordIsReady.JPT).execute().body();
                 Org orgKeyInfo = passwordPolicy.org;
@@ -117,20 +116,21 @@ public class TwoMFADriver {
                         orgKeyInfo.encryptionKeyId)).execute().body();
                 pollingJPTToken = passwordChangeResult.JPT;
             } else {
+                //Send unlock account request
                 JPTResult enableUserResult = accountService.pwdUnlock(passwordIsReady.JPT).execute().body();
                 pollingJPTToken = enableUserResult.JPT;
             }
 
-            //Poll for reset result. Simulating UI behavior, where it poll every 8 seconds. Error message will return if it polled 35 times without FINISH status
+            //Poll for reset or unlock result. Simulating UI behavior, where it poll every 8 seconds. Error message will return if it polled 35 times without FINISH status
             PasswordPoll pollingResult;
             pollingResult = accountService.pwdPoll(pollingJPTToken).execute().body();
             int pollingCount = 0;
             while (!pollingResult.state.equals("FINISHED")) {
                 if (++pollingCount > 35) {
-                    throw new IllegalStateException("Failed while resetting password with code for " + username + " using" + successMsg.split("with", 2)[1] +
+                    throw new IllegalStateException("Failed while " + goalName + " with code for " + username + " using" + successMsg.split("with", 2)[1] +
                             " Polling result for 35 times without receiving a finished message.");
                 } else if (pollingResult.JPT == null) {
-                    throw new IllegalStateException("Failed while resetting password with code for " + username + " using" + successMsg.split("with", 2)[1] +
+                    throw new IllegalStateException("Failed while " + goalName +" with code for " + username + " using" + successMsg.split("with", 2)[1] +
                             " Polling returns error message: " + pollingResult.statusMessage);
                 }
                 Thread.sleep(8000);
@@ -141,15 +141,15 @@ public class TwoMFADriver {
             return true;
 
         } catch (NullPointerException e) {
-            log.error("Failed while resetting password for " + username + ". Server response is missing required parameters.", e);
+            log.error("Failed while " + goalName + " for " + username + ". Server response is missing required parameters.", e);
         } catch (IOException e) {
-            log.error("Failed while resetting password for " + username + ". Cannot send request.", e);
+            log.error("Failed while " + goalName + " for " + username + ". Cannot send request.", e);
         } catch (InterruptedException e) {
-            log.error("Failed while resetting password for " + username + ". Cannot sleep the thread wile polling for password reset results.", e);
+            log.error("Failed while " + goalName + " for " + username + ". Cannot sleep the thread wile polling for " + goalName + " results.", e);
         } catch (IllegalStateException e){
             log.error(e.getMessage(), e);
         } catch (Exception e) {
-            log.error("Failed while resetting password for " + username + ".", e);
+            log.error("Failed while " + goalName + " for " + username + ".", e);
         }
 
         return false;

@@ -22,11 +22,15 @@ public class TwoMFADriver {
 
     private static final String PERF_DEFAULT_PWD = "p@sSw04d!4AD4me-001";
 
-    // Example JVM & Jenkins options: -DccDbPassword=thePassword -DtestUserCount=10000 -DtestThreadCount=20 -Dgoal=accnt-unlock
+    // Example JVM & Jenkins options:
+    // -DccDbPassword=thePassword -DtestUserCount=10000 -DtestThreadCount=20 -Dgoal=accnt-unlock -DmfaKba=true -DmfaEmail=true
     private static final String CC_DB_PASSWORD = System.getProperty("ccDbPassword");
     private static final String TEST_USER_COUNT = System.getProperty("testUserCount", "1000");
     private static final String TEST_THREAD_COUNT = System.getProperty("testThreadCount", "20");
     private static final String GOAL = System.getProperty("goal", "pswd-reset");
+    private static final String MFA_KBA = System.getProperty("mfaKba", "true");
+    private static final String MFA_EMAIL = System.getProperty("mfaEmail", "true");
+    private static final String MFA_SMS = System.getProperty("mfaSms", "false");
 
     public static void main(String[] args) {
         Log4jUtils.boostrapLog4j(Level.INFO);
@@ -75,11 +79,15 @@ public class TwoMFADriver {
 
             //Initiate list of available drivers
             List<MFADriver> driverList = new ArrayList<MFADriver>() {{
-                add(new MFAKbaDriver());
-                add(new MFAResetCodeDriver(MFAType.EMAIL_WORK, CC_DB_PASSWORD));
-                add(new MFAResetCodeDriver(MFAType.EMAIL_PERSONAL, CC_DB_PASSWORD));
-//                add(new MFAResetCodeDriver(MFAType.SMS_WORK, CC_DB_PASSWORD));
-//                add(new MFAResetCodeDriver(MFAType.SMS_PERSONAL, CC_DB_PASSWORD));
+                if (MFA_KBA.equals("true")) add(new MFAKbaDriver());
+                if (MFA_EMAIL.equals("true")) {
+                    add(new MFAResetCodeDriver(MFAType.EMAIL_WORK, CC_DB_PASSWORD));
+                    add(new MFAResetCodeDriver(MFAType.EMAIL_PERSONAL, CC_DB_PASSWORD));
+                }
+                if (MFA_SMS.equals("true")) {
+                    add(new MFAResetCodeDriver(MFAType.SMS_WORK, CC_DB_PASSWORD));
+                    add(new MFAResetCodeDriver(MFAType.SMS_PERSONAL, CC_DB_PASSWORD));
+                }
             }};
 
             //Create account service without session or access token

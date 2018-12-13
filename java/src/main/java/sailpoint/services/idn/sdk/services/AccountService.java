@@ -18,6 +18,9 @@ public interface AccountService {
     @POST("/cc/password/reset")
     Call<JPTResult> pwdReset (@Header("Slpt-Jpt") String jptToken, @Body PasswordReset passwordReset);
 
+    @GET("/cc/password/unlock" )
+    Call<JPTResult> pwdUnlock (@Header("Slpt-Jpt") String jptToken);
+
     @GET("/cc/password/poll" )
     Call<PasswordPoll> pwdPoll (@Header("Slpt-Jpt") String jptToken);
 

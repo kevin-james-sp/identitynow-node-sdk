@@ -88,6 +88,14 @@ public class TwoMFADriver {
         }
     }
 
+    /**
+     * This is a helper method to count the results of execution, and return the number of successful executions.
+     * @param resultList The list of futures to count.
+     * @return An int representing the number of successful executions
+     * @throws InterruptedException if the current thread was interrupted while waiting
+     * @throws ExecutionException if the computation threw an exception
+     * @throws NullPointerException If the resultList is null
+     */
     private static int processResultList(List<Future<Boolean>> resultList) throws InterruptedException, ExecutionException, NullPointerException{
         //count successful logins, and throw null pointer if resultList is null.
         if(resultList == null)

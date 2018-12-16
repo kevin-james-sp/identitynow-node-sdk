@@ -21,7 +21,7 @@ public class MFAResetCodeDriver implements MFADriver {
     private MFAType mfaType;
     private String ccPassword;
 
-    MFAResetCodeDriver(MFAType mfaType, String ccPassword) {
+    public MFAResetCodeDriver(MFAType mfaType, String ccPassword) {
         this.mfaType = mfaType;
         this.ccPassword = ccPassword;
     }

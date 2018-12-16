@@ -66,11 +66,7 @@ public class TwoMFADriver {
                     executor.shutdown();
 
                     //Print results
-                    log.info("TEST RESULTS: ");
-                    log.info("Successful resets: " + successfulResets);
-                    log.info("Time in milliseconds: " + duration);
-                    log.info("");
-                    log.info("Results: " + "Successful Resets: " + successfulResets);
+                    log.info("Results: " + "Successful Resets: " + successfulResets + " Time in milliseconds: " + duration);
 
                 } else {
                     log.error("Failed to start 2MFA load test. User and thread count must be POSITIVE integers");

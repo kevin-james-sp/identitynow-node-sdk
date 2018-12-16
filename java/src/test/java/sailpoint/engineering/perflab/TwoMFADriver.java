@@ -56,7 +56,7 @@ public class TwoMFADriver {
                     log.info("Starting 2MFA load test with " + TEST_USER_COUNT + " users and " + TEST_THREAD_COUNT + " threads.");
 
                     //Build work queue, and execute
-                    for(int i = 1000 ; i < userCount ; i++){
+                    for(int i = 1000 ; i < userCount + 1000 ; i++){
                         username = Integer.toString(i);
                         workQueue.add(new TwoMfaThread(GOAL, username, MFA_KBA, MFA_EMAIL, MFA_SMS, CC_DB_PASSWORD, PERF_DEFAULT_PWD));
                     }

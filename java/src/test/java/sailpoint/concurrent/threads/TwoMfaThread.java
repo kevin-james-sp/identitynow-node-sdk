@@ -53,7 +53,7 @@ public class TwoMfaThread implements Callable<Boolean> {
 	 * @return true if the reset or unlock is successful. false otherwise
 	 */
 	@Override
-	public Boolean call() throws Exception {
+	public Boolean call() {
 		String goalName = GOAL.equals("pswd-reset") ? "reset password" : "unlocked account";
 
 		try {

@@ -63,6 +63,7 @@ public class TwoMFADriver {
                     startTime = System.currentTimeMillis();
                     successfulResets = processResultList( executor.invokeAll(workQueue));
                     duration = System.currentTimeMillis() - startTime;
+                    executor.shutdown();
 
                     //Print results
                     log.info("TEST RESULTS: ");

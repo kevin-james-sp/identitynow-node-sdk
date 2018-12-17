@@ -3,6 +3,8 @@ package sailpoint.services.idn.sdk.interceptor;
 import okhttp3.Interceptor;
 import okhttp3.Request;
 import okhttp3.Response;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -22,6 +24,9 @@ public class MetricsInterceptor implements Interceptor {
 	//call in the test.
 	HashMap<String, LinkedList<Long>> globalCallTimes;
 
+	public final static Logger log = LogManager.getLogger(MetricsInterceptor.class);
+
+
 	@Override
 	public Response intercept(Interceptor.Chain chain) throws IOException {
 		Request request = chain.request();
@@ -30,6 +35,7 @@ public class MetricsInterceptor implements Interceptor {
 		long t2 = response.receivedResponseAtMillis();
 
 		//if there is already a list of times, add this call time to that list, else create a new list and add it.
+		//TODO: Probably url is null
 		LinkedList<Long> specificCallTimes = globalCallTimes.get(request.url().toString());
 		if(specificCallTimes == null){
 			specificCallTimes = new LinkedList<Long>();

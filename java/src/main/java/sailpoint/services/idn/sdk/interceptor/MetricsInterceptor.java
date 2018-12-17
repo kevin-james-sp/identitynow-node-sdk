@@ -31,4 +31,22 @@ public class MetricsInterceptor implements Interceptor {
 	public HashMap<String, LinkedList<Long>> getGlobalCallTimes(){
 		return globalCallTimes;
 	}
+
+	public String getSlowestCall() throws ArithmeticException, NullPointerException{
+		Double slowest = new Double(-1);
+		String slowestCall = null;
+		for(String key : globalCallTimes.keySet()){
+			LinkedList<Long> callTimes = globalCallTimes.get(key);
+			Double average = callTimes.stream().mapToDouble(val -> val).average().orElseThrow(ClassCastException::new);
+			if(average.doubleValue() > slowest){
+				slowest = average;
+				slowestCall = key;
+			}
+		}
+
+		if(slowestCall == null){
+			throw new NullPointerException("Unable to find the slowest call");
+		}
+		return slowestCall;
+	}
 }

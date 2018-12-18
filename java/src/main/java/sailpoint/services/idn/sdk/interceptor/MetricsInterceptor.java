@@ -22,7 +22,7 @@ public class MetricsInterceptor implements Interceptor {
 
 	//It is expected that this map will be used for a single test. Therefore it will contain all times for every type of
 	//call in the test.
-	HashMap<String, LinkedList<Long>> globalCallTimes;
+	HashMap<String, LinkedList<Long>> globalCallTimes = new HashMap<>();
 
 	public final static Logger log = LogManager.getLogger(MetricsInterceptor.class);
 

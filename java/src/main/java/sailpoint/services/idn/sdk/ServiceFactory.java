@@ -15,13 +15,24 @@ public class ServiceFactory {
 				creds.getUserIntUrl(),
 				session.getAccessToken() );	
 	}
-	
-	public static <S> S getService ( Class<S> serviceClass, String url, String token ) {
 
-		OkHttpClient client = new OkHttpClient.Builder()
-				.addInterceptor( new BearerAuthInterceptor( token ) )
-				.addInterceptor(new MetricsInterceptor())
-				.build();
+	public static <S> S getService ( Class<S> serviceClass, String url, String token ) {
+		return getService(serviceClass, url, token, false);
+	}
+
+		public static <S> S getService ( Class<S> serviceClass, String url, String token, boolean collectMetrics ) {
+
+		OkHttpClient client;
+		if(collectMetrics){
+			client = new OkHttpClient.Builder()
+					.addInterceptor( new BearerAuthInterceptor( token ) )
+					.addInterceptor(new MetricsInterceptor())
+					.build();
+		} else{
+			client = new OkHttpClient.Builder()
+					.addInterceptor( new BearerAuthInterceptor( token ) )
+					.build();
+		}
 
 		Retrofit retrofit = new Retrofit.Builder()
 				.baseUrl( url )

@@ -13,7 +13,7 @@ public class MFAKbaDriver implements MFADriver {
 
     private MFAType mfaType = MFAType.KBA;
 
-    MFAKbaDriver() {}
+    public MFAKbaDriver() {}
 
     @Override
     public MFAType getMFAType() {

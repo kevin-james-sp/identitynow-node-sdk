@@ -10,17 +10,17 @@ import sailpoint.services.idn.session.SessionBase;
 public class ServiceFactory {
 
 	public static <S> S getService ( Class<S> serviceClass, ClientCredentials creds, SessionBase session ) {
-		return getService( 
-				serviceClass, 
+		return getService(
+				serviceClass,
 				creds.getUserIntUrl(),
-				session.getAccessToken() );	
+				session.getAccessToken() );
 	}
 
 	public static <S> S getService ( Class<S> serviceClass, String url, String token ) {
 		return getService(serviceClass, url, token, false);
 	}
 
-		public static <S> S getService ( Class<S> serviceClass, String url, String token, boolean collectMetrics ) {
+	public static <S> S getService ( Class<S> serviceClass, String url, String token, boolean collectMetrics ) {
 
 		OkHttpClient client;
 		if(collectMetrics){

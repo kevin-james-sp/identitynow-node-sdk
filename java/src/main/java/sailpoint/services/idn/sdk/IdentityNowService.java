@@ -74,8 +74,8 @@ public final class IdentityNowService {
 
 	public SessionBase createSession(SessionType sessionType, boolean stronglyAuthenticate) throws IOException {
 		this.session = SessionFactory.createSession(this.creds, sessionType);
+		this.session.open();
 		if (stronglyAuthenticate) {
-			this.session.open();
 			((UserInterfaceSession)this.session).stronglyAuthenticate();
 		}
 		return this.session;
@@ -129,6 +129,10 @@ public final class IdentityNowService {
 	public AccountService getAccountService () throws IOException {
 		return getService(AccountService.class, ServiceTypes.GATEWAY);
 	}
+
+    public AccessRequestService getAccessRequestService () throws IOException {
+        return getService(AccessRequestService.class, ServiceTypes.GATEWAY);
+    }
   
 	public static <T> T execute ( Call<T> call ) throws IOException {
 		return call.execute().body();

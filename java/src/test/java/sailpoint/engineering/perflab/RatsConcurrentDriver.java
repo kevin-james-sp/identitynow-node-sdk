@@ -1,5 +1,6 @@
 package sailpoint.engineering.perflab;
 
+import okhttp3.ResponseBody;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -8,52 +9,143 @@ import sailpoint.services.idn.console.Log4jUtils;
 import sailpoint.services.idn.sdk.EnvironmentCredentialer;
 import sailpoint.services.idn.sdk.IdentityNowService;
 import sailpoint.services.idn.sdk.object.accessrequest.AccessRequest;
-import sailpoint.services.idn.sdk.object.accessrequest.AccessRequestResponse;
+import sailpoint.services.idn.sdk.object.accessrequest.AccessRevoke;
 import sailpoint.services.idn.sdk.object.accessrequest.RequestableObject;
 import sailpoint.services.idn.sdk.services.AccessRequestService;
 import sailpoint.services.idn.session.SessionType;
-import sailpoint.services.idn.session.UserInterfaceSession;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class RatsConcurrentDriver {
 
     private final static Logger log = LogManager.getLogger(RatsConcurrentDriver.class);
 
+    private final static String ROLE_NAME_TO_REQUEST = "Test role";
+    private final static int NUMBER_OF_IDENTITIES_TO_REQUEST = 2;
+
+    private final static String ROLE_NAME_TO_RESET = "Role Reset";
+
+
     public static void main(String[] args) {
         Log4jUtils.boostrapLog4j(Level.INFO);
 
+        //Request or revoke. Since these two are asynchronous, please do not run them together.
+        requestRolesByRoleNameAndNumberOfIdentities();
+        //revokeRolesByNumberOfIdentities();
+    }
+
+    /**
+     * Request a given role on behalf of a given number of identities.
+     * The identities are selected by name at alphabetic order until reaching the requested amount.
+     * Calling this multiple times without revoking the role might end up using all the available identities for this role and this method will fail.
+     * It's recommended to revoke the same amount of roles after running this method every time.
+     */
+    private static void requestRolesByRoleNameAndNumberOfIdentities() {
         try {
             IdentityNowService ids = new IdentityNowService(EnvironmentCredentialer.getEnvironmentCredentials());
-            UserInterfaceSession uiSession = (UserInterfaceSession)ids.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC);
+            ids.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC);
             AccessRequestService accessRequestService = ids.getAccessRequestService();
 
-            List<RequestableObject> allRequestableList = accessRequestService.getRequestableObjects("50", "0", "me", "ROLE", "name").execute().body();
+            // Get role by name. Return error if not found
+            List<RequestableObject> allRequestableList = accessRequestService.getRequestableObjects("250", "0", "me", "ROLE", "name").execute().body();
+            RequestableObject role = allRequestableList.parallelStream().filter(roleObj -> roleObj.name.equals(ROLE_NAME_TO_REQUEST)).findFirst().orElse(null);
+            if (role == null) {
+                log.error("Role named \"" + ROLE_NAME_TO_REQUEST + "\" is not found. Exit.");
+                return;
+            }
 
-            long start = System.currentTimeMillis();
-            List<RequestableObject> requestIdentitiesList = accessRequestService.getRequestableIdentities(allRequestableList.get(0).id, "2", "2", "name", "").execute().body();
-            long internal = System.currentTimeMillis() - start;
+            // Get the amount of identities to request. We can request for a maximum of 250 identities per request.
+            List<String> identityList = new ArrayList<>();
+            while (identityList.size() < NUMBER_OF_IDENTITIES_TO_REQUEST) {
+                int identityToRequest = Math.min(NUMBER_OF_IDENTITIES_TO_REQUEST - identityList.size(), 250);
+                List<RequestableObject> currentBatch = accessRequestService.getRequestableIdentities(role.id, Integer.toString(identityToRequest), Integer.toString(identityList.size()),
+                        "name", "").execute().body();
 
-//            String error = requestIdentitiesList.errorBody().string();
-//
-            List<RequestableObject> availableRequestableList = allRequestableList.parallelStream().filter(obj -> obj.requestStatus.equals("AVAILABLE")).collect(Collectors.toList());
+                // Prevent infinite loop
+                if (currentBatch == null || currentBatch.size() == 0) {
+                    log.error("There are not enough available identities to complete this request. There are only " + Integer.toString(identityList.size()));
+                    return;
+                }
 
-            AccessRequest accessRequest = new AccessRequest(Arrays.asList("2c91808565822c1601658b37775404a3"), availableRequestableList);
+                identityList.addAll(currentBatch.parallelStream().map(RequestableObject::getId).collect(Collectors.toList()));
+            }
 
-            AccessRequestResponse accessRequestResponse = accessRequestService.accessRequest(accessRequest).execute().body(); //Check if error is null
+            // Request this role on behalf of the identities
+            Response<ResponseBody> res = accessRequestService.accessRequest(new AccessRequest(identityList, Collections.singletonList(role))).execute();
+            if (!res.isSuccessful()) {
+                String responseBody = res.body() == null ? "" : res.body().string();
+                log.error("Failed while requesting for access. " + responseBody);
+            }
 
+        } catch (IOException e) {
+            log.error("Cannot send request.", e);
+        }
+    }
 
+    /**
+     * Revoke role access on behalf of a given number of identities.
+     * The identities are selected by name at alphabetic order until reaching the requested amount.
+     * If you run the access request method many times before revoking, you need to adjust the NUMBER_OF_IDENTITIES_TO_REQUEST to
+     * {$HowManyTimeYouRequested} * NUMBER_OF_IDENTITIES_TO_REQUEST
+     */
+    private static void revokeRolesByNumberOfIdentities() {
+        try {
+            IdentityNowService ids = new IdentityNowService(EnvironmentCredentialer.getEnvironmentCredentials());
+            ids.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC, true);
+            AccessRequestService accessRequestService = ids.getAccessRequestService();
 
-            System.out.println(1);
+            // Get the reset role by name. Return error if not found
+            List<RequestableObject> allRequestableList = accessRequestService.getRequestableObjects("250", "0", "me", "ROLE", "name").execute().body();
+            RequestableObject resetRole = allRequestableList.parallelStream().filter(roleObj -> roleObj.name.equals(ROLE_NAME_TO_RESET)).findFirst().orElse(null);
+            if (resetRole == null) {
+                log.error("Role named \"" + ROLE_NAME_TO_RESET + "\" is not found. Please create this as an empty role in the org and try again. Exit.");
+                return;
+            }
+
+            // Get the role to revoke by name. Return error if not found
+            RequestableObject role = allRequestableList.parallelStream().filter(roleObj -> roleObj.name.equals(ROLE_NAME_TO_REQUEST)).findFirst().orElse(null);
+            if (role == null) {
+                log.error("Role named \"" + ROLE_NAME_TO_REQUEST + "\" is not found. Failed to revoke identities from it. Exit.");
+                return;
+            }
+
+            // Get the amount of identities to request. We can request for a maximum of 250 identities per request.
+            List<String> identityList = new ArrayList<>();
+            while (identityList.size() < NUMBER_OF_IDENTITIES_TO_REQUEST) {
+                int identityToRequest = Math.min(NUMBER_OF_IDENTITIES_TO_REQUEST - identityList.size(), 250);
+                List<RequestableObject> currentBatch = accessRequestService.getRequestableIdentities(resetRole.id, Integer.toString(identityToRequest), Integer.toString(identityList.size()),
+                        "name", "").execute().body();
+
+                // Prevent infinite loop
+                if (currentBatch == null || currentBatch.size() == 0) {
+                    log.error("There are not enough available identities to complete this request. There are only " + Integer.toString(identityList.size()));
+                    return;
+                }
+
+                identityList.addAll(currentBatch.parallelStream().map(RequestableObject::getId).collect(Collectors.toList()));
+            }
+
+            // Revoke this role on behalf of the identity, one by one
+            // TODO: We might be want some concurrency on this, not for perf test, but just to make this faster?
+            identityList.forEach(identityId -> {
+                try {
+                    Response<Map<String, Object>> res = accessRequestService.accessRevoke(new AccessRevoke(role.id, identityId)).execute();
+                    if (!res.isSuccessful()) {
+                        String responseMap = res.body() == null ? "" : Arrays.toString(res.body().entrySet().toArray());
+                        log.error("Failed to revoke role for " + identityId + ". " + responseMap);
+                    }
+                } catch (IOException e) {
+                    log.error("Failed to revoke role for " + identityId + ". " + e.getMessage());
+                }
+            });
 
 
         } catch (IOException e) {
             log.error("Cannot send request.", e);
         }
-
     }
+
+
 }

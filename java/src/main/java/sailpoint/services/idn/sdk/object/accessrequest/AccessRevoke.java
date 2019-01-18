@@ -9,4 +9,9 @@ public class AccessRevoke {
 
     @SerializedName("identityId")
     public String identityId;
+
+    public AccessRevoke(String roleId, String identityId) {
+        this.roleId = roleId;
+        this.identityId = identityId;
+    }
 }

@@ -1,9 +1,9 @@
 package sailpoint.services.idn.sdk.services;
 
+import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.http.*;
 import sailpoint.services.idn.sdk.object.accessrequest.AccessRequest;
-import sailpoint.services.idn.sdk.object.accessrequest.AccessRequestResponse;
 import sailpoint.services.idn.sdk.object.accessrequest.AccessRevoke;
 import sailpoint.services.idn.sdk.object.accessrequest.RequestableObject;
 
@@ -21,7 +21,7 @@ public interface AccessRequestService {
                                                            @Query("sorters") String sorters, @Query("filters") String filters);
 
     @POST("/beta/access-requests")
-    Call<AccessRequestResponse> accessRequest(@Body AccessRequest accessRequest);
+    Call<ResponseBody> accessRequest(@Body AccessRequest accessRequest);
 
     @POST("/cc/api/role/revoke")
     Call<Map<String, Object>> accessRevoke(@Body AccessRevoke accessRevoke);

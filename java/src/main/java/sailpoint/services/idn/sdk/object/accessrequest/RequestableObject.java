@@ -37,4 +37,8 @@ public class RequestableObject {
     @SerializedName("modified")
     public String modified;
 
+    public String getId() {
+        return id;
+    }
+
 }

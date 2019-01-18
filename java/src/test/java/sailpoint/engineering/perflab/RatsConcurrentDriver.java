@@ -23,7 +23,7 @@ public class RatsConcurrentDriver {
     private final static Logger log = LogManager.getLogger(RatsConcurrentDriver.class);
 
     private final static String ROLE_NAME_TO_REQUEST = "Test role";
-    private final static int NUMBER_OF_IDENTITIES_TO_REQUEST = 2;
+    private final static int NUMBER_OF_IDENTITIES_TO_REQUEST = 100;
 
     private final static String ROLE_NAME_TO_RESET = "Role Reset";
 
@@ -31,7 +31,8 @@ public class RatsConcurrentDriver {
     public static void main(String[] args) {
         Log4jUtils.boostrapLog4j(Level.INFO);
 
-        //Request or revoke. Since these two are asynchronous, please do not run them together.
+        //Request or revoke. Since these two are asynchronous, should not run them together.
+
         requestRolesByRoleNameAndNumberOfIdentities();
         //revokeRolesByNumberOfIdentities();
     }

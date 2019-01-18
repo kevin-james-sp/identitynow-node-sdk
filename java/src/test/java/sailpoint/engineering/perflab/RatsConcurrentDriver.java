@@ -16,6 +16,10 @@ import sailpoint.services.idn.session.SessionType;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class RatsConcurrentDriver {
@@ -24,8 +28,10 @@ public class RatsConcurrentDriver {
 
     private final static String ROLE_NAME_TO_REQUEST = "Test role";
     private final static int NUMBER_OF_IDENTITIES_TO_REQUEST = 100;
-
     private final static String ROLE_NAME_TO_RESET = "Role Reset";
+
+    private final static int THREAD_COUNT = 10;
+    private final static int REQUEST_COUNT = 100;
 
 
     public static void main(String[] args) {
@@ -33,8 +39,13 @@ public class RatsConcurrentDriver {
 
         //Request or revoke. Since these two are asynchronous, should not run them together.
 
-        requestRolesByRoleNameAndNumberOfIdentities();
+        //requestRolesByRoleNameAndNumberOfIdentities();
         //revokeRolesByNumberOfIdentities();
+
+
+
+        //Perf test the role or identities querying end point
+        queryRequestableObjectLoadTest(false);
     }
 
     /**
@@ -79,6 +90,8 @@ public class RatsConcurrentDriver {
                 String responseBody = res.body() == null ? "" : res.body().string();
                 log.error("Failed while requesting for access. " + responseBody);
             }
+
+            log.info("Done.");
 
         } catch (IOException e) {
             log.error("Cannot send request.", e);
@@ -142,10 +155,88 @@ public class RatsConcurrentDriver {
                 }
             });
 
+            log.info("Done.");
 
         } catch (IOException e) {
             log.error("Cannot send request.", e);
         }
+    }
+
+    private static void queryRequestableObjectLoadTest(boolean queryingRole) {
+        try {
+            IdentityNowService ids = new IdentityNowService(EnvironmentCredentialer.getEnvironmentCredentials());
+            ids.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC);
+            AccessRequestService accessRequestService = ids.getAccessRequestService();
+
+            ExecutorService es = Executors.newFixedThreadPool(THREAD_COUNT);
+            AtomicInteger requestCount = new AtomicInteger(0);
+            Random random = new Random();
+
+            // Select a random role in case we are querying available identities
+            final RequestableObject role = accessRequestService.getRequestableObjects("250", "0", "me", "ROLE", "name").execute().body()
+                        .stream().findAny().orElseThrow(IllegalStateException::new);
+
+            // Run the multi threading test
+            for (int i = 0; i <= THREAD_COUNT; i ++) {
+                es.submit(() -> {
+                    while (requestCount.getAndIncrement() <= REQUEST_COUNT) {
+
+                        try {
+                            String limit = Integer.toString(random.nextInt(250));
+                            if (queryingRole) {
+                                String offset = Integer.toString(random.nextInt(10));
+
+                                //Execute and print result
+                                long start = System.currentTimeMillis();
+                                Response<List<RequestableObject>> res = accessRequestService.getRequestableObjects(limit, offset, "me", "ROLE", "name").execute();
+                                long duration = System.currentTimeMillis() - start;
+
+                                if (res.isSuccessful()) {
+                                    log.info("Successfully got requestable roles with limit: " + limit + " and offset: " + offset + " in " + duration  + " ms. Server returned object count: " + res.body().size());
+                                } else {
+                                    log.error("Failed to get requestable roles with limit: " + limit + " and offset: " + offset + " in " + duration + " ms. Server returned error: " + res.errorBody());
+                                }
+
+
+                            } else {
+                                String offset = Integer.toString(random.nextInt(1000));
+                                String filter =  Character.toString((char)(random.nextInt(26) + 'a'));
+
+                                //Execute and print result
+                                long start = System.currentTimeMillis();
+                                Response<List<RequestableObject>> res = accessRequestService.getRequestableIdentities(role.id, limit, offset, "name", "name sw \"" + filter + "\" or email sw \"" + filter + "\"").execute();
+                                long duration = System.currentTimeMillis() - start;
+
+                                if (res.isSuccessful()) {
+                                    log.info("Successfully got requestable identities with limit: " + limit + " and offset: " + offset + " and filter string " + filter +
+                                            " in " + duration  + " ms. Server returned object count: " + res.body().size());
+                                } else {
+                                    log.error("Failed to get requestable identities with limit: " + limit + " and offset: " + offset + " and filter string " + filter +
+                                            " in " + duration + " ms. Server returned error: " + res.errorBody().string());
+                                }
+                            }
+                        } catch (IOException e) {
+                            log.error("Cannot send request.", e);
+                        }
+                    }
+                    es.shutdown();
+                });
+            }
+
+            // Wait until the tests are executed
+            try {
+                es.awaitTermination(1, TimeUnit.DAYS);
+            } catch (InterruptedException e) {
+                log.error("Failure awaiting thread pool termination" , e);
+            }
+
+            log.info("Done.");
+
+        } catch (IOException e) {
+            log.error("Cannot send request.", e);
+        }
+
+
     }
 
 

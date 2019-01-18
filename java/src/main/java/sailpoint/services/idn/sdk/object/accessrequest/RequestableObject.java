@@ -16,6 +16,12 @@ public class RequestableObject {
     @SerializedName("type")
     public String type;
 
+    @SerializedName("email")
+    public String email;
+
+    @SerializedName("comment")
+    public String comment;
+
     @SerializedName("requestStatus")
     public String requestStatus;
 

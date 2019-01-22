@@ -26,10 +26,12 @@ public class RatsConcurrentDriver {
 
     private final static Logger log = LogManager.getLogger(RatsConcurrentDriver.class);
 
+    // Parameters for requesting and resetting roles
     private final static String ROLE_NAME_TO_REQUEST = "Test role";
     private final static int NUMBER_OF_IDENTITIES_TO_REQUEST = 100;
     private final static String ROLE_NAME_TO_RESET = "Role Reset";
 
+    // Parameters for querying user & role load test
     private final static int THREAD_COUNT = 10;
     private final static int REQUEST_COUNT = 100;
 
@@ -45,7 +47,7 @@ public class RatsConcurrentDriver {
 
 
         //Perf test the role or identities querying end point
-        queryRequestableObjectLoadTest(false);
+        //queryRequestableObjectLoadTest(true, false);
     }
 
     /**
@@ -162,7 +164,12 @@ public class RatsConcurrentDriver {
         }
     }
 
-    private static void queryRequestableObjectLoadTest(boolean queryingRole) {
+    /**
+     * Load test API calls that retrieves available roles or available users
+     * @param queryingRole Switch to toggle between querying roles or user.
+     * @param applyFilter Switch to add filter string or not. This is only for querying users.
+     */
+    private static void queryRequestableObjectLoadTest(boolean queryingRole, boolean applyFilter) {
         try {
             IdentityNowService ids = new IdentityNowService(EnvironmentCredentialer.getEnvironmentCredentials());
             ids.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC);
@@ -192,27 +199,30 @@ public class RatsConcurrentDriver {
                                 long duration = System.currentTimeMillis() - start;
 
                                 if (res.isSuccessful()) {
-                                    log.info("Successfully got requestable roles with limit: " + limit + " and offset: " + offset + " in " + duration  + " ms. Server returned object count: " + res.body().size());
+                                    log.info("Successfully got requestable roles with limit: " + String.format("%1$3s", limit) + " and offset: " + String.format("%1$2s", offset) + " in "
+                                            + String.format("%1$6s", duration)  + " ms. Server returned object count: " + res.body().size());
                                 } else {
-                                    log.error("Failed to get requestable roles with limit: " + limit + " and offset: " + offset + " in " + duration + " ms. Server returned error: " + res.errorBody());
+                                    log.error("Failed to get requestable roles with limit: " + String.format("%1$3s", limit) + " and offset: " + String.format("%1$2s", offset) + " in "
+                                            + String.format("%1$6s", duration) + " ms. Server returned error: " + res.errorBody().string());
                                 }
 
 
                             } else {
                                 String offset = Integer.toString(random.nextInt(1000));
-                                String filter =  Character.toString((char)(random.nextInt(26) + 'a'));
+                                String filterKeyWord =  Character.toString((char)(random.nextInt(26) + 'a'));
+                                String filterString = applyFilter ? "name sw \"" + filterKeyWord + "\" or email sw \"" + filterKeyWord + "\"" : "";
 
                                 //Execute and print result
                                 long start = System.currentTimeMillis();
-                                Response<List<RequestableObject>> res = accessRequestService.getRequestableIdentities(role.id, limit, offset, "name", "name sw \"" + filter + "\" or email sw \"" + filter + "\"").execute();
+                                Response<List<RequestableObject>> res = accessRequestService.getRequestableIdentities(role.id, limit, offset, "name", filterString).execute();
                                 long duration = System.currentTimeMillis() - start;
 
                                 if (res.isSuccessful()) {
-                                    log.info("Successfully got requestable identities with limit: " + limit + " and offset: " + offset + " and filter string " + filter +
-                                            " in " + duration  + " ms. Server returned object count: " + res.body().size());
+                                    log.info("Successfully got requestable identities with limit: " + String.format("%1$3s", limit) + " and offset: " + String.format("%1$4s", offset) +
+                                            (applyFilter ? " and filter string " + filterKeyWord : "") + " in " + String.format("%1$6s", duration)  + " ms. Server returned object count: " + res.body().size());
                                 } else {
-                                    log.error("Failed to get requestable identities with limit: " + limit + " and offset: " + offset + " and filter string " + filter +
-                                            " in " + duration + " ms. Server returned error: " + res.errorBody().string());
+                                    log.error("Failed to get requestable identities with limit: " + String.format("%1$3s", limit) + " and offset: " + String.format("%1$4s", offset) +
+                                            (applyFilter ? " and filter string " + filterKeyWord : "")  + " in " + String.format("%1$6s", duration) + " ms. Server returned error: " + res.errorBody().string());
                                 }
                             }
                         } catch (IOException e) {

@@ -11,6 +11,7 @@ import sailpoint.services.idn.sdk.object.accessprofile.AccessProfile;
 import sailpoint.services.idn.sdk.object.role.Role;
 import sailpoint.services.idn.sdk.services.AccessProfileService;
 import sailpoint.services.idn.sdk.services.RoleService;
+import sailpoint.services.idn.session.SessionType;
 
 import java.io.IOException;
 
@@ -19,13 +20,14 @@ public class BulkRoleLoader {
 	public final static Logger log = LogManager.getLogger(ClientListConcurrentDriver.class);
 	private static final String TEST_USER_COUNT = System.getProperty("testRoleCount", "1000");
 	//public static final String BULK_ROLE_SOURCE
-	public static void main(String[] args){
+	public static void main(String[] args) throws IOException{
 
 		//Creds and logger
-		Log4jUtils.boostrapLog4j(Level.INFO);
+		Log4jUtils.boostrapLog4j(Level.DEBUG);
 
 		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
 		IdentityNowService ids = new IdentityNowService(envCreds);
+		ids.createSession(SessionType.SESSION_TYPE_UI_USER_STRONG_AUTHN);
 
 		try{
 			//required service, and desired roles.

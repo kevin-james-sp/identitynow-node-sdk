@@ -18,7 +18,7 @@ public class BulkRoleLoader {
 
 	public final static Logger log = LogManager.getLogger(ClientListConcurrentDriver.class);
 	private static final String TEST_USER_COUNT = System.getProperty("testRoleCount", "1000");
-	public static final String BULK_ROLE_SOURCE
+	//public static final String BULK_ROLE_SOURCE
 	public static void main(String[] args){
 
 		//Creds and logger

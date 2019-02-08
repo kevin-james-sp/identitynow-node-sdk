@@ -541,7 +541,7 @@ public class UserInterfaceSession extends SessionBase {
 			response.close();
 
 			// Parse the /ui/main page to get the CSRF Token.
-			String csrfTokenRegex = "SLPT.globalContext.csrf\\s=\\s'(\\w+)'";
+			String csrfTokenRegex = "csrfToken\":\"(\\w+)\"";
 			Pattern p = Pattern.compile(csrfTokenRegex);
 			Matcher m = p.matcher(loginResponse);
 			if (m.find()) {

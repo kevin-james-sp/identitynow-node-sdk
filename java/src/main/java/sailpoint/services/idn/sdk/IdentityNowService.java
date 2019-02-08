@@ -133,6 +133,10 @@ public final class IdentityNowService {
     public AccessRequestService getAccessRequestService () throws IOException {
         return getService(AccessRequestService.class, ServiceTypes.GATEWAY);
     }
+
+    public AccessProfileService getAccessProfileService () throws IOException {
+		return getService(AccessProfileService.class, ServiceTypes.GATEWAY);
+    }
   
 	public static <T> T execute ( Call<T> call ) throws IOException {
 		return call.execute().body();

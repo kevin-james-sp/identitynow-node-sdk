@@ -41,6 +41,7 @@ public class BulkRoleLoader {
 			RoleService _roleService = ids.getRoleService();
 			int userCount = Integer.parseInt(TEST_USER_COUNT);
 
+			//These roles will have 800 identities, to change this, modify the value in the criterion for your desired identity count
 			RoleCriterionKey key = new RoleCriterionKey("IDENTITY","attribute.uid","");
 			RoleCriterion criterion = new RoleCriterion("CONTAINS",key, "260");
 			List<RoleCriterion> criterionList = new ArrayList<>();

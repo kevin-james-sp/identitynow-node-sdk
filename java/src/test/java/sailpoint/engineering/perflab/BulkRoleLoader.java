@@ -8,13 +8,11 @@ import sailpoint.services.idn.console.Log4jUtils;
 import sailpoint.services.idn.sdk.ClientCredentials;
 import sailpoint.services.idn.sdk.EnvironmentCredentialer;
 import sailpoint.services.idn.sdk.IdentityNowService;
-import sailpoint.services.idn.sdk.object.accessprofile.AccessProfile;
 import sailpoint.services.idn.sdk.object.role.ComplexRoleCriterion;
 import sailpoint.services.idn.sdk.object.role.Role;
 import sailpoint.services.idn.sdk.object.role.RoleCriterion;
 import sailpoint.services.idn.sdk.object.role.RoleCriterionKey;
 import sailpoint.services.idn.sdk.object.role.Selector;
-import sailpoint.services.idn.sdk.services.AccessProfileService;
 import sailpoint.services.idn.sdk.services.RoleService;
 import sailpoint.services.idn.session.SessionType;
 
@@ -30,7 +28,7 @@ public class BulkRoleLoader {
 	public static void main(String[] args) throws IOException{
 
 		//Creds and logger
-		Log4jUtils.boostrapLog4j(Level.ALL);
+		Log4jUtils.boostrapLog4j(Level.DEBUG);
 
 		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
 		IdentityNowService ids = new IdentityNowService(envCreds);
@@ -39,24 +37,9 @@ public class BulkRoleLoader {
 
 		try{
 
-			log.info("Inside the try block.");
 			//required service, and desired roles.
 			RoleService _roleService = ids.getRoleService();
-			AccessProfileService _apService = ids.getAccessProfileService();
 			int userCount = Integer.parseInt(TEST_USER_COUNT);
-
-			log.info("Should have all of the services now.");
-
-			//Get required ids
-
-
-			//Create required access profile.
-			AccessProfile ap = new AccessProfile();
-			ap.description = "BulkRoleLoaded Profile";
-			//ap.entitlements = ListOfEntitlementsHere
-			ap.name = "Bulk Role";
-			//ap.ownerId = $supportIdHere
-			//ap.sourceId = $sourceIdHere
 
 			RoleCriterionKey key = new RoleCriterionKey("IDENTITY","attribute.uid","");
 			RoleCriterion criterion = new RoleCriterion("CONTAINS",key, "260");
@@ -66,6 +49,7 @@ public class BulkRoleLoader {
 			Selector selector = new Selector("COMPLEX_CRITERIA", roleCriterion);
 
 			//Do the executions
+			log.info("Begin Role upload...");
 			for(int i = 0; i < userCount; i++){
 
 				//Create the role and update it
@@ -76,8 +60,15 @@ public class BulkRoleLoader {
 				role.selector = selector;
 
 				Response<Role> roleResponse = _roleService.create(role).execute();
+				log.info(roleResponse.body());
+				if(roleResponse.isSuccessful())
+					log.info("Successfully uploaded Role #" + i);
 
 			}
+
+			log.info("Triggering role refresh...");
+			if(_roleService.refresh().execute().isSuccessful())
+				log.info("Successfully triggered refresh...");
 
 		} catch(IOException e){
 			log.error("An IOException has occurred when trying to get the role service.");

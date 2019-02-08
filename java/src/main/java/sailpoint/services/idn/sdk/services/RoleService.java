@@ -13,4 +13,7 @@ public interface RoleService {
     @POST("/cc/api/role/update")
     Call<Role> update(@Body Role role);
 
+    @POST("/cc/api/role/refresh")
+    Call<Void> refresh();
+
 }

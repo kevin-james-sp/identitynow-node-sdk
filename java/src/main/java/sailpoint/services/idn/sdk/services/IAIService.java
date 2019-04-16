@@ -12,6 +12,7 @@ public interface IAIService {
 
 	@POST( "beta/recommendations/request" )
 	Call<ResponseElement> recommendationRequest (@Header ("Authorization") String authorization,
+	                                             @Header("Content-Type") String contentType,
 	                                             @Body RecommenderFields recommenderFields);
 
 	@POST("oauth/token?grant_type=client_credentials")

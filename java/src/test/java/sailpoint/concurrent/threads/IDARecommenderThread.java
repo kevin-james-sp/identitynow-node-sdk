@@ -65,13 +65,15 @@ public class IDARecommenderThread implements Callable<IDAMetrics> {
 
 		long responseTime;
 		boolean successful;
+		String recommendation = "";
+
 		try {
 
 			log.info("Executing call.");
-			responseTime = System.currentTimeMillis();
-			Call request = iaiService.recommendationRequest(token, recommenderFields);
+			Call request = iaiService.recommendationRequest(token, "application/json;charset=utf-8", recommenderFields);
 			log.info(request.request().toString());
 			log.info(request.request().headers().toString());
+			responseTime = System.currentTimeMillis();
 			Response<ResponseElement> response = request.execute();
 			log.info(response.toString());
 			responseTime = System.currentTimeMillis() - responseTime;
@@ -79,25 +81,28 @@ public class IDARecommenderThread implements Callable<IDAMetrics> {
 			if(response.isSuccessful()) {
 				successful = true;
 				log.debug("Success!");
+				recommendation = response.body().getRecommendation().name();
+				log.debug("Recommendation: " + recommendation);
 			}
 			else{
 				successful = false;
 				log.debug("Failed!");
 				log.debug(response.errorBody().string());
+				log.debug("Error code: " + response.code());
 			}
 
-			return new IDAMetrics(successful, responseTime);
+			return new IDAMetrics(successful, responseTime, recommendation);
 
 		} catch (NullPointerException e) {
-			log.error("Failed while for " + identityId + ". Server response is missing required parameters.", e);
+			log.error("Failed for identity: " + identityId + ". Server response is missing required parameters.", e);
 		} catch (IOException e) {
-			log.error("Failed for " + identityId + ". Could not get IAIService.", e);
+			log.error("Failed for identity: " + identityId + ". Could not get IAIService.", e);
 		} catch (Exception e) {
-			log.error("Failed for " + identityId + ".", e);
+			log.error("Failed for identity: " + identityId + ".", e);
 		}
 
 		successful = false;
 		responseTime = -1;
-		return  new IDAMetrics(successful, responseTime);
+		return  new IDAMetrics(successful, responseTime, null);
 	}
 }

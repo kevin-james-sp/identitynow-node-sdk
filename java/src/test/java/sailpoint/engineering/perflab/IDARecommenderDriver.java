@@ -182,6 +182,7 @@ public class IDARecommenderDriver {
 		long minTime = Integer.MAX_VALUE;
 		long sum = 0;
 		long currentResponseTime;
+		int numNotFound = 0;
 		IDAMetrics currentMetric;
 		try{
 			for(Future<IDAMetrics> metric : metricsList){
@@ -195,6 +196,9 @@ public class IDARecommenderDriver {
 						maxTime = currentResponseTime;
 					if(currentResponseTime < minTime)
 						minTime = currentResponseTime;
+					if(currentMetric.getRecommendation().equals("NOT_FOUND"))
+						numNotFound++;
+					log.info(currentMetric.getRecommendation());
 				}
 				else{
 					numFailed++;

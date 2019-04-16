@@ -13,9 +13,34 @@ public class ResponseElement {
 	@SerializedName("interpretations")
 	String[] interpretations;
 
-	enum Recommendation{
+	public enum Recommendation{
 		YES,
 		NO,
 		NOT_FOUND
+	}
+
+	public Recommendation getRecommendation() {
+		return recommendation;
+	}
+
+	public void setRecommendation(Recommendation recommendation) {
+		this.recommendation = recommendation;
+	}
+
+	public String[] getInterpretations() {
+		return interpretations;
+	}
+
+	public void setInterpretations(String[] interpretations) {
+		this.interpretations = interpretations;
+	}
+
+	public RequestElement getRequest() {
+
+		return request;
+	}
+
+	public void setRequest(RequestElement request) {
+		this.request = request;
 	}
 }

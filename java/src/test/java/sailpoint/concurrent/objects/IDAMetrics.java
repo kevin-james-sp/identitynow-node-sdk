@@ -4,10 +4,12 @@ public class IDAMetrics {
 
 	private boolean successful;
 	private long responseTime;
+	public String recommendation;
 
-	public IDAMetrics(boolean successful, long responseTime){
+	public IDAMetrics(boolean successful, long responseTime, String recommendation){
 		this.successful = successful;
 		this.responseTime = responseTime;
+		this.recommendation = recommendation;
 	}
 
 	public boolean isSuccessful() {
@@ -22,8 +24,10 @@ public class IDAMetrics {
 		return responseTime;
 	}
 
-	public void setResponseTime(long responseTime) {
-		this.responseTime = responseTime;
-	}
+	public void setResponseTime(long responseTime) { this.responseTime = responseTime; }
+
+	public String getRecommendation() { return recommendation; }
+
+	public void setRecommendation(String recommendation) { this.recommendation = recommendation; }
 
 }

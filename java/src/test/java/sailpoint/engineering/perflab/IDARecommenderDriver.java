@@ -214,6 +214,8 @@ public class IDARecommenderDriver {
 			log.error("Unable to get IDAMetric result from thread's Future object.", e);
 		} catch(InterruptedException e){
 			log.error("Unable to get IDAMetric result from thread's Future object.", e);
+		} catch(ArithmeticException e){
+			log.error("Unable to calculate average. 0 successful calls.", e);
 		}
 
 	}

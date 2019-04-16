@@ -44,8 +44,6 @@ public class RatsConcurrentDriver {
         //requestRolesByRoleNameAndNumberOfIdentities();
         //revokeRolesByNumberOfIdentities();
 
-
-
         //Perf test the role or identities querying end point
         //queryRequestableObjectLoadTest(true, false);
     }

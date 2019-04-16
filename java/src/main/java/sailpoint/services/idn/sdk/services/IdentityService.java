@@ -7,6 +7,7 @@ import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
 import retrofit2.http.Query;
+import sailpoint.services.idn.sdk.object.identity.userList.UserList;
 
 public interface IdentityService {
 	
@@ -52,12 +53,12 @@ Call<ResponseBody> get (@Query("_dc") long dc);
 	// \"name\",\"value\":\"Support\"},{\"property\":\"alias\",\"value\":\"Support\"},{\"property\":\"email\",\"value\":\"Support\"}]}&limit=100&page=1&start=0&sorters=[{\"property\":\"name\",\"direction\":\"ASC\"}]"
 
 	@GET("/cc/api/user/list")
-	Call<ResponseBody> list(@Query("_dc") long dc,
-	                        @Query("query") String query);
+	Call<UserList> list(@Query("_dc") long dc,
+	                    @Query("query") String query);
 
 	//Server accepts, but will fail with 504, not sure why..
 	@GET("/cc/api/user/list")
-	Call<ResponseBody> customList(@Query("_dc") long dc,
+	Call<UserList> customList(@Query("_dc") long dc,
 	                              @Query("query") String query,
 	                              @Query("filters") String filters,
 	                              @Query("limit") String limit,

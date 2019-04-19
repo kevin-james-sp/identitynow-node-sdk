@@ -13,6 +13,7 @@ import sailpoint.services.idn.console.Log4jUtils;
 import sailpoint.services.idn.sdk.ClientCredentials;
 import sailpoint.services.idn.sdk.EnvironmentCredentialer;
 import sailpoint.services.idn.sdk.object.IAI.Oauth.AccessToken;
+import sailpoint.services.idn.sdk.object.IAI.recommender.ResponseElement;
 import sailpoint.services.idn.sdk.services.IAIService;
 
 import java.io.IOException;
@@ -75,7 +76,6 @@ public class IDARecommenderDriver {
 
 			//Get a list of Identity Ids
 			Connection connection = DriverManager.getConnection(dbUrl, username, password);
-
 
 			String query = "SELECT id FROM spt_identity;";
 			Statement statement = connection.createStatement();
@@ -154,6 +154,7 @@ public class IDARecommenderDriver {
 	public static IAIService getIAIService (String url) {
 
 		OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
+		//clientBuilder.addInterceptor(new LoggingInterceptor());
 		OkHttpClient client = clientBuilder.build();
 		String basicCredentials = Credentials.basic(clientId, key);
 		AccessToken accessToken = null;
@@ -183,6 +184,7 @@ public class IDARecommenderDriver {
 		long sum = 0;
 		long currentResponseTime;
 		int numNotFound = 0;
+		int numRateLimited = 0;
 		IDAMetrics currentMetric;
 		try{
 			for(Future<IDAMetrics> metric : metricsList){
@@ -196,11 +198,15 @@ public class IDARecommenderDriver {
 						maxTime = currentResponseTime;
 					if(currentResponseTime < minTime)
 						minTime = currentResponseTime;
-					if(currentMetric.getRecommendation().equals("NOT_FOUND"))
-						numNotFound++;
-					log.info(currentMetric.getRecommendation());
+					for(ResponseElement recommendation : metric.get().getRecommendations()){
+						if(recommendation.getRecommendation().equals("NOT_FOUND"))
+							numNotFound++;
+						log.info("Recommendation: " + recommendation.getRecommendation());
+					}
 				}
 				else{
+					if(metric.get().getResponseCode() == 429)
+						numRateLimited++;
 					numFailed++;
 					break;
 				}
@@ -210,10 +216,13 @@ public class IDARecommenderDriver {
 
 			log.info("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 			log.info("The test has completed!");
-			log.info("Number of successful posts: " + numSuccess);
+			log.info("Successful posts: " + numSuccess);
+			log.info("Failed posts: " + numFailed);
+			log.info("NOT_FOUND Recommendation: " + numNotFound);
 			log.info("Slowest response in milliseconds: " + maxTime);
 			log.info("Fastest response in milliseconds: " + minTime);
 			log.info("Average response in milliseconds: " + avgTime);
+			log.info("Rate limited 429 responses: " + numRateLimited);
 		} catch(ExecutionException e){
 			log.error("Unable to get IDAMetric result from thread's Future object.", e);
 		} catch(InterruptedException e){
@@ -221,7 +230,6 @@ public class IDARecommenderDriver {
 		} catch(ArithmeticException e){
 			log.error("Unable to calculate average. 0 successful calls.", e);
 		}
-
 	}
 }
 

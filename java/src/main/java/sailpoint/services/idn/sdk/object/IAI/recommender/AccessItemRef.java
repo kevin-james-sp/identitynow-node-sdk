@@ -6,19 +6,36 @@ public class AccessItemRef {
 
 	public AccessItemRef(String id, String type){
 		this.id = id;
-		this.type = Type.valueOf(type);
+		//this.type = Type.valueOf(type);
+		this.type = type;
 	}
 
 	@SerializedName("id")
 	String id;
 
 	@SerializedName("type")
-	Type type;
+	String type;
 
-	enum Type{
+/*	enum Type{
 		ENTITLEMENT,
 		ROLE,
 		ACCESS_PROFILE,
 		ACCOUNT
+	}*/
+
+	public String getId() {
+		return id;
+	}
+
+	public void setId(String id) {
+		this.id = id;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
 	}
 }

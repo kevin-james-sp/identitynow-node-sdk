@@ -64,8 +64,9 @@ public class IDARecommenderThread implements Callable<IDAMetrics> {
 		Log4jUtils.boostrapLog4j(Level.DEBUG);
 
 		long responseTime;
-		boolean successful;
-		String recommendation = "";
+		RequestElement[] recommendations;
+		String responseBody;
+		int responseCode = -1;
 
 		try {
 
@@ -73,36 +74,34 @@ public class IDARecommenderThread implements Callable<IDAMetrics> {
 			Call request = iaiService.recommendationRequest(token, "application/json;charset=utf-8", recommenderFields);
 			log.info(request.request().toString());
 			log.info(request.request().headers().toString());
+			log.info("Body " + request.request().body().contentLength());
 			responseTime = System.currentTimeMillis();
 			Response<ResponseElement> response = request.execute();
-			log.info(response.toString());
 			responseTime = System.currentTimeMillis() - responseTime;
+			ResponseElement responses = response.body();
 
 			if(response.isSuccessful()) {
-				successful = true;
 				log.debug("Success!");
-				recommendation = response.body().getRecommendation().name();
-				log.debug("Recommendation: " + recommendation);
+				//return new IDAMetrics(true, responseTime, responses.getResponses(), responseCode);
 			}
 			else{
-				successful = false;
 				log.debug("Failed!");
 				log.debug(response.errorBody().string());
-				log.debug("Error code: " + response.code());
+				log.error("Code: " + response.code());
+				//return new IDAMetrics(false, responseTime, responses.getResponses(), responseCode);
 			}
 
-			return new IDAMetrics(successful, responseTime, recommendation);
+			//return new IDAMetrics(successful, responseTime, recommendations);
 
 		} catch (NullPointerException e) {
-			log.error("Failed for identity: " + identityId + ". Server response is missing required parameters.", e);
+			log.error("Failed for identity: " + identityId + ". Response is missing required parameters.", e);
 		} catch (IOException e) {
 			log.error("Failed for identity: " + identityId + ". Could not get IAIService.", e);
 		} catch (Exception e) {
 			log.error("Failed for identity: " + identityId + ".", e);
 		}
 
-		successful = false;
 		responseTime = -1;
-		return  new IDAMetrics(successful, responseTime, null);
+		return  new IDAMetrics(false, responseTime, null, responseCode);
 	}
 }

@@ -1,46 +1,44 @@
 package sailpoint.services.idn.sdk.object.IAI.recommender;
 
+import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
+
+import java.util.List;
 
 public class ResponseElement {
 
 	@SerializedName("request")
-	RequestElement request;
-
+	@Expose
+	private RequestElement requestElement;
 	@SerializedName("recommendation")
-	Recommendation recommendation;
-
+	@Expose
+	private String recommendation;
 	@SerializedName("interpretations")
-	String[] interpretations;
-
-	public enum Recommendation{
-		YES,
-		NO,
-		NOT_FOUND
-	}
-
-	public Recommendation getRecommendation() {
-		return recommendation;
-	}
-
-	public void setRecommendation(Recommendation recommendation) {
-		this.recommendation = recommendation;
-	}
-
-	public String[] getInterpretations() {
-		return interpretations;
-	}
-
-	public void setInterpretations(String[] interpretations) {
-		this.interpretations = interpretations;
-	}
+	@Expose
+	private List<String> interpretations = null;
 
 	public RequestElement getRequest() {
-
-		return request;
+		return requestElement;
 	}
 
 	public void setRequest(RequestElement request) {
-		this.request = request;
+		this.requestElement = request;
 	}
+
+	public String getRecommendation() {
+		return recommendation;
+	}
+
+	public void setRecommendation(String recommendation) {
+		this.recommendation = recommendation;
+	}
+
+	public List<String> getInterpretations() {
+		return interpretations;
+	}
+
+	public void setInterpretations(List<String> interpretations) {
+		this.interpretations = interpretations;
+	}
+
 }

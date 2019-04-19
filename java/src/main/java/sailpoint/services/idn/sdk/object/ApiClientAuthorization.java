@@ -3,7 +3,7 @@ package sailpoint.services.idn.sdk.object;
 import com.google.gson.annotations.SerializedName;
 
 /**
- * Response returned by an IdentityNow API Gateway server when requesting a JWT 
+ * ResponseElement returned by an IdentityNow API Gateway server when requesting a JWT
  * token be created and authorized for the presented Client ID / Client Secret
  * API credentials.
  * 

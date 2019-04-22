@@ -52,16 +52,10 @@ public class IDARecommenderDriver {
 		boolean excludeInterpretations = Boolean.parseBoolean(args[2]);
 		int threadCount = Integer.parseInt(args[3]);
 		boolean continueWithError = false;
-		int successfulCalls;
-		int avgResponseTime;
-		long startTime;
-		long duration;
 		LinkedList<String> identityIds = new LinkedList<>();
 		LinkedList<String> accessIds = new LinkedList<>();
 		LinkedList<IDARecommenderThread> workQueue = new LinkedList<>();
 		LinkedList<String> batch = new LinkedList<>();
-		List<Future<IDAMetrics>> metricsList;
-
 
 		//Get url, iaiservice, and executor
 		ClientCredentials clientCredentials = EnvironmentCredentialer.getEnvironmentCredentials();
@@ -184,7 +178,12 @@ public class IDARecommenderDriver {
 		long sum = 0;
 		long currentResponseTime;
 		int numNotFound = 0;
+		int numYes = 0;
+		int numNo = 0;
 		int numRateLimited = 0;
+		int numBadGateway = 0;
+		int numServiceUnavailable = 0;
+		int totalQueries = 0;
 		IDAMetrics currentMetric;
 		try{
 			for(Future<IDAMetrics> metric : metricsList){
@@ -199,30 +198,47 @@ public class IDARecommenderDriver {
 					if(currentResponseTime < minTime)
 						minTime = currentResponseTime;
 					for(ResponseElement recommendation : metric.get().getRecommendations()){
+						totalQueries++;
 						if(recommendation.getRecommendation().equals("NOT_FOUND"))
 							numNotFound++;
-						log.info("Recommendation: " + recommendation.getRecommendation());
+						else if(recommendation.getRecommendation().equals("NO"))
+							numNo++;
+						else if(recommendation.getRecommendation().equals("YES"))
+							numYes++;
+						log.debug("Recommendation: " + recommendation.getRecommendation());
 					}
 				}
 				else{
 					if(metric.get().getResponseCode() == 429)
 						numRateLimited++;
+					if(metric.get().getResponseCode() == 502)
+						numBadGateway++;
+					if(metric.get().getResponseCode() == 503)
+						numServiceUnavailable++;
+					log.error("A call failed for http: " + metric.get().getResponseCode());
 					numFailed++;
 					break;
 				}
 			}
 
-			avgTime = sum / numSuccess;
-
-			log.info("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+			log.info("============================================================================================================================");
 			log.info("The test has completed!");
 			log.info("Successful posts: " + numSuccess);
 			log.info("Failed posts: " + numFailed);
-			log.info("NOT_FOUND Recommendation: " + numNotFound);
+			log.info("Total queries: " + totalQueries);
+			log.info("YES recommendations: " + numYes);
+			log.info("NO recommendations: " + numNo);
+			log.info("NOT_FOUND Recommendations: " + numNotFound);
+			log.info("Rate limited 429 responses: " + numRateLimited);
+			log.info("Service unavailable 503 responses: " + numServiceUnavailable);
+			log.info("Bad Gateway responses: " + numBadGateway);
+
 			log.info("Slowest response in milliseconds: " + maxTime);
 			log.info("Fastest response in milliseconds: " + minTime);
+			//do this calculation last in case it errors out.
+			avgTime = sum / numSuccess;
 			log.info("Average response in milliseconds: " + avgTime);
-			log.info("Rate limited 429 responses: " + numRateLimited);
+
 		} catch(ExecutionException e){
 			log.error("Unable to get IDAMetric result from thread's Future object.", e);
 		} catch(InterruptedException e){

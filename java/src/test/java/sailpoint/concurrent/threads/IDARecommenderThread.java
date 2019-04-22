@@ -10,7 +10,7 @@ import sailpoint.services.idn.console.Log4jUtils;
 import sailpoint.services.idn.sdk.object.IAI.recommender.AccessItemRef;
 import sailpoint.services.idn.sdk.object.IAI.recommender.RecommenderFields;
 import sailpoint.services.idn.sdk.object.IAI.recommender.RequestElement;
-import sailpoint.services.idn.sdk.object.IAI.recommender.ResponseElement;
+import sailpoint.services.idn.sdk.object.IAI.recommender.Responses;
 import sailpoint.services.idn.sdk.services.IAIService;
 
 import java.io.IOException;
@@ -64,31 +64,31 @@ public class IDARecommenderThread implements Callable<IDAMetrics> {
 		Log4jUtils.boostrapLog4j(Level.DEBUG);
 
 		long responseTime;
-		RequestElement[] recommendations;
-		String responseBody;
 		int responseCode = -1;
 
 		try {
 
 			log.info("Executing call.");
 			Call request = iaiService.recommendationRequest(token, "application/json;charset=utf-8", recommenderFields);
-			log.info(request.request().toString());
-			log.info(request.request().headers().toString());
-			log.info("Body " + request.request().body().contentLength());
+			log.debug(request.request().toString());
+			log.debug(request.request().headers().toString());
+			log.debug("Body " + request.request().body().contentLength());
 			responseTime = System.currentTimeMillis();
-			Response<ResponseElement> response = request.execute();
+			Response<Responses> response = request.execute();
 			responseTime = System.currentTimeMillis() - responseTime;
-			ResponseElement responses = response.body();
+			Responses responses = response.body();
+			responseCode = response.code();
 
 			if(response.isSuccessful()) {
 				log.debug("Success!");
-				//return new IDAMetrics(true, responseTime, responses.getResponses(), responseCode);
+				log.debug(responses);
+				return new IDAMetrics(true, responseTime, responses.getResponses(), responseCode);
 			}
 			else{
 				log.debug("Failed!");
 				log.debug(response.errorBody().string());
 				log.error("Code: " + response.code());
-				//return new IDAMetrics(false, responseTime, responses.getResponses(), responseCode);
+				return new IDAMetrics(false, responseTime, responses.getResponses(), responseCode);
 			}
 
 			//return new IDAMetrics(successful, responseTime, recommendations);

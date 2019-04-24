@@ -1,3 +1,4 @@
+apply plugin: 'application'
 apply plugin: 'java'
 apply plugin: 'maven'
 
@@ -23,6 +24,12 @@ project.uploadArchives{
 task testJar(type: Jar) {
 	classifier = 'tests'
 	from sourceSets.test.output.classesDirs
+}
+
+run{
+	classpath = sourceSets.test.runtimeClasspath
+	if(project.hasProperty('mainClass'))
+	main = mainClass
 }
 
 // Support a gradle task of 'execute' that runs test class without building jar file

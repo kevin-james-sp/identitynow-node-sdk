@@ -44,7 +44,7 @@ public class IDARecommenderDriver {
 	public static void main(String[] args){
 
 		//Bootstrap logger, and vars
-		Log4jUtils.boostrapLog4j(Level.ALL);
+		Log4jUtils.boostrapLog4j(Level.INFO);
 
 		int batchSize = Integer.parseInt(args[0]);
 		int numRequests = Integer.parseInt(args[1]);

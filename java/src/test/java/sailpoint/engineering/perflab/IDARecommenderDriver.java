@@ -10,8 +10,6 @@ import retrofit2.converter.gson.GsonConverterFactory;
 import sailpoint.concurrent.objects.IDAMetrics;
 import sailpoint.concurrent.threads.IDARecommenderThread;
 import sailpoint.services.idn.console.Log4jUtils;
-import sailpoint.services.idn.sdk.ClientCredentials;
-import sailpoint.services.idn.sdk.EnvironmentCredentialer;
 import sailpoint.services.idn.sdk.object.IAI.Oauth.AccessToken;
 import sailpoint.services.idn.sdk.object.IAI.recommender.ResponseElement;
 import sailpoint.services.idn.sdk.services.IAIService;
@@ -52,6 +50,7 @@ public class IDARecommenderDriver {
 		int numRequests = Integer.parseInt(args[1]);
 		boolean excludeInterpretations = Boolean.parseBoolean(args[2]);
 		int threadCount = Integer.parseInt(args[3]);
+		String orgName = args[4];
 		boolean continueWithError = false;
 		LinkedList<String> identityIds = new LinkedList<>();
 		LinkedList<String> accessIds = new LinkedList<>();
@@ -59,8 +58,7 @@ public class IDARecommenderDriver {
 		LinkedList<String> batch = new LinkedList<>();
 
 		//Get url, iaiservice, and executor
-		ClientCredentials clientCredentials = EnvironmentCredentialer.getEnvironmentCredentials();
-		IAIService iaiService = getIAIService("https://" + clientCredentials.getOrgName() + ".api.cloud.sailpoint.com/");
+		IAIService iaiService = getIAIService("https://" + orgName + ".api.cloud.sailpoint.com/");
 
 		ExecutorService executor = Executors.newFixedThreadPool(threadCount);
 

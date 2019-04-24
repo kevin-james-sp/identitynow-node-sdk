@@ -29,6 +29,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 public class IDARecommenderDriver {
 
@@ -47,8 +48,8 @@ public class IDARecommenderDriver {
 		//Bootstrap logger, and vars
 		Log4jUtils.boostrapLog4j(Level.ALL);
 
-		double batchSize = Double.parseDouble(args[0]);
-		double numRequests = Double.parseDouble(args[1]);
+		int batchSize = Integer.parseInt(args[0]);
+		int numRequests = Integer.parseInt(args[1]);
 		boolean excludeInterpretations = Boolean.parseBoolean(args[2]);
 		int threadCount = Integer.parseInt(args[3]);
 		boolean continueWithError = false;
@@ -63,6 +64,8 @@ public class IDARecommenderDriver {
 
 		ExecutorService executor = Executors.newFixedThreadPool(threadCount);
 
+		log.info("Performing test setup.");
+		log.info("Connecting to database...");
 		//connect to database, and pull back required info
 		try {
 			//make driver register for classloader
@@ -105,6 +108,7 @@ public class IDARecommenderDriver {
 			log.error("Unable to get JWT Token.", e);
 		}
 
+		log.info("Database interaction complete.");
 		//Build work queue and pass information to threads. Catch configuration errors and continue if possible.
 		String currentAccessId;
 		for(int i = 0; i < numRequests; i++){
@@ -149,7 +153,10 @@ public class IDARecommenderDriver {
 
 		OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
 		//clientBuilder.addInterceptor(new LoggingInterceptor());
-		OkHttpClient client = clientBuilder.build();
+		OkHttpClient client = clientBuilder
+				.connectTimeout(1, TimeUnit.MINUTES)
+				.readTimeout(1, TimeUnit.MINUTES)
+				.writeTimeout(1, TimeUnit.MINUTES).build();
 		String basicCredentials = Credentials.basic(clientId, key);
 		AccessToken accessToken = null;
 

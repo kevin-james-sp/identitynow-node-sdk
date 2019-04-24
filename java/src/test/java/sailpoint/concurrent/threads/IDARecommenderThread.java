@@ -81,7 +81,6 @@ public class IDARecommenderThread implements Callable<IDAMetrics> {
 
 			if(response.isSuccessful()) {
 				log.debug("Success!");
-				log.debug(responses);
 				return new IDAMetrics(true, responseTime, responses.getResponses(), responseCode);
 			}
 			else{

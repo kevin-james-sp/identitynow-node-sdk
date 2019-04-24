@@ -56,6 +56,8 @@ public class IDARecommenderDriver {
 		LinkedList<String> accessIds = new LinkedList<>();
 		LinkedList<IDARecommenderThread> workQueue = new LinkedList<>();
 		LinkedList<String> batch = new LinkedList<>();
+		List<Future<IDAMetrics>> metricsList;
+		long totalTime;
 
 		//Get url, iaiservice, and executor
 		IAIService iaiService = getIAIService("https://" + orgName + ".api.cloud.sailpoint.com/");
@@ -138,7 +140,10 @@ public class IDARecommenderDriver {
 			log.info("workQueue size: " + workQueue.size());
 
 			//Test complete, process results and display them to console
-			processResultList(executor.invokeAll(workQueue));
+			long startTime = System.currentTimeMillis();
+			metricsList = executor.invokeAll(workQueue);
+			totalTime = System.currentTimeMillis() - startTime;
+			processResultList(metricsList, totalTime);
 			executor.shutdown();
 		} catch(InterruptedException e){
 			log.error("The executor has been interrupted.", e);
@@ -174,7 +179,7 @@ public class IDARecommenderDriver {
 	 * @throws ExecutionException if the computation threw an exception
 	 * @throws NullPointerException If the resultList is null
 	 */
-	private static void processResultList(List<Future<IDAMetrics>> metricsList) {
+	private static void processResultList(List<Future<IDAMetrics>> metricsList, long totalTime) {
 		long numSuccess = 0;
 		long numFailed = 0;
 		long avgTime;
@@ -236,6 +241,7 @@ public class IDARecommenderDriver {
 			log.info("Rate limited 429 responses: " + numRateLimited);
 			log.info("Service unavailable 503 responses: " + numServiceUnavailable);
 			log.info("Bad Gateway responses: " + numBadGateway);
+			log.info("Total test time: " + totalTime);
 
 			log.info("Slowest response in milliseconds: " + maxTime);
 			log.info("Fastest response in milliseconds: " + minTime);

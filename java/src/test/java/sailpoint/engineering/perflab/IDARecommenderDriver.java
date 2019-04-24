@@ -210,7 +210,6 @@ public class IDARecommenderDriver {
 							numNo++;
 						else if(recommendation.getRecommendation().equals("YES"))
 							numYes++;
-						log.debug("Recommendation: " + recommendation.getRecommendation());
 					}
 				}
 				else{

@@ -1,3 +1,4 @@
+apply plugin: 'application'
 apply plugin: 'java'
 apply plugin: 'maven'
 
@@ -23,6 +24,12 @@ project.uploadArchives{
 task testJar(type: Jar) {
 	classifier = 'tests'
 	from sourceSets.test.output.classesDirs
+}
+
+run{
+	classpath = sourceSets.test.runtimeClasspath
+	if(project.hasProperty('mainClass'))
+	main = mainClass
 }
 
 // Support a gradle task of 'execute' that runs test class without building jar file
@@ -76,6 +83,8 @@ jar {
 		compile group: 'org.apache.logging.log4j', name: 'log4j-core',           version:'2.11.0'
 
 		compile group: 'org.jsoup',                name: 'jsoup',                version: '1.11.3'
+
+		compile group: 'mysql', name: 'mysql-connector-java', version: '5.1.6'
 
 		testCompile group: 'com.amazonaws',        name: 'aws-java-sdk-lambda',  version: '1.11.228'
 		testCompile group: 'junit',                name: 'junit',                version: '4.12'

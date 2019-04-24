@@ -58,7 +58,7 @@ public class OkHttpUtils {
 	// Calculated 1 time and then re-used for the remainder of calls.
 	private static String userAgent = null;
 
-	// IdentityNow's API gateway can send 429s with a recommendation for how
+	// IdentityNow's API gateway can send 429s with a ResponseElement for how
 	// long to delay the retry in the 'Retry-After' header. The value is
 	// specified in seconds to delay.
 	public static final String HEADER_RETRY_AFTER = "Retry-After";

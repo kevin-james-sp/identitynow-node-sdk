@@ -537,7 +537,7 @@ public class UserInterfaceSession extends SessionBase {
 			} while (!redirectsDone);
 
 			String loginResponse = response.body().string();
-			log.debug("Login Response Body:" + loginResponse);
+			log.debug("Login ResponseElement Body:" + loginResponse);
 			response.close();
 
 			// Parse the /ui/main page to get the CSRF Token.

@@ -44,7 +44,7 @@ public class SharedAuthDriver {
 		log.info(" ");
 		log.info("======================================================================================================");
 		try{
-			ids.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC, true);
+			ids.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC, false);
 		} catch (IOException e){
 			log.error("Unable to get session.", e);
 		}

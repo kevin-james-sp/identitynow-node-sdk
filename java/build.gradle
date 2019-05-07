@@ -32,6 +32,10 @@ run{
 	main = mainClass
 }
 
+build{
+	mainClassName = 'sailpoint.engineering.perflab.TwoMFADriver'
+}
+
 // Support a gradle task of 'execute' that runs test class without building jar file
 task execute(type: JavaExec) {
 	systemProperties System.getProperties()
@@ -64,9 +68,16 @@ jar {
 			name "snapshot"
 			url "http://sptchu-mvn-repo.s3-website-us-east-1.amazonaws.com/snapshot"
 		}
+
+		maven {
+			name "release"
+			url "http://sptcbu-mvn-repo.s3-website-us-east-1.amazonaws.com/release"
+		}
 	}
 
 	dependencies {
+
+		compile "com.sailpoint:feature-flag:+"
 
 		compile group: 'com.squareup.okhttp3',     name: 'okhttp',               version:'3.10.0'
 		compile group: 'com.squareup.okhttp3',     name: 'okhttp-urlconnection', version: '3.10.0'

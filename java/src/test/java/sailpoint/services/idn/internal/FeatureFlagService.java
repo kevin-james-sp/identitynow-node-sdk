@@ -1,7 +1,5 @@
 package sailpoint.services.idn.internal;
 
-package IdnServices;
-
 import com.google.gson.FieldNamingStrategy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

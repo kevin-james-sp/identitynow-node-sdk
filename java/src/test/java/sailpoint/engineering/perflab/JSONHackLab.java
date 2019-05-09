@@ -1,36 +1,32 @@
 package sailpoint.engineering.perflab;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import sailpoint.services.idn.console.Log4jUtils;
+import sailpoint.services.idn.sdk.ClientCredentials;
+import sailpoint.services.idn.sdk.EnvironmentCredentialer;
+import sailpoint.services.idn.sdk.IdentityNowService;
+import sailpoint.services.idn.session.SessionType;
 
-import sailpoint.services.idn.sdk.object.IAI.recommender.Responses;
+import java.io.IOException;
 
 public class JSONHackLab {
+
+	public final static Logger log = LogManager.getLogger(JSONHackLab.class);
 
 	public JSONHackLab() {
 		// TODO Auto-generated constructor stub
 	}
 
-	public static void main(String[] args) {
-		
-		System.out.println("Hello World");
-		
-		String rawJson = "{\"responses\":[{\"request\":{\"identityId\":\"8a80828f643d484f01643d8e4f552169\",\"item\":{\"id\":\"8a808094696804590169732f112e371a\",\"type\":\"ENTITLEMENT\"}},\"recommendation\":\"NO\",\"interpretations\":[\"No similar users have this access.\"]}]}";
-		// String rawJson = "responses:[{\"request\":{\"identityId\":\"8a80828f643d484f01643d8e4f552169\",\"item\":{\"id\":\"8a808094696804590169732f112e371a\",\"type\":\"ENTITLEMENT\"}},\"recommendation\":\"NO\",\"interpretations\":[\"No similar users have this access.\"]}]";
-		
-		System.out.println("rawJson:" + rawJson);
-		
-		Gson gson = new Gson();
-		
-		Responses r = new Responses();
-		
-		Responses rsp = gson.fromJson(rawJson, Responses.class);
-		System.out.println("responses:" + rsp);
-		
-		Gson gsonpp = new GsonBuilder().setPrettyPrinting().create();
-		String json = gsonpp.toJson(rsp);
-		System.out.println("pretty printed:\n" + json);
-		
+	public static void main(String[] args) throws IOException {
+		Log4jUtils.boostrapLog4j(Level.INFO);
+
+
+		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
+		IdentityNowService ids = new IdentityNowService(envCreds);
+		ids.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC, true);
+		System.out.print("Done");
 		
 		
 		

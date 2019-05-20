@@ -23,16 +23,16 @@ public class SearchScaffolding {
 
 		Log4jUtils.boostrapLog4j(Level.DEBUG);
 
-        try {
-            IdentityNowService ids = new IdentityNowService(EnvironmentCredentialer.getEnvironmentCredentials());
-            ids.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC, true);
-            SearchService searchService = ids.getSearchService();
+		try {
+			IdentityNowService ids = new IdentityNowService(EnvironmentCredentialer.getEnvironmentCredentials());
+			ids.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC, true);
+			SearchService searchService = ids.getSearchService();
 
-            List<Identity> idList = searchService.searchIdentities(50, 0, "id=99999").execute().body();
+			List<Identity> idList = searchService.searchIdentities(50, 0, "id=99999").execute().body();
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	
 	}
 }

@@ -67,14 +67,22 @@ public class IdentityAttributes {
 	
 	@SerializedName("identificationNumber")
 	public String identificationNumber;
+
+    @SerializedName("costCenter")
+    public String costCenter;
+
+    @SerializedName("department")
+    public String department;
+
+    @SerializedName("internal_lockoutState")
+    public String internalLockoutState;
+
+    @SerializedName("triggerSnapshots")
+    public String triggerSnapshots;
 	
 	
 	// TODO: Handle this list of IWA User Principal Name values:
 	// "iplanet-am-user-alias-list": [],
-	
-	// Custom attributes from performance lab examples:
-	// "workerType": "Employee",
-    // "costCenter": "CC-AM",
-    // "department": "Legal",
+
 
 }

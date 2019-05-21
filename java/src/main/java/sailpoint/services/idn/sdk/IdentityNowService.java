@@ -135,7 +135,11 @@ public final class IdentityNowService {
     }
 
     public AccessProfileService getAccessProfileService () throws IOException {
-		return getService(AccessProfileService.class, ServiceTypes.GATEWAY);
+        return getService(AccessProfileService.class, ServiceTypes.GATEWAY);
+    }
+
+    public SearchService getSearchService () throws IOException {
+        return getService(SearchService.class, ServiceTypes.GATEWAY);
     }
   
 	public static <T> T execute ( Call<T> call ) throws IOException {

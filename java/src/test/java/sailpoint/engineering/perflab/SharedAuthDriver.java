@@ -31,51 +31,54 @@ public class SharedAuthDriver {
 		long executionTime;
 		long startTime;
 		long sharedAuthExecutionTime;
-		int numSessions = args.length == 2 ? Integer.valueOf(args[0]) : 1;
-		int numThreads = args.length == 2 ? Integer.valueOf(args[1]) : 1;
+		int numSessions = args.length >= 2 ? Integer.valueOf(args[0]) : 1;
+		int numThreads = args.length >= 2 ? Integer.valueOf(args[1]) : 1;
+		boolean testSharedAuthOnly = args.length == 3 ? Boolean.parseBoolean(args[2]) : false);
 		Log4jUtils.boostrapLog4j(Level.INFO);
 
 		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
 		IdentityNowService ids = new IdentityNowService(envCreds);
-
-		log.info("======================================================================================================");
-		log.info(" ");
-		log.info("Testing OpenAM performance on org: " + envCreds.getOrgName() + " with user: " + envCreds.getOrgUser());
-		log.info(" ");
-		log.info("======================================================================================================");
-		try{
-			ids.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC, false);
-		} catch (IOException e){
-			log.error("Unable to get session.", e);
-		}
-
 		FeatureFlagService _ffService = new FeatureFlagService(null);
-		EnvironmentCredentialer environmentCredentialer = new EnvironmentCredentialer();
 		LinkedList<SessionExecutorThread> workQueue = new LinkedList<>();
-		ListIterator<SessionExecutorThread> iter = workQueue.listIterator();
 
-		//Load work queue with threads
-		for(int i = 0 ; i < numSessions ; i++){
-			workQueue.push(new SessionExecutorThread(environmentCredentialer.getEnvironmentCredentials()));
+		if(!testSharedAuthOnly) {
+			log.info("======================================================================================================");
+			log.info(" ");
+			log.info("Testing OpenAM performance on org: " + envCreds.getOrgName() + " with user: " + envCreds.getOrgUser());
+			log.info(" ");
+			log.info("======================================================================================================");
+			try {
+				ids.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC, false);
+			} catch (IOException e) {
+				log.error("Unable to get session.", e);
+			}
+
+
+			EnvironmentCredentialer environmentCredentialer = new EnvironmentCredentialer();
+			ListIterator<SessionExecutorThread> iter = workQueue.listIterator();
+
+			//Load work queue with threads
+			for (int i = 0; i < numSessions; i++) {
+				workQueue.push(new SessionExecutorThread(environmentCredentialer.getEnvironmentCredentials()));
+			}
+
+			//Set flag to non shared auth service for comparison
+			_ffService.setFlagForOrg(false, FeatureFlagService.FEATURE_FLAGS.SSO_USE_LOGIN_SERVICE);
+			_ffService.setFlagForOrg(false, FeatureFlagService.FEATURE_FLAGS.PUBLISH_IDENTITIES_TO_IRIS);
+			_ffService.setFlagForOrg(false, FeatureFlagService.FEATURE_FLAGS.SHARED_AUTH_CONSUME_EVENTS);
+			_ffService.setFlagForOrg(false, FeatureFlagService.FEATURE_FLAGS.SHARED_AUTH_PTA);
+
+			//Time and execute
+			startTime = System.currentTimeMillis();
+			successfulLogins = executeLogins(workQueue, numThreads);
+			executionTime = System.currentTimeMillis() - startTime;
+
+			log.info("======================================================================================================");
+			log.info(" ");
+			log.info("OpenAM test complete.");
+			log.info(" ");
+			log.info("======================================================================================================");
 		}
-
-		//Set flag to non shared auth service for comparison
-		_ffService.setFlagForOrg(false, FeatureFlagService.FEATURE_FLAGS.SSO_USE_LOGIN_SERVICE);
-		_ffService.setFlagForOrg(false, FeatureFlagService.FEATURE_FLAGS.PUBLISH_IDENTITIES_TO_IRIS);
-		_ffService.setFlagForOrg(false, FeatureFlagService.FEATURE_FLAGS.SHARED_AUTH_CONSUME_EVENTS);
-		_ffService.setFlagForOrg(false, FeatureFlagService.FEATURE_FLAGS.SHARED_AUTH_PTA);
-
-		//Time and execute
-		startTime = System.currentTimeMillis();
-		successfulLogins = executeLogins(workQueue, numThreads);
-		executionTime = System.currentTimeMillis() - startTime;
-
-		log.info("======================================================================================================");
-		log.info(" ");
-		log.info("OpenAM test complete.");
-		log.info(" ");
-		log.info("======================================================================================================");
-
 		//Enable auth service
 		_ffService.setFlagForOrg(true, FeatureFlagService.FEATURE_FLAGS.SSO_USE_LOGIN_SERVICE);
 		_ffService.setFlagForOrg(true, FeatureFlagService.FEATURE_FLAGS.PUBLISH_IDENTITIES_TO_IRIS);

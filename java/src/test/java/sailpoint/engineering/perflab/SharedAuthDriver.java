@@ -14,7 +14,6 @@ import sailpoint.services.idn.session.SessionType;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -26,11 +25,11 @@ public class SharedAuthDriver {
 
 	public static void main(String[] args){
 		//Vars
-		int successfulLogins;
-		int successfulAuthLogins;
-		long executionTime;
-		long startTime;
-		long sharedAuthExecutionTime;
+		int successfulLogins = 0;
+		int successfulAuthLogins = 0;
+		long executionTime = 0;
+		long startTime = 0;
+		long sharedAuthExecutionTime = 0;
 		int numSessions = args.length >= 2 ? Integer.valueOf(args[0]) : 1;
 		int numThreads = args.length >= 2 ? Integer.valueOf(args[1]) : 1;
 		boolean testSharedAuthOnly = args.length == 3 ? Boolean.parseBoolean(args[2]) : false;
@@ -41,26 +40,26 @@ public class SharedAuthDriver {
 		FeatureFlagService _ffService = new FeatureFlagService(null);
 		LinkedList<SessionExecutorThread> workQueue = new LinkedList<>();
 
+		try {
+			ids.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC, false);
+		} catch (IOException e) {
+			log.error("Unable to get session.", e);
+		}
+
+		EnvironmentCredentialer environmentCredentialer = new EnvironmentCredentialer();
+		//ListIterator<SessionExecutorThread> iter = workQueue.listIterator();
+
+		//Load work queue with threads
+		for (int i = 0; i < numSessions; i++) {
+			workQueue.push(new SessionExecutorThread(environmentCredentialer.getEnvironmentCredentials()));
+		}
+
 		if(!testSharedAuthOnly) {
 			log.info("======================================================================================================");
 			log.info(" ");
 			log.info("Testing OpenAM performance on org: " + envCreds.getOrgName() + " with user: " + envCreds.getOrgUser());
 			log.info(" ");
 			log.info("======================================================================================================");
-			try {
-				ids.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC, false);
-			} catch (IOException e) {
-				log.error("Unable to get session.", e);
-			}
-
-
-			EnvironmentCredentialer environmentCredentialer = new EnvironmentCredentialer();
-			ListIterator<SessionExecutorThread> iter = workQueue.listIterator();
-
-			//Load work queue with threads
-			for (int i = 0; i < numSessions; i++) {
-				workQueue.push(new SessionExecutorThread(environmentCredentialer.getEnvironmentCredentials()));
-			}
 
 			//Set flag to non shared auth service for comparison
 			_ffService.setFlagForOrg(false, FeatureFlagService.FEATURE_FLAGS.SSO_USE_LOGIN_SERVICE);
@@ -101,14 +100,19 @@ public class SharedAuthDriver {
 		log.info("TEST RESULTS: ");
 		log.info("Org: " + envCreds.getOrgName());
 		log.info("User: " + envCreds.getOrgUser());
-		log.info("Baseline: ");
-		log.info("Successful logins: " + successfulLogins);
-		log.info("Time in milliseconds: " + executionTime);
-		log.info("");
+		if(!testSharedAuthOnly){
+			log.info("Baseline: ");
+			log.info("Successful logins: " + successfulLogins);
+			log.info("Time in milliseconds: " + executionTime);
+			log.info("");
+		}
 		log.info("Shared Auth: ");
 		log.info("Successful logins: " + successfulAuthLogins);
 		log.info("Time in milliseconds: " + sharedAuthExecutionTime);
-		log.info("Results: " + "Successful OpenAM: " + successfulLogins + " Successful Auth: " + successfulAuthLogins + " % change: " + getPercentChange(executionTime, sharedAuthExecutionTime));
+		if(!testSharedAuthOnly)
+			log.info("Results: " + "Successful OpenAM: " + successfulLogins + " Successful Auth: " + successfulAuthLogins + " % change: " + getPercentChange(executionTime, sharedAuthExecutionTime));
+		else
+			log.info("Results: " + " Successful Auth: " + successfulAuthLogins);
 		log.info(" ");
 		log.info("======================================================================================================");
 	}

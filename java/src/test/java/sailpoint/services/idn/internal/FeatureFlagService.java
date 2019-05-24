@@ -234,8 +234,8 @@ public class FeatureFlagService{
 			addOrgToIncludeList(key);
 		}
 		else{
+			removeOrgFromExcludeList(key);
 			removeOrgFromIncludeList(key);
-			addOrgToExcludeList(key);
 		}
 	}
 

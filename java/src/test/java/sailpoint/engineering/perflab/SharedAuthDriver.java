@@ -33,7 +33,7 @@ public class SharedAuthDriver {
 		long sharedAuthExecutionTime;
 		int numSessions = args.length >= 2 ? Integer.valueOf(args[0]) : 1;
 		int numThreads = args.length >= 2 ? Integer.valueOf(args[1]) : 1;
-		boolean testSharedAuthOnly = args.length == 3 ? Boolean.parseBoolean(args[2]) : false);
+		boolean testSharedAuthOnly = args.length == 3 ? Boolean.parseBoolean(args[2]) : false;
 		Log4jUtils.boostrapLog4j(Level.INFO);
 
 		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();

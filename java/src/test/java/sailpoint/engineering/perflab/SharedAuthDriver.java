@@ -77,12 +77,13 @@ public class SharedAuthDriver {
 			log.info("OpenAM test complete.");
 			log.info(" ");
 			log.info("======================================================================================================");
+
+			//Enable auth service
+			_ffService.setFlagForOrg(true, FeatureFlagService.FEATURE_FLAGS.SSO_USE_LOGIN_SERVICE);
+			_ffService.setFlagForOrg(true, FeatureFlagService.FEATURE_FLAGS.PUBLISH_IDENTITIES_TO_IRIS);
+			_ffService.setFlagForOrg(true, FeatureFlagService.FEATURE_FLAGS.SHARED_AUTH_CONSUME_EVENTS);
+			_ffService.setFlagForOrg(true, FeatureFlagService.FEATURE_FLAGS.SHARED_AUTH_PTA);
 		}
-		//Enable auth service
-		_ffService.setFlagForOrg(true, FeatureFlagService.FEATURE_FLAGS.SSO_USE_LOGIN_SERVICE);
-		_ffService.setFlagForOrg(true, FeatureFlagService.FEATURE_FLAGS.PUBLISH_IDENTITIES_TO_IRIS);
-		_ffService.setFlagForOrg(true, FeatureFlagService.FEATURE_FLAGS.SHARED_AUTH_CONSUME_EVENTS);
-		_ffService.setFlagForOrg(true, FeatureFlagService.FEATURE_FLAGS.SHARED_AUTH_PTA);
 
 		log.info("======================================================================================================");
 		log.info(" ");

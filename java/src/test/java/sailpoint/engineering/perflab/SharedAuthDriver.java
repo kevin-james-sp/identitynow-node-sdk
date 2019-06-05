@@ -52,7 +52,7 @@ public class SharedAuthDriver {
 
 		//Load work queue with threads
 		for (int i = 0; i < numSessions; i++) {
-			workQueue.push(new SessionExecutorThread(environmentCredentialer.getEnvironmentCredentials(), "10000" + Integer.toString(i)));
+			workQueue.push(new SessionExecutorThread(environmentCredentialer.getEnvironmentCredentials(), Integer.toString(10000 + i)));
 		}
 
 		if(!testSharedAuthOnly) {

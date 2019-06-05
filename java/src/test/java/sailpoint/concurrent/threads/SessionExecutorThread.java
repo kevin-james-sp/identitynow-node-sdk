@@ -13,7 +13,8 @@ public class SessionExecutorThread implements Callable<Boolean> {
 	public SessionExecutorThread(){
 	}
 
-	public SessionExecutorThread(ClientCredentials envCreds){
+	public SessionExecutorThread(ClientCredentials envCreds, String user){
+		envCreds.setOrgUser(user);
 		this.envCreds = envCreds;
 	}
 

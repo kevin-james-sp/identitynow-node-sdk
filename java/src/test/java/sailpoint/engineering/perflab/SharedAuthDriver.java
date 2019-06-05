@@ -23,6 +23,7 @@ public class SharedAuthDriver {
 
 	public final static Logger log = LogManager.getLogger(SharedAuthDriver.class);
 
+	//Currently this test is expected to run against perflab-05101139 (other orgs must load the HR Performance source in order for this test to work there)
 	public static void main(String[] args){
 		//Vars
 		int successfulLogins = 0;
@@ -51,7 +52,7 @@ public class SharedAuthDriver {
 
 		//Load work queue with threads
 		for (int i = 0; i < numSessions; i++) {
-			workQueue.push(new SessionExecutorThread(environmentCredentialer.getEnvironmentCredentials()));
+			workQueue.push(new SessionExecutorThread(environmentCredentialer.getEnvironmentCredentials(), "10000" + Integer.toString(i)));
 		}
 
 		if(!testSharedAuthOnly) {

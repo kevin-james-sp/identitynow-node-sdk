@@ -32,7 +32,7 @@ public class SharedAuthDriver {
 		long sharedAuthExecutionTime = 0;
 		int numSessions = args.length >= 2 ? Integer.valueOf(args[0]) : 1;
 		int numThreads = args.length >= 2 ? Integer.valueOf(args[1]) : 1;
-		boolean testSharedAuthOnly = args.length == 3 ? Boolean.parseBoolean(args[2]) : false;
+		boolean testSharedAuthOnly = args.length == 3 ? Boolean.parseBoolean(args[2]) : true;
 		Log4jUtils.boostrapLog4j(Level.INFO);
 
 		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
@@ -62,9 +62,6 @@ public class SharedAuthDriver {
 			log.info("======================================================================================================");
 
 			//Set flag to non shared auth service for comparison
-			_ffService.setFlagForOrg(false, FeatureFlagService.FEATURE_FLAGS.SSO_USE_LOGIN_SERVICE);
-			_ffService.setFlagForOrg(false, FeatureFlagService.FEATURE_FLAGS.PUBLISH_IDENTITIES_TO_IRIS);
-			_ffService.setFlagForOrg(false, FeatureFlagService.FEATURE_FLAGS.SHARED_AUTH_CONSUME_EVENTS);
 			_ffService.setFlagForOrg(false, FeatureFlagService.FEATURE_FLAGS.SHARED_AUTH_PTA);
 
 			//Time and execute
@@ -79,9 +76,6 @@ public class SharedAuthDriver {
 			log.info("======================================================================================================");
 
 			//Enable auth service
-			_ffService.setFlagForOrg(true, FeatureFlagService.FEATURE_FLAGS.SSO_USE_LOGIN_SERVICE);
-			_ffService.setFlagForOrg(true, FeatureFlagService.FEATURE_FLAGS.PUBLISH_IDENTITIES_TO_IRIS);
-			_ffService.setFlagForOrg(true, FeatureFlagService.FEATURE_FLAGS.SHARED_AUTH_CONSUME_EVENTS);
 			_ffService.setFlagForOrg(true, FeatureFlagService.FEATURE_FLAGS.SHARED_AUTH_PTA);
 		}
 

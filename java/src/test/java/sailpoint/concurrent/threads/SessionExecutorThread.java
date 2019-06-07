@@ -4,7 +4,6 @@ import sailpoint.services.idn.sdk.ClientCredentials;
 import sailpoint.services.idn.sdk.EnvironmentCredentialer;
 import sailpoint.services.idn.sdk.IdentityNowService;
 import sailpoint.services.idn.session.SessionType;
-import sailpoint.services.idn.session.UserInterfaceSession;
 
 import java.util.concurrent.Callable;
 
@@ -14,7 +13,8 @@ public class SessionExecutorThread implements Callable<Boolean> {
 	public SessionExecutorThread(){
 	}
 
-	public SessionExecutorThread(ClientCredentials envCreds){
+	public SessionExecutorThread(ClientCredentials envCreds, String user){
+		envCreds.setOrgUser(user);
 		this.envCreds = envCreds;
 	}
 
@@ -27,7 +27,6 @@ public class SessionExecutorThread implements Callable<Boolean> {
 			envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
 
 		System.out.println(thisName + " attempting to login to " + envCreds.getOrgName() + " UI as " + envCreds.getOrgUser() + " ...");
-		UserInterfaceSession uiSession = null;
 		// Note: we don't want a try-with-resources here b/c we're returning the UI session back to the caller.
 		try {
 			ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();

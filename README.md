@@ -15,7 +15,7 @@ There are several sub-projects under this GitHub repository, including both Java
 
 |Function       |Description            |
 |---------------|-----------------------|
-|Build System 	|Gradle v4.7            |
+|Build System 	|Gradle v4.9            |
 |ogging System  |Log4j v2.11.0 or better|
 |HTTP Client  	|OkHttp3 from Square    |
 |JSON Library 	|GSON                   |

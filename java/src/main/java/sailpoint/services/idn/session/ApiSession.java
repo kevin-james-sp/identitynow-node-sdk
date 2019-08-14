@@ -1,11 +1,21 @@
 package sailpoint.services.idn.session;
 
 import java.io.IOException;
+import java.net.CookieManager;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.google.gson.Gson;
 
+import okhttp3.ConnectionPool;
+import okhttp3.FormBody;
+import okhttp3.Interceptor;
+import okhttp3.JavaNetCookieJar;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -28,6 +38,8 @@ public class ApiSession extends SessionBase {
 	public static final String URL_SUFFIX_OAUTH_REVOKE = "/oauth/revoke";  // Log-off
 	
 	protected ApiClientAuthorization apiClientAuth = null;
+	
+	private OkHttpClient apiGatewayClient = null;
 	
 	public ApiSession (ClientCredentials clientCredentials) {
 		
@@ -115,5 +127,74 @@ public class ApiSession extends SessionBase {
 		return apiClientAuth.getAccessToken();
 	}
 	
+	@Override
+	public OkHttpClient getClient() {
+		
+		if (null != apiGatewayClient) return apiGatewayClient;
+		
+		OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
+		OkHttpUtils.applyTimeoutSettings(clientBuilder);
+		OkHttpUtils.applyLoggingInterceptors(clientBuilder);
+		OkHttpUtils.applyProxySettings(clientBuilder);
+		clientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
+		
+		// Experiment with re-using a single connection for up to 10 seconds.
+		ConnectionPool apiGwCxnPool = new ConnectionPool(1, 10, TimeUnit.SECONDS);
+		clientBuilder.connectionPool(apiGwCxnPool);
 
+		apiGatewayClient = clientBuilder.build();
+		
+		return apiGatewayClient;
+	}
+	
+	public String doApiGet (String apiUrlSuffix) {
+		
+		String apiUrl = getApiGatewayUrl() + apiUrlSuffix;
+		
+		HashMap<String,String> apiHeadersMap = new HashMap<String,String>();
+		apiHeadersMap.put("Authorization", "Bearer " + this.accessToken);
+		// apiHeadersMap.put("User-Agent", OkHttpUtils.getUserAgent());
+		
+		try (Response response = doGet(apiUrl, getClient(), apiHeadersMap, null)) {
+			return extractResponseString(response);
+		} catch (IOException e) {
+			log.error("Failure while calling " + apiUrl, e);
+			return null;
+		}
+		
+	}
+
+	public String doApiPost (String apiUrlSuffix, Map<String,String> form) {
+		String apiUrl = getApiGatewayUrl() + apiUrlSuffix;
+
+		HashMap<String,String> apiHeadersMap = new HashMap<String,String>();
+		apiHeadersMap.put("Authorization", "Bearer " + this.accessToken);
+
+		FormBody.Builder formBodyBuilder = new FormBody.Builder();
+		for (String key : form.keySet()) {
+			formBodyBuilder.add(key, form.get(key));
+		}
+
+		try(Response response = doPost(apiUrl, formBodyBuilder.build(), getClient(), apiHeadersMap, null)) {
+			return extractResponseString(response);
+		} catch (IOException e) {
+			log.error("Failure while calling " + apiUrl, e);
+			return null;
+		}
+
+	}
+
+	private String extractResponseString(Response response) throws IOException {
+		if (!response.isSuccessful()) {
+			log.error(response.code() + " while calling " + response.request().url().toString());
+		}
+		String responseJson = response.body().string();
+		response.body().close();
+		// Spare the expensive string concat if we can:
+		if (log.isDebugEnabled()) {
+			log.debug(response.request().url().toString() + ": " + responseJson);
+		}
+		return responseJson;
+	}
+	
 }

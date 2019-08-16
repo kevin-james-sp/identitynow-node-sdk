@@ -1,19 +1,17 @@
 package sailpoint.services.idn.sdk.services;
 
-import okhttp3.ResponseBody;
 import retrofit2.Call;
-import retrofit2.http.Field;
-import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.GET;
-import retrofit2.http.POST;
 import retrofit2.http.Query;
-import sailpoint.services.idn.sdk.object.identity.userList.UserList;
+import sailpoint.services.idn.sdk.object.identity.userList.Filters;
+import sailpoint.services.idn.sdk.object.identity.userList.IdentityList;
+import sailpoint.services.idn.sdk.object.identity.userList.Sorters;
 
 public interface IdentityService {
 	
-	@FormUrlEncoded
-	@POST( "/cc/api/user/invite" )
-	Call<ResponseBody> invite ( @Field( "ids" ) String userId );
+	//@FormUrlEncoded
+	//@POST( "/cc/api/user/invite" )
+	//Call<ResponseBody> invite ( @Field( "ids" ) String userId );
 	
 //	@POST( "/api/user/attestUsageCert" )
 //	Call<ResponseBody> attestUsageCert (  );
@@ -30,8 +28,8 @@ public interface IdentityService {
 //	@POST( "/api/user/enabled" ) 
 //	Call<ResponseBody> enabled ( );
 //	
-@GET( "/api/user/get" )
-Call<ResponseBody> get (@Query("_dc") long dc);
+//@GET( "/api/user/get" )
+//Call<ResponseBody> get (@Query("_dc") long dc);
 //	
 //	@GET( "/api/user/getExportReport" ) 
 //	Call<ResponseBody> getExportReport ( );
@@ -53,18 +51,16 @@ Call<ResponseBody> get (@Query("_dc") long dc);
 	// \"name\",\"value\":\"Support\"},{\"property\":\"alias\",\"value\":\"Support\"},{\"property\":\"email\",\"value\":\"Support\"}]}&limit=100&page=1&start=0&sorters=[{\"property\":\"name\",\"direction\":\"ASC\"}]"
 
 	@GET("/cc/api/user/list")
-	Call<UserList> list(@Query("_dc") long dc,
-	                    @Query("query") String query);
+	Call<IdentityList> list();
 
 	//Server accepts, but will fail with 504, not sure why..
 	@GET("/cc/api/user/list")
-	Call<UserList> customList(@Query("_dc") long dc,
-	                              @Query("query") String query,
-	                              @Query("filters") String filters,
+	Call<IdentityList> customList(@Query("query") String query,
+	                              @Query("filters") Filters filters,
 	                              @Query("limit") String limit,
 	                              @Query("page") String page,
 	                              @Query("start") String start,
-	                              @Query("sorters") String sorters);
+	                              @Query("sorters") Sorters sorters);
 
 	//
 //	@POST( "/api/user/preview" ) 

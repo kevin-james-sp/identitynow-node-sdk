@@ -36,7 +36,7 @@ public class Identity {
     @SerializedName("accountCount")
     public Integer accountCount;
 
-    @SerializedName("entitlementCount")
+	@SerializedName("entitlementCount")
     public Integer entitlementCount;
 	
 	@SerializedName("manager")
@@ -87,4 +87,75 @@ public class Identity {
     @SerializedName("synced")
     public String synced;
 
+	public String getId() {
+		return id;
+	}
+
+	public void setId(String id) {
+		this.id = id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getModified() {
+		return modified;
+	}
+
+	public void setModified(String modified) {
+		this.modified = modified;
+	}
+
+	public IdentityAttributes getAttributes() {
+		return attributes;
+	}
+
+	public void setAttributes(IdentityAttributes attributes) {
+		this.attributes = attributes;
+	}
+
+	public Integer getAccessCount() {
+		return accessCount;
+	}
+
+	public void setAccessCount(Integer accessCount) {
+		this.accessCount = accessCount;
+	}
+
+	public Integer getAccountCount() {
+		return accountCount;
+	}
+
+	public void setAccountCount(Integer accountCount) {
+		this.accountCount = accountCount;
+	}
+
+	public Integer getEntitlementCount() {
+		return entitlementCount;
+	}
+
+	public void setEntitlementCount(Integer entitlementCount) {
+		this.entitlementCount = entitlementCount;
+	}
+
+	public Identity getManager() {
+		return manager;
+	}
+
+	public void setManager(Boolean manager) {
+		isManager = manager;
+	}
+
+	public Integer getRoleCount() {
+		return roleCount;
+	}
+
+	public void setRoleCount(Integer roleCount) {
+		this.roleCount = roleCount;
+	}
 }

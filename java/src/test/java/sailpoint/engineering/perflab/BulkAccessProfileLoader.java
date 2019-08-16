@@ -84,8 +84,8 @@ public class BulkAccessProfileLoader {
 			for(int i = 0; i < profileCount; i++){
 
 				LinkedList<String> profileEntitlements = new LinkedList<>();
-				for(int j = 0 ; j < ThreadLocalRandom.current().nextInt(1, 4) ; j++){
-					profileEntitlements.push(entitlements.getItems().get(ThreadLocalRandom.current().nextInt(0, 201)).getId());
+				for(int j = 0 ; j < ThreadLocalRandom.current().nextInt(1, 12) ; j++){
+					profileEntitlements.push(entitlements.getItems().get(ThreadLocalRandom.current().nextInt(0, 200)).getId());
 				}
 				AccessProfile profile = new AccessProfile();
 				profile.setName("Bulk Profile " + i);

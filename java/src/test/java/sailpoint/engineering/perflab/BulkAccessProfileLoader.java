@@ -31,11 +31,13 @@ import java.util.concurrent.ThreadLocalRandom;
 public class BulkAccessProfileLoader {
 
 	public final static Logger log = LogManager.getLogger(BulkAccessProfileLoader.class);
-	private static final String PROFILE_COUNT = System.getProperty("AccessProfileCount", "100");
 	public static void main(String[] args) throws IOException {
 
 		//Creds and logger
 		Log4jUtils.boostrapLog4j(Level.DEBUG);
+
+		//pass desired number of profiles through main args
+		final String PROFILE_COUNT = args[0];
 
 		ClientCredentials envCreds = EnvironmentCredentialer.getEnvironmentCredentials();
 		IdentityNowService ids = new IdentityNowService(envCreds);
@@ -55,7 +57,7 @@ public class BulkAccessProfileLoader {
 				if(thisSource.getName().equals("Active Directory"))
 					profileSource = thisSource;
 			}
-			Assert.assertNotNull(profileSource);
+			Assert.assertNotNull("Unable to find correct source", profileSource);
 
 			EntitlementList entitlements = _entitlementService.list(200, profileSource.getExternalId()).execute().body();
 
@@ -68,12 +70,13 @@ public class BulkAccessProfileLoader {
 			LinkedList<Sorter> sorterList = new LinkedList<Sorter>();
 			sorterList.push(new Sorter("name", "ASC"));
 			Sorters sorters = new Sorters(sorterList);
-			IdentityList identityList = _identityService.customList("support", filters, "1", "1", "0", sorters).execute().body();
+			IdentityList identityList = _identityService.customList(String.valueOf(System.currentTimeMillis()),"support", filters, "1", "1", "0", sorters).execute().body();
 			Identity supportIdentity = null;
 			for(Identity thisIdentity : identityList.getItems()){
-				if(thisIdentity.getName().equals("Support"))
+				if(thisIdentity.getName().equals("SailPoint Support"))
 					supportIdentity = thisIdentity;
 			}
+			Assert.assertNotNull("Unable to find Support identity", supportIdentity);
 
 			log.info("Begin Profile upload...");
 			for(int i = 0; i < profileCount; i++){

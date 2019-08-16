@@ -6,6 +6,7 @@ import retrofit2.http.Query;
 import sailpoint.services.idn.sdk.object.identity.userList.Filters;
 import sailpoint.services.idn.sdk.object.identity.userList.IdentityList;
 import sailpoint.services.idn.sdk.object.identity.userList.Sorters;
+import sailpoint.services.idn.util.ToJson;
 
 public interface IdentityService {
 	
@@ -53,14 +54,14 @@ public interface IdentityService {
 	@GET("/cc/api/user/list")
 	Call<IdentityList> list();
 
-	//Server accepts, but will fail with 504, not sure why..
 	@GET("/cc/api/user/list")
-	Call<IdentityList> customList(@Query("query") String query,
-	                              @Query("filters") Filters filters,
+	Call<IdentityList> customList(@Query("_dc") String _dc,
+	                              @Query("query") String query,
+	                              @ToJson @Query("filters") Filters filters,
 	                              @Query("limit") String limit,
 	                              @Query("page") String page,
 	                              @Query("start") String start,
-	                              @Query("sorters") Sorters sorters);
+	                              @ToJson @Query("sorters") Sorters sorters);
 
 	//
 //	@POST( "/api/user/preview" ) 

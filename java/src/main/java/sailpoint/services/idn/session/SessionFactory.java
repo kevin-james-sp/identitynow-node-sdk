@@ -1,9 +1,7 @@
 package sailpoint.services.idn.session;
 
 
-import com.google.gson.Gson;
 import okhttp3.OkHttpClient;
-import retrofit2.Converter;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -11,11 +9,8 @@ import sailpoint.services.idn.sdk.ClientCredentials;
 import sailpoint.services.idn.sdk.EnvironmentCredentialer;
 import sailpoint.services.idn.sdk.interceptor.BasicAuthInterceptor;
 import sailpoint.services.idn.sdk.services.AuthorizationService;
-import sailpoint.services.idn.util.ToJson;
 
 import java.io.IOException;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Type;
 
 /**
  * Factory for creating various types of IdentityNow sessions.
@@ -33,11 +28,6 @@ import java.lang.reflect.Type;
  */
 public class SessionFactory {
 
-	/**
-	 * gson parser for parsing input objects to strings for sending http calls
-	 */
-	private static final Gson gson = new Gson();
-	
 	/**
 	 * Assemble an IdentityNow API session from configured environment.
 	 * @return
@@ -128,23 +118,6 @@ public class SessionFactory {
 
 		Retrofit retrofit = new Retrofit.Builder()
 				.baseUrl( url )
-				.addConverterFactory(new Converter.Factory() {
-					@Override
-					public Converter<?, String> stringConverter(final Type type, final Annotation[] annotations, final Retrofit retrofit) {
-						if (!hasToJson(annotations))
-							return super.stringConverter(type, annotations, retrofit);
-						return value -> gson.toJson(value, type);
-					}
-
-					private boolean hasToJson(final Annotation[] annotations){
-						for (final Annotation annotation : annotations){
-							if(annotation instanceof ToJson)
-								return true;
-						}
-					return false;
-
-					}
-				})
 				.addConverterFactory(GsonConverterFactory.create())
 				.client( client )
 				.build();

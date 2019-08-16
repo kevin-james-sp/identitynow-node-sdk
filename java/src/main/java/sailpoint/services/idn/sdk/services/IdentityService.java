@@ -6,7 +6,6 @@ import retrofit2.http.Query;
 import sailpoint.services.idn.sdk.object.identity.userList.Filters;
 import sailpoint.services.idn.sdk.object.identity.userList.IdentityList;
 import sailpoint.services.idn.sdk.object.identity.userList.Sorters;
-import sailpoint.services.idn.util.ToJson;
 
 public interface IdentityService {
 	
@@ -57,11 +56,11 @@ public interface IdentityService {
 	@GET("/cc/api/user/list")
 	Call<IdentityList> customList(@Query("_dc") String _dc,
 	                              @Query("query") String query,
-	                              @ToJson @Query("filters") Filters filters,
+	                              @Query("filters") Filters filters,
 	                              @Query("limit") String limit,
 	                              @Query("page") String page,
 	                              @Query("start") String start,
-	                              @ToJson @Query("sorters") Sorters sorters);
+	                              @Query("sorters") Sorters sorters);
 
 	//
 //	@POST( "/api/user/preview" ) 

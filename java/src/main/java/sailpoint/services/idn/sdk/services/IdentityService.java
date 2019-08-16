@@ -3,9 +3,7 @@ package sailpoint.services.idn.sdk.services;
 import retrofit2.Call;
 import retrofit2.http.GET;
 import retrofit2.http.Query;
-import sailpoint.services.idn.sdk.object.identity.userList.Filters;
 import sailpoint.services.idn.sdk.object.identity.userList.IdentityList;
-import sailpoint.services.idn.sdk.object.identity.userList.Sorters;
 
 public interface IdentityService {
 	
@@ -56,11 +54,11 @@ public interface IdentityService {
 	@GET("/cc/api/user/list")
 	Call<IdentityList> customList(@Query("_dc") String _dc,
 	                              @Query("query") String query,
-	                              @Query("filters") Filters filters,
+	                              @Query("filters") String filters,
 	                              @Query("limit") String limit,
 	                              @Query("page") String page,
 	                              @Query("start") String start,
-	                              @Query("sorters") Sorters sorters);
+	                              @Query("sorters") String sorters);
 
 	//
 //	@POST( "/api/user/preview" ) 

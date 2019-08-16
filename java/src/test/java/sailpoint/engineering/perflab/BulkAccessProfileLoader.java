@@ -1,5 +1,6 @@
 package sailpoint.engineering.perflab;
 
+import com.google.gson.Gson;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -45,6 +46,7 @@ public class BulkAccessProfileLoader {
 		log.info("Session created");
 
 		try{
+			Gson gson = new Gson();
 			AccessProfileService _profileService = ids.getAccessProfileService();
 			EntitlementService _entitlementService = ids.getEntitlementService();
 			SourceService _sourceService = ids.getSourceService();
@@ -70,7 +72,7 @@ public class BulkAccessProfileLoader {
 			LinkedList<Sorter> sorterList = new LinkedList<Sorter>();
 			sorterList.push(new Sorter("name", "ASC"));
 			Sorters sorters = new Sorters(sorterList);
-			IdentityList identityList = _identityService.customList(String.valueOf(System.currentTimeMillis()),"support", filters, "1", "1", "0", sorters).execute().body();
+			IdentityList identityList = _identityService.customList(String.valueOf(System.currentTimeMillis()),"support", gson.toJson(filters), "1", "1", "0", gson.toJson(sorters)).execute().body();
 			Identity supportIdentity = null;
 			for(Identity thisIdentity : identityList.getItems()){
 				if(thisIdentity.getName().equals("SailPoint Support"))

@@ -3,7 +3,7 @@ package sailpoint.services.idn.sdk.object.identity.userList;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
-public class Item {
+public class Identity {
 
 	@SerializedName("id")
 	@Expose

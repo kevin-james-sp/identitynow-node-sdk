@@ -103,7 +103,7 @@ public final class IdentityNowService {
 	}
 	
 	public IdentityService getIdentityService() throws IOException {
-		return getService( IdentityService.class );
+		return getService( IdentityService.class, ServiceTypes.GATEWAY );
 	}
 	
 	public ReportService getReportService() throws IOException {

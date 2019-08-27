@@ -7,7 +7,7 @@ import sailpoint.services.idn.sdk.object.accessprofile.AccessProfile;
 
 public interface AccessProfileService {
 
-	@POST
+	@POST("/v2/access-profiles")
 	Call<AccessProfile> accessProfile(@Body AccessProfile accessProfile);
 
 }

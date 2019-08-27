@@ -27,7 +27,7 @@ import java.io.IOException;
  *
  */
 public class SessionFactory {
-	
+
 	/**
 	 * Assemble an IdentityNow API session from configured environment.
 	 * @return
@@ -117,10 +117,10 @@ public class SessionFactory {
 			.build();
 
 		Retrofit retrofit = new Retrofit.Builder()
-			.baseUrl( url )
-			.addConverterFactory( GsonConverterFactory.create() )
-			.client( client )
-			.build();
+				.baseUrl( url )
+				.addConverterFactory(GsonConverterFactory.create())
+				.client( client )
+				.build();
 
 		return retrofit.create( serviceClass );
 	}

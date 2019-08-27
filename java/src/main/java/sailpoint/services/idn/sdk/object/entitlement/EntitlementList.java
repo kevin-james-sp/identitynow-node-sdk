@@ -11,4 +11,20 @@ public class EntitlementList {
 
     @SerializedName("items")
     public List<Entitlement> items;
+
+    public int getCount() {
+        return count;
+    }
+
+    public void setCount(int count) {
+        this.count = count;
+    }
+
+    public List<Entitlement> getItems() {
+        return items;
+    }
+
+    public void setItems(List<Entitlement> items) {
+        this.items = items;
+    }
 }

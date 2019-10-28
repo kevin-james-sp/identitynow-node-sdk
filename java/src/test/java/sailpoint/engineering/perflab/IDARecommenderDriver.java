@@ -226,7 +226,6 @@ public class IDARecommenderDriver {
 						numServiceUnavailable++;
 					log.error("A call failed for http: " + metric.get().getResponseCode());
 					numFailed++;
-					break;
 				}
 			}
 

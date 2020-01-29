@@ -85,7 +85,7 @@ public class EnvironmentCredentialer {
 		creds.setClientId    (System.getProperty("clientId",     cfProps.getProperty("clientId")));
 		creds.setClientSecret(System.getProperty("clientSecret", cfProps.getProperty("clientSecret")));
 		creds.setKbaDefault  (System.getProperty("kbaDefault",   cfProps.getProperty("kbaDefault")));
-		creds.setKbaDefault  (System.getProperty("persAccToken", cfProps.getProperty("persAccToken")));
+		creds.setPersAccTkn  (System.getProperty("persAccToken", cfProps.getProperty("persAccToken")));
 		
 		// The 'password' property for some reason needs to be treated specially.
 		String sysPassword = System.getProperty("password");

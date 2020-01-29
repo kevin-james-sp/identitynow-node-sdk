@@ -7,7 +7,7 @@ public class UiLoginGetResponse {
 	@SerializedName("ssoServerUrl")
 	String ssoServerUrl;
 
-	@SerializedName("goToOnFail")
+	@SerializedName("gotoOnFail")
 	String goToOnFail;
 
 	@SerializedName("loginUrl")

@@ -2,18 +2,14 @@ package sailpoint.services.idn.sdk.scaffolding;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 import org.apache.logging.log4j.Level;
 
-import okhttp3.OkHttpClient;
 import sailpoint.services.idn.console.Log4jUtils;
+import sailpoint.services.idn.sdk.ClientCredentials;
 import sailpoint.services.idn.sdk.EnvironmentCredentialer;
 import sailpoint.services.idn.sdk.IdentityNowService;
 import sailpoint.services.idn.sdk.object.Identity;
-import sailpoint.services.idn.session.ApiSession;
-import sailpoint.services.idn.session.OkHttpUtils;
 import sailpoint.services.idn.session.SessionBase;
 import sailpoint.services.idn.session.SessionType;
 import sailpoint.services.idn.session.UserInterfaceSession;
@@ -23,50 +19,23 @@ import sailpoint.services.idn.session.UserInterfaceSession;
  * @author adam.hampton
  *
  */
-public class GetSSOSettingsScaffolding {
+public class StepUpScaffolding {
 
 	public static void main(String[] args) {
-
+		
 		Log4jUtils.boostrapLog4j(Level.DEBUG);
-
+		
 		try {
 			
 			IdentityNowService ids = new IdentityNowService(
 					EnvironmentCredentialer.getEnvironmentCredentials()
 			);
 			System.out.println("Authenticating ...");
-			
-			ApiSession session = (ApiSession) ids.createSession(SessionType.SESSION_TYPE_API_WITH_USER);
+			UserInterfaceSession session = (UserInterfaceSession) ids.createSession(SessionType.SESSION_TYPE_UI_USER_BASIC, true);
+			session.open();
+			session.stronglyAuthenticate();
 			System.out.println("getUniqueId: " + session.getUniqueId());
-			
-			session.getClient();
-			
-			String getResponse = session.doApiGet("/cc/api/org/setSSOSettings");
-			
-			Map<String,String> formData = new TreeMap<String,String>();
-			formData.put("enableRemoteIdp", "true");
-			formData.put("ssoIdpAllowDirectLogin", "true");
-			/*
-			ssoIdpEntityID
-			ssoIdpLoginUrl
-			ssoIdpLoginRedirectUrl
-			ssoIdpLogoutUrl
-			ssoIdpMappingAttribute
-			ssoIdpNameIdFormat
-			ssoIdpRequestBinding
-			ssoIdpRequestedAuthnContext
-			ssoIdpExcludeReqAuthnContext
-			certificateName
-			certificateExpirationDate
-			certificateMissing
-			signingCertificate
-			enableHostedSp
-			config
-			*/
-			
-			String putResponse = session.doApiPost("/cc/api/org/setSSOSettings", formData);
-			
-			System.out.println("putResponse: " + putResponse);
+			System.out.println("Done!");
 			
 			// SearchService searchService = ids.getSearchService();
 			// List<Identity> idList = searchService.searchIdentities(50, 0, "id=99999").execute().body();

@@ -57,9 +57,6 @@ public class User {
 	@SerializedName("name")
 	public String name;
 	
-	@SerializedName("kbaReqForAuthn")
-	public int kbaReqForAuthn;
-	
 	@SerializedName("org")
 	public UiOrgData org;
 
@@ -93,14 +90,6 @@ public class User {
 
 	public void setName(String name) {
 		this.name = name;
-	}
-
-	public int getKbaReqForAuthn() {
-		return kbaReqForAuthn;
-	}
-
-	public void setKbaReqForAuthn(int kbaReqForAuthn) {
-		this.kbaReqForAuthn = kbaReqForAuthn;
 	}
 
 	public UiOrgData getOrg() {

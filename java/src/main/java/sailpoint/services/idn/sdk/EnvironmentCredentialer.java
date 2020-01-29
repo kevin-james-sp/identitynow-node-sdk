@@ -66,7 +66,6 @@ public class EnvironmentCredentialer {
 		
 	}
 	
-
 	/**
 	 * Access the JVM environment and extract the credentials to contact IdentityNow. 
 	 * @return
@@ -86,8 +85,8 @@ public class EnvironmentCredentialer {
 		creds.setClientId    (System.getProperty("clientId",     cfProps.getProperty("clientId")));
 		creds.setClientSecret(System.getProperty("clientSecret", cfProps.getProperty("clientSecret")));
 		creds.setKbaDefault  (System.getProperty("kbaDefault",   cfProps.getProperty("kbaDefault")));
-
-
+		creds.setKbaDefault  (System.getProperty("persAccToken", cfProps.getProperty("persAccToken")));
+		
 		// The 'password' property for some reason needs to be treated specially.
 		String sysPassword = System.getProperty("password");
 		String cfgPassword = cfProps.getProperty("password");

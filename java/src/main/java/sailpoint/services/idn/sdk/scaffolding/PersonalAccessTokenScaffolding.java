@@ -98,7 +98,7 @@ public class PersonalAccessTokenScaffolding {
 					log.debug(response.request().url().toString() + ": " + responseJson);
 				}
 				PersonalAccessTokenResponse patRsp = gson.fromJson(responseJson, PersonalAccessTokenResponse.class);
-				log.debug("Personal Access Token secret:" + patRsp.getSecret());
+				System.out.println("Personal Access Token secret:" + patRsp.getSecret());
 			} catch (IOException e) {
 				log.error("Failure while calling " + patApiSuffix, e);
 			}

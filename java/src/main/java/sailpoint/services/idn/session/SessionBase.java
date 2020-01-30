@@ -6,6 +6,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import sailpoint.services.idn.sdk.ClientCredentials;
+import sailpoint.services.idn.sdk.object.OAuthJwtResponse;
 
 import java.io.IOException;
 import java.net.HttpCookie;
@@ -33,6 +34,16 @@ public class SessionBase implements java.lang.AutoCloseable {
 	protected int expiresIn = -1;
 	protected boolean isAthenticated = false;
 	
+	protected OAuthJwtResponse oAuthBearerJwt = null;
+	
+	public OAuthJwtResponse getOAuthBearerJwt() {
+		return oAuthBearerJwt;
+	}
+
+	public void setOAuthBearerJwt(OAuthJwtResponse oAuthBearerJwt) {
+		this.oAuthBearerJwt = oAuthBearerJwt;
+	}
+
 	public SessionBase (ClientCredentials clientCredentials) {
 		if (null == clientCredentials.getOrgName()) {
 			throw new IllegalArgumentException("ClientCredentials must contain an Organization Name to construct a Session.");

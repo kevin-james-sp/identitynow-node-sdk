@@ -59,11 +59,15 @@ public class SessionFactory {
 	 */
 	public static SessionBase createSession (ClientCredentials clientCreds, SessionType sessionType) {
 		switch (sessionType) {
-//		case SESSION_TYPE_ADMIN_API_STRONG_AUTHN:
-//			break;
+		case SESSION_TYPE_UI_USER_STRONG_AUTHN:
+		case SESSION_TYPE_ADMIN_API_STRONG_AUTHN:
+			UserInterfaceSession uiSess = new UserInterfaceSession(clientCreds);
+			uiSess.stronglyAuthenticate();
+			return uiSess;
 		case SESSION_TYPE_UI_USER_BASIC:
 			return new UserInterfaceSession(clientCreds);
 		default:
+		case SESSION_TYPE_PERSONAL_ACCESS_TOKEN:
 		case SESSION_TYPE_API_ONLY:
 			return new ApiSession(clientCreds);
 		}		

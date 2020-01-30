@@ -29,6 +29,8 @@ public class ClientCredentials extends ConcurrentHashMap<String,String> {
 	public static final String JWT_TOKEN     = "jwtToken";     // The JWT Token created for the client when authenticated.
 	public static final String EXPIRES_IN    = "expiresIn";    // The expiration time for the JWT token.
 	public static final String KBA_DEFAULT   = "kbaDefault";   // The default answer to Knowledge Based Authentication questions for strong auth-n.
+	public static final String PERS_ACC_TKN  = "persAccToken"; // Personal access token ID for use-associated API calls.
+	public static final String PERS_ACC_SCR  = "persAccTkScr"; // Personal access token Secret for use-associated API calls.
 	
 	// Maintain a mapping of Knowledge Based Authentication question substring to answer text.
 	// Environment parameters like: kbaQ_1, kbaA_1, kbaQ_2, kbaA_2, etc.
@@ -87,6 +89,8 @@ public class ClientCredentials extends ConcurrentHashMap<String,String> {
 	public String getJWTToken()     { return this.get(JWT_TOKEN);     }
 	public String getExpiresIn()    { return this.get(EXPIRES_IN);    }
 	public String getKbaDefault()   { return this.get(KBA_DEFAULT);   }
+	public String getPersAccTkn()   { return this.get(PERS_ACC_TKN);  }
+	public String getPersAccScr()   { return this.get(PERS_ACC_SCR);  }
 	
 	/**
 	 * Returns the org's script name to the caller.  
@@ -127,6 +131,8 @@ public class ClientCredentials extends ConcurrentHashMap<String,String> {
 	public void setJWTToken(String arg)     { setFieldWithNull(JWT_TOKEN,      arg); }
 	public void setExpiresIn(String arg)    { setFieldWithNull(EXPIRES_IN,     arg); }
 	public void setKbaDefault(String arg)   { setFieldWithNull(KBA_DEFAULT,    arg); }
+	public void setPersAccTkn(String arg)   { setFieldWithNull(PERS_ACC_TKN,   arg); }
+	public void setPersAccScr(String arg)   { setFieldWithNull(PERS_ACC_SCR,   arg); }
 	
 	/** 
 	 * The API Gateway URL for IdentityNow organizations is strictly derived 
@@ -239,6 +245,17 @@ public class ClientCredentials extends ConcurrentHashMap<String,String> {
 		if (null == getClientSecret()) return false;
 		return true;
 		
+	}
+	
+	/**
+	 * Tell the caller if the credentials set has a Personal Access token available.
+	 * A personal access token can invoke APIs with a user's access model in context.
+	 * @return
+	 */
+	public boolean hasPersonalAccessToken() {
+		if (null == getPersAccTkn()) return false;
+		if (null == getPersAccScr()) return false;
+		return true;
 	}
 
 }

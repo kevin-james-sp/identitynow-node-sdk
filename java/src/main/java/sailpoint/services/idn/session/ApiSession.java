@@ -2,6 +2,7 @@ package sailpoint.services.idn.session;
 
 import java.io.IOException;
 import java.net.CookieManager;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,7 @@ import com.google.gson.Gson;
 
 import okhttp3.ConnectionPool;
 import okhttp3.FormBody;
+import okhttp3.HttpUrl;
 import okhttp3.Interceptor;
 import okhttp3.JavaNetCookieJar;
 import okhttp3.MediaType;
@@ -24,6 +26,7 @@ import okhttp3.Response;
 import sailpoint.services.idn.sdk.ClientCredentials;
 import sailpoint.services.idn.sdk.interceptor.ApiCredentialsBasicAuthInterceptor;
 import sailpoint.services.idn.sdk.object.ApiClientAuthorization;
+import sailpoint.services.idn.sdk.object.OAuthJwtResponse;
 
 /** 
  * A Session model for an API Gateway based IdentityNow session.
@@ -44,6 +47,13 @@ public class ApiSession extends SessionBase {
 	public ApiSession (ClientCredentials clientCredentials) {
 		
 		super (clientCredentials);
+		
+		// If we have a personal access token then use it for all of our API calls.
+		String pat = clientCredentials.getPersAccTkn();
+		if ((null !=  pat && 0 < pat.length())) {
+			this.setSessionType(SessionType.SESSION_TYPE_PERSONAL_ACCESS_TOKEN);
+			return;
+		}
 		
 		// Sanity check the arguments passed in.
 		String clientId = clientCredentials.getClientId();
@@ -67,6 +77,64 @@ public class ApiSession extends SessionBase {
 	public SessionBase open() throws IOException {
 		
 		String oAuthUrl = creds.getGatewayUrl() + URL_SUFFIX_OAUTH_TOKEN;
+		
+		// If we have a personal access token then handle this differently.
+		// See: https://community.sailpoint.com/t5/IdentityNow-Wiki/Best-Practice-Using-Personal-Access-Tokens-in-IdentityNow/ta-p/150471#
+		// We do an Oauth2.0 request with the personal access token to get a JWT.
+		if (	
+				(this.sessionType == SessionType.SESSION_TYPE_PERSONAL_ACCESS_TOKEN) &&
+				(creds.hasPersonalAccessToken())
+		) {
+			log.debug("Using Personal Access Token for OAuth 2.0 Token Request.");
+			this.setAccessToken(creds.getPersAccTkn());
+			
+			// POST https://{tenant}.api.identitynow.com/oauth/token?grant_type=client_credentials&client_id={client_id}&client_secret={client_secret}
+			HttpUrl url = HttpUrl.parse(oAuthUrl).newBuilder()
+					.addQueryParameter("grant_type",   "client_credentials")
+					.addQueryParameter("client_id",     creds.getPersAccTkn())
+					.addQueryParameter("client_secret", creds.getPersAccScr())
+					.build();
+			
+			OkHttpClient client = new OkHttpClient.Builder().build();
+			
+			RequestBody emptyPostBody = RequestBody.create(null, new byte[]{});
+			
+			Request.Builder reqBuilder = new Request.Builder();
+			reqBuilder.url(url);
+			reqBuilder.addHeader("User-Agent", OkHttpUtils.getUserAgent());
+			reqBuilder.addHeader("Accept", "*/*");
+			reqBuilder.addHeader("cache-control", "no-cache");
+			reqBuilder.post(emptyPostBody);
+			
+			Request request = reqBuilder.build();
+			
+			String responseJson = null;
+			
+			try (Response response = OkHttpUtils.callWithRetires(client, request)) {
+				log.debug(String.format(
+						"Sending body-free OAuth 2.0 token POST to %s with PAT id %s:%s",
+						url,
+						creds.getPersAccTkn(),
+						creds.getPersAccScr()
+				));
+				responseJson = response.body().string();
+				log.info("responseJson: " + responseJson);
+				
+				OAuthJwtResponse oajr = new Gson().fromJson(responseJson, OAuthJwtResponse.class);
+				this.setOAuthBearerJwt(oajr);
+				this.setAccessToken(oajr.getAccessToken());
+				this.setExpiresIn(oajr.getExpiresIn());
+				creds.setJWTToken(oajr.getAccessToken());
+				
+				log.debug("OAuth Access Token: " + oajr.getAccessToken());
+				
+			} catch (IOException e) {
+				log.error("Failure while calling " + oAuthUrl + " to login. ", e);
+				throw e;
+			}
+			
+			return this;
+		}
 		
 		// TODO: Hook in here to honor proxy stuff; we're going to need a global clientBuilder.
 		// Construct our OkHttpClient with pro-active Authorization header injection.
@@ -123,6 +191,7 @@ public class ApiSession extends SessionBase {
 	
 	@Override
 	public String getUniqueId() {
+		if (creds.hasPersonalAccessToken()) return creds.getPersAccTkn();
 		if (null == apiClientAuth) return null;
 		return apiClientAuth.getAccessToken();
 	}

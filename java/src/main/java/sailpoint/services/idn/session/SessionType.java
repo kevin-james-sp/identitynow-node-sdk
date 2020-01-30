@@ -26,6 +26,15 @@ public enum SessionType {
 	SESSION_TYPE_API_ONLY,
 	
 	/**
+	 * An API session with a personal access token for accessing the IdentityNow
+	 * org/tenant.  This type of session always has a user in context when making
+	 * calls into IdentityNow.  This requires having either a specified token
+	 * in the credentials file and/or having the user/password/kba fields 
+	 * present to create one.
+	 */
+	SESSION_TYPE_PERSONAL_ACCESS_TOKEN,
+	
+	/**
 	 * API with User credentials in context to create an OAuth token for the 
 	 * session.
 	 */	

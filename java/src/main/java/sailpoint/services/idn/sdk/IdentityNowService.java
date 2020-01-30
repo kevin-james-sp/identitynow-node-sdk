@@ -44,6 +44,13 @@ public final class IdentityNowService {
 		this.session = null;
 	}
     
+    public IdentityNowService( String url, String personalAccessToken) {
+    	this.creds = new ClientCredentials();
+    	creds.setUserIntUrl(url);
+    	creds.setPersAccTkn(personalAccessToken);
+    	this.session = null;
+    }
+    
     /**
      * Construct an IdentityNow service using caller supplied ClientCredentials.
      * @param clientCredentials
@@ -69,6 +76,9 @@ public final class IdentityNowService {
 	}
 
 	public SessionBase createSession(SessionType sessionType) throws IOException {
+		if (SessionType.SESSION_TYPE_UI_USER_STRONG_AUTHN == sessionType) {
+			return createSession(sessionType, true);
+		}
 		return createSession(sessionType, false);
 	}
 
@@ -81,8 +91,6 @@ public final class IdentityNowService {
 		return this.session;
 	}
 
-
-  
 	public <S> S getService ( Class<S> serviceClass ) throws IOException {
 		return getService(serviceClass, ServiceTypes.UI);
 	}

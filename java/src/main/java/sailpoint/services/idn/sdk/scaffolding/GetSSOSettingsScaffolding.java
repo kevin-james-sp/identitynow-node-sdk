@@ -35,11 +35,18 @@ public class GetSSOSettingsScaffolding {
 					EnvironmentCredentialer.getEnvironmentCredentials()
 			);
 			System.out.println("Authenticating ...");
-			ApiSession session = (ApiSession) ids.createSession(SessionType.SESSION_TYPE_API_WITH_USER);
+			
+			ApiSession session = (ApiSession) ids.createSession(SessionType.SESSION_TYPE_PERSONAL_ACCESS_TOKEN);
 			System.out.println("getUniqueId: " + session.getUniqueId());
 			
-			String getResponse = session.doApiGet("/cc/api/org/setSSOSettings");
+			session.getClient();
 			
+			String getResponse = session.doApiGet("/cc/api/org/getSSOSettings");
+			
+			/// This causes a 405:
+			// String getResponse = session.doApiGet("/cc/api/org/setSSOSettings");
+			
+			/*
 			Map<String,String> formData = new TreeMap<String,String>();
 			formData.put("enableRemoteIdp", "true");
 			formData.put("ssoIdpAllowDirectLogin", "true");
@@ -59,11 +66,12 @@ public class GetSSOSettingsScaffolding {
 			signingCertificate
 			enableHostedSp
 			config
-			*/
+			
 			
 			String putResponse = session.doApiPost("/cc/api/org/setSSOSettings", formData);
 			
 			System.out.println("putResponse: " + putResponse);
+			*/
 			
 			// SearchService searchService = ids.getSearchService();
 			// List<Identity> idList = searchService.searchIdentities(50, 0, "id=99999").execute().body();

@@ -20,6 +20,7 @@ import sailpoint.services.idn.sdk.ClientCredentials;
 import sailpoint.services.idn.sdk.EnvironmentCredentialer;
 import sailpoint.services.idn.sdk.object.UiKbaQuestion;
 import sailpoint.services.idn.sdk.object.UiLoginGetResponse;
+import sailpoint.services.idn.sdk.object.UiOrgData;
 import sailpoint.services.idn.sdk.object.UiSailpointGlobals;
 import sailpoint.services.idn.sdk.object.UiSessionToken;
 import sailpoint.services.idn.sdk.object.UiStrongAuthMethod;
@@ -112,6 +113,9 @@ public class UserInterfaceSession extends SessionBase {
 	
 	@Override
 	public String getUniqueId() {
+		if (null != accessToken) { 
+			return accessToken;
+		}
 		return ccSessionId;
 	}
 
@@ -972,7 +976,8 @@ public class UserInterfaceSession extends SessionBase {
 		response = null;
 		
 		User user = gson.fromJson(userGetJson, User.class);
-		log.debug("kbaReqForAuthn: " + user.getKbaReqForAuthn());
+		UiOrgData org = user.getOrg();
+		log.debug("user.org.kbaReqForAuthn: " + org.getKbaReqForAuthn());
 		
 		// Strong Authentication payloads are sent as a JSON array of hashed
 		// toLowerCase() answers paired with the ID string of the KBA question 
@@ -983,8 +988,18 @@ public class UserInterfaceSession extends SessionBase {
 		// ]
 		// We put this in a "scrubbedQuestions" list that only has IDs and Answer strings.
 		
+		
 		// Apply the user's answer and submit the strong authentication back up to the UI.
 		ClientCredentials creds = getCredentials();
+		/*
+		log.debug(String.format(
+				"User %s credsAnswers:%d kbaDefault:%s",
+				creds.getOrgUser(),
+				creds.getKbaQuestionTexts().size(),
+				creds.getKbaDefault()
+		));
+		*/
+		
 		ArrayList<UiKbaQuestion> scrubbedQuestions = new ArrayList<UiKbaQuestion>();
 		for (UiKbaQuestion kbaQuestion : answeredKbaQuestions) {
 			String answer = creds.getKbaAnswer(kbaQuestion.getText());
@@ -1005,7 +1020,7 @@ public class UserInterfaceSession extends SessionBase {
 		String scrubbedQJsonArrayString = gson.toJson(scrubbedQuestions);
 		log.debug("scrubbedQJsonArrayString: '" + scrubbedQJsonArrayString + "'");
 		if (10 > scrubbedQJsonArrayString.length()) {
-			log.error("Extremely short scrubbedQJsonArrayString: '" + scrubbedQJsonArrayString + "', probably invalid.");
+			log.error("Extremely short scrubbedQJsonArrayString: '" + scrubbedQJsonArrayString + "', probably invalid. NO KBA answers or kbaDefault found!");
 		}
 		
 		// Submit the Strong Authn payload.  Note that this call is made directly
@@ -1137,6 +1152,11 @@ public class UserInterfaceSession extends SessionBase {
 		}
 		
 	}
+	
+	@Override
+	public OkHttpClient getClient() {
+		return getApiGatewayOkClient();
+	}
 
 	public String doApiPost (String apiUrlSuffix, Map<String,String> form) {
 		String apiUrl = getApiGatewayUrl() + apiUrlSuffix;
@@ -1170,5 +1190,6 @@ public class UserInterfaceSession extends SessionBase {
 		}
 		return responseJson;
 	}
+	
 
 }

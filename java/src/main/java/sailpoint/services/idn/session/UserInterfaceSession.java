@@ -1152,6 +1152,11 @@ public class UserInterfaceSession extends SessionBase {
 		}
 		
 	}
+	
+	@Override
+	public OkHttpClient getClient() {
+		return getApiGatewayOkClient();
+	}
 
 	public String doApiPost (String apiUrlSuffix, Map<String,String> form) {
 		String apiUrl = getApiGatewayUrl() + apiUrlSuffix;
@@ -1185,5 +1190,6 @@ public class UserInterfaceSession extends SessionBase {
 		}
 		return responseJson;
 	}
+	
 
 }

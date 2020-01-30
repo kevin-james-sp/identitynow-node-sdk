@@ -45,6 +45,13 @@ public class ApiSession extends SessionBase {
 		
 		super (clientCredentials);
 		
+		// If we have a personal access token then use it for all of our API calls.
+		String pat = clientCredentials.getPersAccTkn();
+		if ((null !=  pat && 0 < pat.length())) {
+			this.setSessionType(SessionType.SESSION_TYPE_PERSONAL_ACCESS_TOKEN);
+			return;
+		}
+		
 		// Sanity check the arguments passed in.
 		String clientId = clientCredentials.getClientId();
 		if ((null == clientId) || (0 == clientId.length())) {
@@ -67,6 +74,11 @@ public class ApiSession extends SessionBase {
 	public SessionBase open() throws IOException {
 		
 		String oAuthUrl = creds.getGatewayUrl() + URL_SUFFIX_OAUTH_TOKEN;
+		
+		// TODO: If we have a personal access token then handle this differently.
+		if (this.sessionType == SessionType.SESSION_TYPE_PERSONAL_ACCESS_TOKEN) {
+			log.error("TODO: Change open() behavior for using Personal Access Tokens");
+		}
 		
 		// TODO: Hook in here to honor proxy stuff; we're going to need a global clientBuilder.
 		// Construct our OkHttpClient with pro-active Authorization header injection.

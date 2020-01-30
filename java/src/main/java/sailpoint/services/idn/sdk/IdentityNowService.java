@@ -91,8 +91,6 @@ public final class IdentityNowService {
 		return this.session;
 	}
 
-
-  
 	public <S> S getService ( Class<S> serviceClass ) throws IOException {
 		return getService(serviceClass, ServiceTypes.UI);
 	}

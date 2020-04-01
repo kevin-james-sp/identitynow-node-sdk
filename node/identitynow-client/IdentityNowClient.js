@@ -40,7 +40,9 @@ IdentityNowClient.prototype.token = function( config ) {
     } else {
         // Check if we have a token for the default credentials; otherwise we'll need to go grab one
         if (this.accesstoken!=null) {
-            return this.accesstoken;
+            return {
+                token: this.accesstoken
+            };
         }
         client_id = this.client_id;
         client_secret = this.client_secret;
@@ -69,5 +71,21 @@ IdentityNowClient.prototype.userToken = async function() {
 
 }
 
+function doGet( client, url, token ) {
+
+    console.log('doGet: '+url);
+    return client.get( url, {
+        headers: {
+            Authorization: 'Bearer '+token.token
+        }
+    })
+
+}
+
+IdentityNowClient.prototype.get = function( url ) {
+
+    return this.token().then( doGet.bind(null, this.client, url) );
+
+}
 
 module.exports=IdentityNowClient;

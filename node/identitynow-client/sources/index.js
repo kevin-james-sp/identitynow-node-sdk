@@ -1,17 +1,24 @@
 var client;
 
-exports.configure = function( client ) {
+function Sources( client ) {
 
-    console.log("sources.constructor");
     this.client=client;
 
 }
 
-exports.get = function ( id ) {
+
+Sources.prototype.get = async function get ( id ) {
+    
+    var token=await this.client.token();
+    console.log('--token');
+    console.log(token);
+    console.log('--token--');
 
     console.log("sources.get("+id+")");
-    console.log('token='+this.client.token);
+    console.log('token='+token);
     return {
         "a": "thing"
     }
 }
+
+module.exports = Sources;

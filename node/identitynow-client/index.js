@@ -1,23 +1,7 @@
-const Sources = require('./sources');
-
-var apiUrl;
-var client_id;
-var client_secret;
-
-var token;
-
-console.log('identitynow-client');
+var IdentityNowClient = require('./IdentityNowClient');
 
 exports.Create = function ( config ) {
 
-    this.apiUrl=config.apiUrl;
+    return new IdentityNowClient( config );
 
-    if (config.apiUrl!=null) {
-        this.client_id=config.client_id;
-        this.client_secret=config.client_secret;    
-    }
-    Sources.configure( this );
-
-}
-
-exports.Sources=Sources;
+};

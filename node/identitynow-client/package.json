@@ -10,7 +10,10 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^0.19.2",
-    "jwt-decode": "^2.2.0"
+    "http": "0.0.1-security",
+    "jwt-decode": "^2.2.0",
+    "open": "^7.0.3",
+    "querystring": "^0.2.0"
   },
   "devDependencies": {
     "grunt": "^1.1.0",

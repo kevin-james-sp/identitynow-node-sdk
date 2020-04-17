@@ -2,7 +2,11 @@ var axios = require('axios');
 var http = require('http');
 var open = require('open');
 var qs = require('querystring');
+var Clusters = require('./clusters');
+var CorrelationConfigs = require('./correlationconfigs');
+var Identities = require('./identities');
 var Sources = require('./sources');
+var Schemas = require('./schemas');
 var url = require('url');
 
 var config;
@@ -18,8 +22,6 @@ var jwtRefreshToken;
 var jwtExpires;
 
 var client;
-var Sources;
-
 
 var IdentityNowClient=function( config ) {
     
@@ -27,9 +29,13 @@ var IdentityNowClient=function( config ) {
     
     this.apiUrl='https://'+this.config.tenant+'.api.identitynow.com';
     this.authorizationUrl='https://'+this.config.tenant+'.identitynow.com/oauth/authorize';
-    this.tokenUrl='https://'+this.config.tenant+'neil-test.api.identitynow.com/oauth/token';
+    this.tokenUrl=this.apiUrl+'/oauth/token';
     
+    this.Clusters = new Clusters( this );
+    this.CorrelationConfigs = new CorrelationConfigs( this );
+    this.Identities = new Identities( this );    
     this.Sources = new Sources( this );
+    this.Schemas = new Schemas( this );
     this.client = axios.create({
         baseURL: this.apiUrl
     });
@@ -186,6 +192,43 @@ IdentityNowClient.prototype.get = function( url ) {
             }
         }));
     });
+    
+}
+
+IdentityNowClient.prototype.post = function( url, payload ) {
+    
+    let that=this;
+    
+    return this.token().then( function( resp ) { // token success
+        return that.client.post( url, payload, {
+                headers: {
+                    Authorization: 'Bearer '+resp
+                }
+            }).then( function ( resp ) { // post success
+                return Promise.resolve( resp );
+            }, function(err) { //post failure
+                if (err.response.status==400) {                    
+                    return Promise.reject({
+                        url: url,
+                        detailcode: err.response.data.detailCode,
+                        messages: err.response.data.messages,
+                        trackingId: err.response.data.trackingId,
+                        status: 400,
+                        statusText: err.response.data.messages[0].text
+                    });
+                } else {
+                    return Promise.reject({
+                        url: url,
+                        status: err.response.status,
+                        statusText: err.response.statusText
+                    });
+                }
+            })
+            }
+            , function (err ) { // token failure
+            return Promise.reject(err);
+        }
+    );
     
 }
 

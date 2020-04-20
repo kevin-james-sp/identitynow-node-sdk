@@ -186,11 +186,25 @@ IdentityNowClient.prototype.get = function( url ) {
     let that=this;
     
     return this.token().then( function( resp ) {
-        return Promise.resolve(that.client.get( url, {
+        return that.client.get( url, {
             headers: {
                 Authorization: 'Bearer '+resp
             }
-        }));
+        });
+    });
+    
+}
+
+IdentityNowClient.prototype.delete = function( url ) {
+    
+    let that=this;
+    
+    return this.token().then( function( resp ) {
+        return that.client.delete( url, {
+            headers: {
+                Authorization: 'Bearer '+resp
+            }
+        });
     });
     
 }

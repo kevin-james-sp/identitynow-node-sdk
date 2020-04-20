@@ -188,27 +188,55 @@ Sources.prototype.create = function( object ) {
 
     return Promise.all(promises).then( function () {
 
-        console.log('all promises resolved');
         let url=that.client.apiUrl+'/beta/sources';
         return that.client.post(url, source).then( function( resp ) {
             let appId=resp.data.id;
             if (schemas!=null) {
                 promises=[];
                 schemas.forEach( function (schema) {
-                    promises.push(that.client.Schemas.create(appId, schema).then(
-                        function (sch) {
-                            return Promise.resolve(sch);
-                        }, function ( reject ) {
-                            return Promise.reject(reject);
+                    // Do we need to replace an automatically generated schema?                  
+                    if (resp.data.schemas!=null) {
+                        let currentSchemaId=null;
+                        resp.data.schemas.forEach( function( value ) {
+                            if (value.name==schema.name) {
+                                currentSchemaId=value.id;
+                            }
+                        });
+                        
+                        let promise=Promise.resolve();
+                        if (currentSchemaId!=null) {
+                            console.log('deleting '+currentSchemaId);
+                            promise=that.client.Schemas.delete(appId, currentSchemaId);
                         }
-                    ));                                
-                })
-            }
-            return Promise.all(promises).then( function() {
+                        
+                        promises.push(promise.then( 
+                            function( ok ) {
+                                that.client.Schemas.create(appId, schema).then(
+                                    function ( sch ) {
+                                        console.log('sch: '+sch);
+                                        return Promise.resolve(sch);
+                                    }, function ( reject ) {
+                                        console.log(reject);
+                                        return Promise.reject(reject);
+                                    }
+                                )
+                            }, function( reject ){
+                                console.log('reject: ');                                
+                                return Promise.reject(reject);
+                            }
+                        ));                                
+                    }
+                });
+                return Promise.all(promises).then( function( resp ) {
+                    console.log('all promises resolved');
                     return resp;
                 }, function( err ){
+                    console.log('all.reject');
+                    console.log(err);
                     return Promise.reject(err);
                 });
+            }
+            return Promise.resolve( resp );
         }, function( err ) {
             return Promise.reject(err);
         });

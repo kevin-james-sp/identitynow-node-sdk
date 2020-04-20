@@ -69,12 +69,35 @@ Schemas.prototype.create = function( appId, schema ) {
     let url=this.client.apiUrl+'/beta/sources/'+appId+'/schemas';
     
     return this.client.post(url, schema).then( function (resp ) {
-        return Promise.resolve(resp.id);
+        console.log('schemas.create');
+        console.log(JSON.stringify(resp.data));
+        return Promise.resolve(resp.data.id);
     }
     , function ( err ) {
         return Promise.reject(err);
     }
     );
+}
+
+Schemas.prototype.delete = function get ( appId, schemaId ) {
+    
+    let url=this.client.apiUrl+'/beta/sources/'+appId+'/schemas/'+schemaId;
+    
+    return this.client.delete(url)
+        .then( 
+        function (resp) {
+            return Promise.resolve(resp);
+        }, function (err) {
+            console.log('schemas.delete: '+schemaId);
+            console.log(url);
+            console.log(JSON.stringify(err));
+            return Promise.reject({
+                url: url,
+                status: err.response.status,
+                statusText: err.response.statusText
+            })
+        }
+        );
 }
 
 module.exports = Schemas;

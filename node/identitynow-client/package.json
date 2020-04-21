@@ -11,6 +11,7 @@
   "dependencies": {
     "axios": "^0.19.2",
     "http": "0.0.1-security",
+    "jszip": "^3.4.0",
     "jwt-decode": "^2.2.0",
     "open": "^7.0.3",
     "querystring": "^0.2.0"

@@ -2,6 +2,7 @@ var axios = require('axios');
 var http = require('http');
 var open = require('open');
 var qs = require('querystring');
+var AccountProfiles = require('./accountprofiles');
 var Clusters = require('./clusters');
 var CorrelationConfigs = require('./correlationconfigs');
 var Identities = require('./identities');
@@ -31,6 +32,7 @@ var IdentityNowClient=function( config ) {
     this.authorizationUrl='https://'+this.config.tenant+'.identitynow.com/oauth/authorize';
     this.tokenUrl=this.apiUrl+'/oauth/token';
     
+    this.AccountProfiles = new AccountProfiles( this );
     this.Clusters = new Clusters( this );
     this.CorrelationConfigs = new CorrelationConfigs( this );
     this.Identities = new Identities( this );    

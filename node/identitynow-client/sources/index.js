@@ -1,3 +1,5 @@
+const JSZip=require('jszip');
+
 var client;
 
 function Sources( client ) {
@@ -50,6 +52,37 @@ Sources.prototype.list = function list () {
 
 }
 
+Sources.prototype.getZip = function getZip( id ) {
+
+    return this.get(id, {
+        clean: true,
+        export: true
+    }).then( function( object ) {
+        let zip=new JSZip();
+        zip.file('source.json', JSON.stringify(object.source, null, 2));
+        if (object.schemas!=null) {
+            let schemaFolder=zip.folder('schemas');
+            object.schemas.forEach( function( schema ){
+                schemaFolder.file(schema.name+'.json', JSON.stringify(schema, null, 2));
+            });
+        }
+        if (object.accountProfiles!=null) {
+            let apFolder=zip.folder('accountProfiles');
+            object.accountProfiles.forEach( function( ap ){
+                let name=ap.name;
+                if (name.replace(/\s/g, '')!=ap.usage){
+                    name=name+'.'+ap.usage;
+                }
+                apFolder.file(name+'.json', JSON.stringify(ap, null, 2));
+            });    
+        }
+        return Promise.resolve(zip);
+    }, function ( err ) {
+        return Promise.reject( err );
+    });
+
+}
+
 Sources.prototype.get = function get ( id, options ) {
     
     let url=this.client.apiUrl+'/beta/sources/'+id;
@@ -83,9 +116,21 @@ Sources.prototype.get = function get ( id, options ) {
                     })
                 );
             })
+            //let sourceExtId=resp.data.connectorAttributes.cloudExternalId;
+            // Account Profiles
+            promises.push( that.client.AccountProfiles.list( sourceid ).then( function ( resp )
+                {
+                    ret.accountProfiles=resp;
+                }, function ( err ) {
+                    return Promise.reject({
+                        url: url,
+                        status: err.response.status,
+                        statusText: err.response.statusText
+                    });    
+                }            
+            ));
             // Password Policies
             // Account Correlation Config
-            console.log(ret.schemas);
             return Promise.all(promises).then( function() {
                 return ret;
             }, function(err) {

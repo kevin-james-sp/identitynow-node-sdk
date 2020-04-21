@@ -75,13 +75,32 @@ This will return something like:
 ```
 
 ### Create ###
-TODO
+
+Create a new source
+```
+client.Sources.create( object );
+```
+When creating a source, the object passed in can contain all the sub-objects (schemas etc.) associated with the source. At a minimum, it must contain a definition of the source:
+```
+{
+    source: {
+        description: 'My Source',
+        ...
+    }
+}
+```
+It can also contain Schemas (this list continues to be extended)
+
+Owner and Cluster can be specified by name; the SDK will look up the relevant ID in the IDN tenant
+
 
 ### Update ###
 TODO
 
 ### Delete ###
-TODO
+```
+var source=client.Sources.delete( 'abcdef1234' )
+```
 
 ## Schemas ##
 
@@ -98,13 +117,22 @@ Get a specific source by ID
 ```
 
 ### Create ###
-TODO
+
+```
+client.Schemas.create( 'abcdef1234', object );
+```
+Create a schema. Pass in the ID of the Source, and the object representing the schema
 
 ### Update ###
 TODO
 
 ### Delete ###
-TODO
+```
+client.Schemas.delete( 'abcdef1234', 'badc0ffee' ).then( function( ok ){
+    ....
+})
+```
+Delete a schema. Pass in the ID of the Source, and the ID of the schema
 
 ## Transforms ##
 
@@ -117,7 +145,9 @@ TODO
 
 Get a specific transform by ID
 ```
-    var source = client.Schemas.get( 'ToUpper' );
+    client.Schemas.get( 'ToUpper' ).then( function (transform) {
+        ....
+    });
 ```
 
 ### Create ###
@@ -128,3 +158,21 @@ TODO
 
 ### Delete ###
 TODO
+
+## Account Profiles ##
+
+### List ###
+```
+client.AccountProfiles.list( 'abcdef1234' ).then( function( profiles ) {
+    ....
+});
+```
+Returns a list of account profiles for the specified source. Returns an Array
+
+### Get ###
+```
+client.AccountProfiles.get( 'abcdef1234', 'Create' ).then( function( profile ) {
+    ....
+});
+```
+Returns the account profile for the specified source and Usage

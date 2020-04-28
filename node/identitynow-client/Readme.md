@@ -19,6 +19,8 @@ Authorization needs to be configured during instantiation. The following fields 
 This can be performed in a block like this:
 
 ```
+const idnClient=require('identitynow-client');
+
 const config={
     tenant: 'readme',
     clientID: 'b0b15abaddad',
@@ -37,6 +39,22 @@ if userAuthenticate is set to true, when a call is made to IdentityNow a browser
 
 *NOTE* If you wish to perform API activities that require an ORG_ADMIN connection, you will need to step up in the browser before running your code
 
+*ALTERNATIVELY..* If you are using the client from within a server-side Node app, where the app handles the user authentication via browser redirection, you can instantiate the client like so:
+
+```
+const idnClient=require('identitynow-client');
+
+const config={
+    tenant: 'readme',
+    userToken: <Token passed back to the app via oauth redirect>
+    userRefreshToken: <Refresh token passed back to the app via oauth redirect>
+}
+
+const client=idnClient.Create( config );
+
+```
+
+
 Once you have an authenticated client, the following actions are available
 
 **NOTE** Unless otherwise specified, all methods will return a Promise
@@ -52,17 +70,23 @@ Once you have an authenticated client, the following actions are available
 
 Get a specific source by ID
 ```
-    var source = client.Sources.get( 'abcdef1234' );
+    client.Sources.get( 'abcdef1234' ).then( function ( source) {
+        ....
+    });
 ```
 
 Get a 'clean' version of the source. Strips out all IDs as they will only be accurate in the tenant the source is extracted from
 ```
-    var source = client.Sources.get( 'abcdef1234', { clean: true } );
+    client.Sources.get( 'abcdef1234', { clean: true } ).then( function ( source) {
+        ....
+    });
 ```
 
 Get an 'exported' version of the source. This will collect sub-objects (such as Schemas) and bundle them in the response.
 ```
-    var source = client.Sources.get( 'abcdef1234', { clean: true, export: true } );
+    client.Sources.get( 'abcdef1234', { clean: true, export: true } ).then( function ( object ) {
+        ....
+    });
 ```
 This will return something like:
 ```{
@@ -74,6 +98,26 @@ This will return something like:
 }
 ```
 
+### Get Zip file ###
+Get a zip of a specific source with its associated objects
+```
+    client.Sources.getZip( 'abcdef1234' ).then( function ( zip ) {
+        ....
+    });
+```
+This returns a zip object (using the JSZip library) which can then be written to a file. For example:
+```
+client.Sources.getZip( 'abcdef1234' ).then( function (zip) {
+    zip
+    .generateNodeStream({type:'nodebuffer',streamFiles:true})
+    .pipe(fs.createWriteStream('out.zip'))
+    .on('finish', function () {
+        // JSZip generates a readable stream with a "end" event,
+        // but is piped here in a writable stream which emits a "finish" event.
+        console.log("out.zip written.");
+    });
+})
+```
 ### Create ###
 
 Create a new source
@@ -138,9 +182,26 @@ Delete a schema. Pass in the ID of the Source, and the ID of the schema
 
 ### List ###
 ```
-  var sources = client.Transforms.List();
+  client.Transforms.List().then( function( items ){
+      ....
+  });
 ```
-
+Return value looks like:
+```
+[
+    {
+        "attributes": null,
+        "id": "ToUpper",
+        "type": "upper"
+    },
+    {
+        "attributes": null,
+        "id": "ISO3166 Country Format",
+        "type": "iso3166"
+    },
+    ....
+]
+```
 ### Get ###
 
 Get a specific transform by ID

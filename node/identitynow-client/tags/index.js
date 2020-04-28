@@ -1,23 +1,23 @@
 var client;
 
-function Transforms( client ) {
+function Tags( client ) {
 
     this.client=client;
 
 
 }
 
-Transforms.prototype.list=function( id ) {
+Tags.prototype.list=function( id ) {
         
-    let url=this.client.apiUrl+'/cc/api/transform/list';
+    let url=this.client.apiUrl+'/beta/tags';
     let that=this;
 
     return this.client.get(url)
         .then(
         function (resp) {
-            console.log('Transforms.list');
+            console.log('Tags.list');
             console.log(JSON.stringify(resp.data, null, 2));
-            return Promise.resolve(resp.data.items);
+            return Promise.resolve(resp.data);
         }
         , function (err) {
             console.log('Transform');
@@ -31,9 +31,9 @@ Transforms.prototype.list=function( id ) {
 
 }
 
-Transforms.prototype.get = function get (transformName ) {
+Tags.prototype.get = function get ( tagId ) {
     
-    let url=this.client.apiUrl+'/cc/api/transform/get/'+transformName;
+    let url=this.client.apiUrl+'/beta/tags/'+tagId;
     
     return this.client.get(url)
         .then( 
@@ -50,32 +50,27 @@ Transforms.prototype.get = function get (transformName ) {
         );
 }
 
-Transforms.prototype.create = function( xform ) {
+Tags.prototype.create = function( tag ) {
+
+    let url=this.client.apiUrl+'/beta/tags/'+tagId;
 
     // Sanity check
-    if ( xform==null ) {
+    if ( tag==null ) {
         return Promise.reject({
             url: url,
             status: -1,
-            statusText: 'No transform specified for creation'
+            statusText: 'No tag specified for creation'
         });
     }
-    if ( xform.id==null ) {
+    if ( tag.name==null ) {
         return Promise.reject({
             url: url,
             status: -1,
-            statusText: 'No id specified for creation'
-        });
-    }
-    if ( xform.type==null ) {
-        return Promise.reject({
-            url: url,
-            status: -1,
-            statusText: 'No type specified for creation'
+            statusText: 'No name specified for creation'
         });
     }
 
-    return this.client.post(url, xform).then( function (resp ) {
+    return this.client.post(url, tag).then( function (resp ) {
         return resp.id;
     })
     , function (err) {
@@ -90,4 +85,4 @@ Transforms.prototype.create = function( xform ) {
 
 
 
-module.exports = Transforms;
+module.exports = Tags;

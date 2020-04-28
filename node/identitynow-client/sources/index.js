@@ -104,6 +104,10 @@ Sources.prototype.get = function get ( id, options ) {
                 return Promise.resolve(ret.source);
             }
             
+            // put source into 'source' object
+            let src=ret;
+            ret={};
+            ret.source=src;
             // array of things we need to wait for
             promises=[];
             // Go get the other objects

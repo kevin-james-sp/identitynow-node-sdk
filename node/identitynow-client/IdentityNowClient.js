@@ -2,12 +2,17 @@ var axios = require('axios');
 var http = require('http');
 var open = require('open');
 var qs = require('querystring');
+var AccessProfiles = require('./accessprofiles');
 var AccountProfiles = require('./accountprofiles');
 var Clusters = require('./clusters');
 var CorrelationConfigs = require('./correlationconfigs');
 var Identities = require('./identities');
+var IdentityProfiles = require('./identityprofiles');
+var Roles = require('./roles');
 var Sources = require('./sources');
 var Schemas = require('./schemas');
+var Tags = require('./tags');
+var Transforms = require('./transforms');
 var url = require('url');
 
 var config;
@@ -32,12 +37,25 @@ var IdentityNowClient=function( config ) {
     this.authorizationUrl='https://'+this.config.tenant+'.identitynow.com/oauth/authorize';
     this.tokenUrl=this.apiUrl+'/oauth/token';
     
+    // If we were initialized from a server NodeJS app which has already done the OAuth2 dance
+    if (config.userToken) {
+        this.accesstoken=config.userToken;
+    }
+    if (config.userRefreshToken) {
+        this.jwtRefreshToken=config.userRefreshToken;
+    }
+
+    this.AccessProfiles = new AccessProfiles( this );
     this.AccountProfiles = new AccountProfiles( this );
     this.Clusters = new Clusters( this );
     this.CorrelationConfigs = new CorrelationConfigs( this );
     this.Identities = new Identities( this );    
+    this.IdentityProfiles = new IdentityProfiles( this );    
+    this.Roles=new Roles( this );
     this.Sources = new Sources( this );
     this.Schemas = new Schemas( this );
+    this.Tags = new Tags( this );
+    this.Transforms = new Transforms( this );
     this.client = axios.create({
         baseURL: this.apiUrl
     });
@@ -193,6 +211,10 @@ IdentityNowClient.prototype.get = function( url ) {
                 Authorization: 'Bearer '+resp
             }
         });
+    }, function( err ){
+        console.log('------Get ERRROR-------');
+        console.log(err);
+        return Promise.reject(err);
     });
     
 }
@@ -240,11 +262,10 @@ IdentityNowClient.prototype.post = function( url, payload ) {
                     });
                 }
             })
-            }
-            , function (err ) { // token failure
-            return Promise.reject(err);
-        }
-    );
+    }
+    , function (err ) { // token failure
+        return Promise.reject(err);
+    });
     
 }
 

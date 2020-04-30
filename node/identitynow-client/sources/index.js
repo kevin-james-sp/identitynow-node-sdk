@@ -37,9 +37,15 @@ Sources.prototype.getPage=function(off, lst) {
             return that.getPage(offset, list);
         }
         return Promise.resolve(list);
-    }, function (reject) {
+    }, function ( err ) {
         console.log('getPage.reject');
-        console.log(reject);
+        console.log( url );
+        console.log( err );
+        return Promise.reject({
+            url: url,
+            status: err.response.status,
+            statusText: err.response.statusText
+        });
     });
 
 
@@ -81,6 +87,26 @@ Sources.prototype.getZip = function getZip( id ) {
         return Promise.reject( err );
     });
 
+}
+
+Sources.prototype.getByName = function ( name ){
+    return this.list().then( function( list ){
+        if (list!=null) {
+            let foundSrc;
+            for( let source of list) {
+                if (source.name==(name)) {
+                    return Promise.resolve(source);
+                }
+            };
+        }
+        return Promise.reject({
+            url: 'Sources',
+            status: -1,
+            statusText: 'Source not found'
+        });
+    }, function( err ){
+        return Promise.reject( err );
+    });
 }
 
 Sources.prototype.get = function get ( id, options ) {

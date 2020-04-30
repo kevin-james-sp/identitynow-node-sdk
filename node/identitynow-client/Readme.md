@@ -59,18 +59,47 @@ Once you have an authenticated client, the following actions are available
 
 **NOTE** Unless otherwise specified, all methods will return a Promise
 
+## Entitlements ##
+
+### List ###
+```
+  client.Entitlements.List().then( function ( entitlements ) { 
+      ....
+  });
+```
+Get a list of entitlements
+
+Options:
+- sourceId: id of source to constrain search
+- sourceName: name of source to constrain search
+- entitlements: list of values to constrain search
+```
+  client.Entitlements.List( {
+      sourceName: 'Active Directory',
+      entitlements: [
+          'CN=All_Users,OU=Groups,DC=sailpoint,DC=com',
+          'CN=Corporate-VPN,OU=Groups,DC=sailpoint,DC=com'
+      ]
+  }).then( function ( entitlements ) { 
+      ....
+  });
+```
+
+
 ## Sources ##
 
 ### List ###
 ```
-  var sources = client.Sources.List();
+  client.Sources.List().then( function ( sources ) { 
+      ....
+  });
 ```
 
 ### Get ###
 
-Get a specific source by ID
+Get a specific source by ID.
 ```
-    client.Sources.get( 'abcdef1234' ).then( function ( source) {
+    client.Sources.get( 'abcdef1234' ).then( function ( source ) {
         ....
     });
 ```
@@ -96,6 +125,15 @@ This will return something like:
         { <schema data> }
     ]
 }
+```
+
+### Get by Name ###
+
+Get a specific source by ID.
+```
+    client.Sources.getByName( 'Active Direectory' ).then( function ( source) {
+        ....
+    });
 ```
 
 ### Get Zip file ###

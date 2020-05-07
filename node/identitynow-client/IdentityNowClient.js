@@ -14,6 +14,9 @@ var Sources = require('./sources');
 var Schemas = require('./schemas');
 var Tags = require('./tags');
 var Transforms = require('./transforms');
+
+var QueryString = require('querystring');
+
 var url = require('url');
 
 var config;
@@ -203,7 +206,7 @@ IdentityNowClient.prototype.getJWTToken=function( callback ) {
     });
 }
 
-IdentityNowClient.prototype.get = function( url ) {
+IdentityNowClient.prototype.get = function( url, retry ) {
     
     let that=this;
     
@@ -214,6 +217,11 @@ IdentityNowClient.prototype.get = function( url ) {
             }
         });
     }, function( err ){
+        if (err.response.status==401 && !retry) {
+            // 401. Not a retry. Invalidate the token and try once more
+            that.accesstoken=null;
+            return get( url, true);
+        }
         console.log('------Get ERRROR-------');
         console.log(err);
         return Promise.reject(err);
@@ -235,16 +243,22 @@ IdentityNowClient.prototype.delete = function( url ) {
     
 }
 
-IdentityNowClient.prototype.post = function( url, payload ) {
+IdentityNowClient.prototype.post = function( url, payload, options, retry ) {
     
     let that=this;
     
     return this.token().then( function( resp ) { // token success
-        return that.client.post( url, payload, {
-                headers: {
-                    Authorization: 'Bearer '+resp
-                }
-            }).then( function ( resp ) { // post success
+        headers={
+            headers: {
+                Authorization: 'Bearer '+resp
+            }
+        };
+        if (options && options.formEncoded) {
+            headers['Content-Type'] = 'application/x-www-form-urlencoded';
+            payload=QueryString['stringify'](payload);
+        }
+        return that.client.post( url, payload, headers )            
+            .then( function ( resp ) { // post success
                 return Promise.resolve( resp );
             }, function(err) { //post failure
                 if (err.response.status==400) {                    
@@ -256,6 +270,10 @@ IdentityNowClient.prototype.post = function( url, payload ) {
                         status: 400,
                         statusText: err.response.data.messages[0].text
                     });
+                } else if (err.response.status==401 && !retry) {
+                    // 401. Not a retry. Invalidate the token and try once more
+                    that.accesstoken=null;
+                    return post( url, payload, options, true);
                 } else {
                     return Promise.reject({
                         url: url,
@@ -264,6 +282,53 @@ IdentityNowClient.prototype.post = function( url, payload ) {
                     });
                 }
             })
+    }
+    , function (err ) { // token failure
+        return Promise.reject(err);
+    });
+    
+}
+
+IdentityNowClient.prototype.put = function( url, payload, options, retry ) {
+    
+    let that=this;
+    
+    return this.token().then( function( resp ) { // token success
+        headers={
+            headers: {
+                Authorization: 'Bearer '+resp
+            }
+        };
+        if (options && options.formEncoded) {
+            headers['Content-Type'] = 'application/x-www-form-urlencoded';
+            payload=QueryString['stringify'](payload);
+        }
+        return that.client.put( url, payload, headers )
+            .then( function ( resp ) { // post success
+                return Promise.resolve( resp );
+            }, function(err) { //post failure
+                if (err.response.status==400) {                    
+                    return Promise.reject({
+                        url: url,
+                        detailcode: err.response.data.detailCode,
+                        messages: err.response.data.messages,
+                        trackingId: err.response.data.trackingId,
+                        status: 400,
+                        statusText: err.response.data.messages[0].text
+                    });
+                } else if (err.response.status==401 && !retry) {
+                    // 401. Not a retry. Invalidate the token and try once more
+                    that.accesstoken=null;
+                    return put( url, payload, options, true);
+                } else {
+                    return Promise.reject({
+                        url: url,
+                        status: err.response.status,
+                        statusText: err.response.statusText
+                    });
+                }
+            }
+        );
     }
     , function (err ) { // token failure
         return Promise.reject(err);

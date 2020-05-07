@@ -27,13 +27,17 @@ Schemas.prototype.list=function( id ) {
 
 }
 
-Schemas.prototype.get = function get ( appId, schemaId ) {
+Schemas.prototype.get = function get ( appId, schemaId , options ) {
     
     let url=this.client.apiUrl+'/beta/sources/'+appId+'/schemas/'+schemaId;
     
     return this.client.get(url)
         .then( 
         function (resp) {
+            if ( options && options.clean ) {
+                delete resp.data.id;
+                delete resp.data.created;
+            }
             return Promise.resolve(resp.data);
         }
         , function (err) {
@@ -78,6 +82,21 @@ Schemas.prototype.create = function( appId, schema ) {
     }
     );
 }
+
+Schemas.prototype.update = function get ( appId, schemaId, newSchema, options ) {
+    let url=this.client.apiUrl+'/beta/sources/'+appId+'/schemas/'+schemaId;
+    // POST needs id *in* schema as well as in URL
+    newSchema.id=schemaId;
+    return this.client.put( url, newSchema )
+    .then(
+        resolve=> { return resolve; },
+        err=> {
+            console.log('error update schema');
+            return Promise.reject( err );
+        }
+    );
+}
+
 
 Schemas.prototype.delete = function get ( appId, schemaId ) {
     

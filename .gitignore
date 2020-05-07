@@ -6,3 +6,4 @@ Java/.idea
 java/build/**
 .idea/workspace.xml
 node/.vscode/launch.json
+node/out.zip

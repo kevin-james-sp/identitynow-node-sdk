@@ -75,9 +75,19 @@ Entitlements.prototype.list = function list ( parms ) {
             sourceId=sourceId.then( ()=> {
                 console.log( 'resolving Source name '+parms.sourceName);
                 return this.client.Sources.getByName(parms.sourceName).then( source => {
-                    console.log('resolving to source.id');
-                    return source.id;
+                    console.log('resolving to source.id from name');
+                    if ( source ) {
+                        return Promise.resolve(source.id);
+                    } else {
+                        return Promise.reject( {
+                            url: 'Entitlements.list',
+                            status: 1,
+                            statusText: 'Entitlement Source \''+parms.sourceName+'\' not found'
+                        });
+                    }
                 }, err=> {
+                    console.log('entprotlist');
+                    console.log(err);
                     return Promise.reject( err );
                 })
             }, function( err ){
@@ -88,10 +98,14 @@ Entitlements.prototype.list = function list ( parms ) {
     return sourceId.then( sourceId=> {
         // Pass sourceId to query generator promise (if defined)
         console.log('sourceId.then: sourceId='+sourceId);
-        if (!sourceId) {
-            return null;
-        }
-        return 'source.id:\"'+sourceId+'\"';
+        return Promise.resolve('source.id:\"'+sourceId+'\"');
+    }, err=> {
+        console.log('no sounrce found');
+        return Promise.reject( {
+            url: 'Entitlements.list',
+            status: 1,
+            statusText: 'Source '+parms.sourceName+' not found '
+        });
     }).then( queryString => {
         if (!parms|| !parms.entitlements) return Promise.resolve( queryString );
         // now add all the attribute values to a string
@@ -124,6 +138,7 @@ Entitlements.prototype.list = function list ( parms ) {
         return this.getPage( query );
     }, err => {
         console.log('err');
+        return Promise.reject( err );
     });
 
 

@@ -29,9 +29,7 @@ Sources.prototype.getPage=function(off, lst) {
     return this.client.get(url)
         .then( function (resp) {
         count=resp.headers['x-total-count'];
-        resp.data.forEach( function( itm ) {
-            list.push(itm);
-        } );
+        list=list.concat(resp.data);
         offset+=resp.data.length;
         if (list.length<count) {
             return that.getPage(offset, list);
@@ -65,7 +63,8 @@ Sources.prototype.getZip = function getZip( id ) {
         export: true
     }).then( function( object ) {
         let zip=new JSZip();
-        zip.file('source.json', JSON.stringify(object.source, null, 2));
+        let sourceFolder=zip.folder('source');
+        sourceFolder.file(object.source.source.name+'.json', JSON.stringify(object.source.source, null, 2));
         if (object.schemas!=null) {
             let schemaFolder=zip.folder('schemas');
             object.schemas.forEach( function( schema ){
@@ -82,6 +81,14 @@ Sources.prototype.getZip = function getZip( id ) {
                 apFolder.file(name+'.json', JSON.stringify(ap, null, 2));
             });    
         }
+        if (object.correlationConfig!=null) {
+            let ccFolder=zip.folder('correlationConfig');
+            ccFolder.file('correlationConfig.json', JSON.stringify(object.correlationConfig, null, 2));
+        }
+        if (object.connectorAttributes.connectorFiles) {
+            let filesFolder=zip.folder('files');
+
+        }
         return Promise.resolve(zip);
     }, function ( err ) {
         return Promise.reject( err );
@@ -91,14 +98,17 @@ Sources.prototype.getZip = function getZip( id ) {
 
 Sources.prototype.getByName = function ( name ){
     return this.list().then( function( list ){
+        let source;
         if (list!=null) {
             let foundSrc;
-            for( let source of list) {
-                if (source.name==(name)) {
-                    return Promise.resolve(source);
+            for( let src of list) {
+                if (src.name==(name)) {
+                    source=src;
                 }
             };
         }
+        if (source) return Promise.resolve(source);
+        console.log(' source not found');
         return Promise.reject({
             url: 'Sources',
             status: -1,
@@ -141,16 +151,18 @@ Sources.prototype.get = function get ( id, options ) {
             ret.schemas=[];
             let sourceid=resp.data.id;
             resp.data.schemas.forEach( function(schema) {
-                promises.push( that.client.Schemas.get( sourceid, schema.id ).then( function (resp) {
+                promises.push( that.client.Schemas.get( sourceid, schema.id, options ).then( function (resp) {
                         ret.schemas.push(resp);
                     })
                 );
             })
             //let sourceExtId=resp.data.connectorAttributes.cloudExternalId;
             // Account Profiles
-            promises.push( that.client.AccountProfiles.list( sourceid ).then( function ( resp )
+            promises.push( that.client.AccountProfiles.list( sourceid, options ).then( function ( resp )
                 {
-                    ret.accountProfiles=resp;
+                    if (resp.length>0) {
+                        ret.accountProfiles=resp;
+                    }
                 }, function ( err ) {
                     return Promise.reject({
                         url: url,
@@ -159,8 +171,21 @@ Sources.prototype.get = function get ( id, options ) {
                     });    
                 }            
             ));
-            // Password Policies
+                // Password Policies
             // Account Correlation Config
+            let cloudExtId=resp.data.connectorAttributes.cloudExternalId;
+            promises.push( that.client.get( that.client.apiUrl + '/cc/api/source/get/'+ cloudExtId ).then( function( resp ){
+                ret.correlationConfig={};
+                ret.correlationConfig.correlationConfig=resp.data.correlationConfig;
+            }, err => {
+                return Promise.reject({
+                    url: url,
+                    status: err.response.status,
+                    statusText: err.response.statusText
+                })
+            })
+            );
+                    
             return Promise.all(promises).then( function() {
                 return ret;
             }, function(err) {
@@ -198,7 +223,17 @@ Sources.prototype.create = function( object ) {
     // cloudExternalID is honored if present
     // accountCorrelationConfig and cloudExternalID are generated if required
 
-    let source=object.source;
+    // source will be in object.source under its key name, e.g.
+    // { 
+    //   source: {
+    //     'Active Directory': {
+    //        ...
+    //     }
+    //   }
+    // }
+    // There will be only one of these (TODO: Implement check?)
+
+    let source=Object.values(object.source)[0];
     let schemas=object.schemas;
 
     // 1. No IDs or create/modified dates are allowed; we will look up IDs as needed
@@ -226,10 +261,13 @@ Sources.prototype.create = function( object ) {
         }, function ( reject ) {
             return Promise.reject(reject);
         }
-
+        
     ));
-
-    // Check for cluster (if specified); look up the ID
+        
+        // Check for cluster (if specified); look up the ID
+    if (source.cluster==null||source.cluster.name==null) {
+        return Promise.reject("Source cluster must be specified by name");
+    }    
     if (source.cluster!=null) {
         promises.push(this.client.Clusters.getByName(source.cluster.name).then(
             function (cluster) {
@@ -243,32 +281,23 @@ Sources.prototype.create = function( object ) {
 
         ));
     }
-
-    // Check for account correlation config. if specified in 'object', send it. Otherwise, look up the ID
-    if (source.accountCorrelationConfig!=null) {
-        promises.push(this.client.CorrelationConfigs.getByName(source.cluster.name).then(
-            function (cluster) {
-                if (cluster==null) {
-                    return Promise.reject("Cluster '"+source.cluster.name+"' not found'");
-                }
-                source.cluster.id=cluster.id;
-            }, function ( reject ) {
-                return Promise.reject(reject);
-            }
-
-        ));
-    }
-
     var that=this;
 
     return Promise.all(promises).then( function () {
 
         let url=that.client.apiUrl+'/beta/sources';
+        if (source.accountCorrelationConfig) {
+            // If there is an accountCorrelationConfig specified on the source,
+            // the POST call will return a 404 since we haven't created it yet.
+            // So we need to null it out here, and the we upload the config later on..
+            source.accountCorrelationConfig=null;
+
+        };
         return that.client.post(url, source).then( function( resp ) {
             let appId=resp.data.id;
+            promises=[];
             if (schemas!=null) {
-                promises=[];
-                schemas.forEach( function (schema) {
+                Object.values(schemas).forEach( function (schema) {
                     // Do we need to replace an automatically generated schema?                  
                     if (resp.data.schemas!=null) {
                         let currentSchemaId=null;
@@ -280,29 +309,50 @@ Sources.prototype.create = function( object ) {
                         
                         let promise=Promise.resolve();
                         if (currentSchemaId!=null) {
-                            console.log('deleting '+currentSchemaId);
-                            promise=that.client.Schemas.delete(appId, currentSchemaId);
-                        }
-                        
-                        promises.push(promise.then( 
-                            function( ok ) {
-                                that.client.Schemas.create(appId, schema).then(
-                                    function ( sch ) {
-                                        console.log('sch: '+sch);
-                                        return Promise.resolve(sch);
-                                    }, function ( reject ) {
-                                        console.log(reject);
-                                        return Promise.reject(reject);
-                                    }
-                                )
-                            }, function( reject ){
-                                console.log('reject: ');                                
-                                return Promise.reject(reject);
-                            }
-                        ));                                
+                            console.log('replacing '+currentSchemaId);
+                            promises.push(that.client.Schemas.update(appId, currentSchemaId, schema)
+                            .then( resolve => { return Promise.resolve() },
+                            err => {
+                                console.log(JSON.stringify(err, null, 2));
+                                return Promise.reject( err );
+                            }));
+                        } else {                        
+                            promises.push(promise.then( 
+                                function( ok ) {
+                                    that.client.Schemas.create(appId, schema).then(
+                                        function ( sch ) {
+                                            console.log('sch: '+sch);
+                                            return Promise.resolve(sch);
+                                        }, function ( reject ) {
+                                            console.log(reject);
+                                            return Promise.reject(reject);
+                                        }
+                                    )
+                                }, function( reject ){
+                                    console.log('reject: ');                                
+                                    return Promise.reject(reject);
+                                }
+                            ));
+                        }                          
                     }
                 });
-                return Promise.all(promises).then( function( resp ) {
+            }
+            if (object.correlationConfig && object.correlationConfig.correlationConfig) {
+                console.log('Replacing Correlation Config');
+                promises.push( that.client.post( that.client.apiUrl+'/cc/api/source/update/'+resp.data.connectorAttributes.cloudExternalId,
+                    {
+                        correlationConfig: JSON.stringify(object.correlationConfig.correlationConfig)
+                    }, { formEncoded: true }
+                ).then( 
+                    resolve => {
+                        return Promise.resolve( resolve )
+                    }, reject => {
+                        return Promise.reject( reject )
+                    }
+                )
+                );
+            }
+            return Promise.all(promises).then( function( resp ) {
                     console.log('all promises resolved');
                     return resp;
                 }, function( err ){
@@ -310,7 +360,6 @@ Sources.prototype.create = function( object ) {
                     console.log(err);
                     return Promise.reject(err);
                 });
-            }
             return Promise.resolve( resp );
         }, function( err ) {
             return Promise.reject(err);

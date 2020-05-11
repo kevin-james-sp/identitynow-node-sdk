@@ -63,6 +63,32 @@ Identities.prototype.list = function list () {
 }
 
 Identities.prototype.get = function get ( id, options ) {
+    if ( options && options.usev2 ) {
+        return this.getv2( id, options );
+    } else {
+        return this.getv3( id, options );
+    }
+}
+
+Identities.prototype.getv2 = function getv2 ( id, options ) {
+    
+    let url=this.client.apiUrl+'/v2/identities/'+id;
+
+    return this.client.get(url)
+        .then( function (resp) {
+            return resp.data;
+        },
+        function ( err ) {
+            return Promise.reject({
+                url: url,
+                status: -1,
+                statusText: err.response.data.message
+            });
+        }
+    );
+}
+
+Identities.prototype.getv3 = function getv3 ( id, options ) {
     
     let url=this.client.apiUrl+'/v3/search/identities';
     let payload={

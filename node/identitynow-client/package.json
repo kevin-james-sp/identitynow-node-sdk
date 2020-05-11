@@ -14,7 +14,8 @@
     "jszip": "^3.4.0",
     "jwt-decode": "^2.2.0",
     "open": "^7.0.3",
-    "querystring": "^0.2.0"
+    "querystring": "^0.2.0",
+    "sort-array": "^4.1.1"
   },
   "devDependencies": {
     "grunt": "^1.1.0",

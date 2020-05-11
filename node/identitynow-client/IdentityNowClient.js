@@ -10,8 +10,9 @@ var Entitlements = require('./entitlements');
 var Identities = require('./identities');
 var IdentityProfiles = require('./identityprofiles');
 var Roles = require('./roles');
-var Sources = require('./sources');
 var Schemas = require('./schemas');
+var SDKUtils = require('./sdkUtils');
+var Sources = require('./sources');
 var Tags = require('./tags');
 var Transforms = require('./transforms');
 
@@ -57,8 +58,9 @@ var IdentityNowClient=function( config ) {
     this.Identities = new Identities( this );    
     this.IdentityProfiles = new IdentityProfiles( this );    
     this.Roles=new Roles( this );
-    this.Sources = new Sources( this );
     this.Schemas = new Schemas( this );
+    this.SDKUtils = new SDKUtils( this );
+    this.Sources = new Sources( this );
     this.Tags = new Tags( this );
     this.Transforms = new Transforms( this );
     this.client = axios.create({
@@ -120,7 +122,7 @@ IdentityNowClient.prototype.getClientToken = function( overrideconfig ) {
         }, function (err) {
             return Promise.reject({
                 status: err.response.status,
-                statusText: err.response.statusText
+                statusText: this.cerr.response.statusText|err.response.data.message
             });
         }
     );
@@ -170,7 +172,7 @@ IdentityNowClient.prototype.getJWTToken=function( callback ) {
             }, function (err) {
                 reject({
                     status: err.response.status,
-                    statusText: err.response.statusText
+                    statusText: this.cerr.response.statusText|err.response.data.message
                 });
             });
 
@@ -268,7 +270,7 @@ IdentityNowClient.prototype.post = function( url, payload, options, retry ) {
                         messages: err.response.data.messages,
                         trackingId: err.response.data.trackingId,
                         status: 400,
-                        statusText: err.response.data.messages[0].text
+                        statusText: err.response.data.message||err.response.data.messages[0].text
                     });
                 } else if (err.response.status==401 && !retry) {
                     // 401. Not a retry. Invalidate the token and try once more
@@ -278,7 +280,7 @@ IdentityNowClient.prototype.post = function( url, payload, options, retry ) {
                     return Promise.reject({
                         url: url,
                         status: err.response.status,
-                        statusText: err.response.statusText
+                        statusText: err.response.statusText|err.response.data.message
                     });
                 }
             })
@@ -324,7 +326,7 @@ IdentityNowClient.prototype.put = function( url, payload, options, retry ) {
                     return Promise.reject({
                         url: url,
                         status: err.response.status,
-                        statusText: err.response.statusText
+                        statusText: this.cerr.response.statusText|err.response.data.message
                     });
                 }
             }

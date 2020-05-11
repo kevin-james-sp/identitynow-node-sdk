@@ -1,7 +1,9 @@
 var axios = require('axios');
 var http = require('http');
+var jwtDecode = require('jwt-decode');
 var open = require('open');
 var qs = require('querystring');
+
 var AccessProfiles = require('./accessprofiles');
 var AccountProfiles = require('./accountprofiles');
 var Clusters = require('./clusters');
@@ -32,6 +34,9 @@ var accesstoken;
 var jwtRefreshToken;
 var jwtExpires;
 
+var pod;
+var tenant;
+
 var client;
 
 var IdentityNowClient=function( config ) {
@@ -44,12 +49,12 @@ var IdentityNowClient=function( config ) {
     
     // If we were initialized from a server NodeJS app which has already done the OAuth2 dance
     if (config.userToken) {
-        this.accesstoken=config.userToken;
+       this.parseToken(config.userToken);
     }
     if (config.userRefreshToken) {
         this.jwtRefreshToken=config.userRefreshToken;
     }
-
+    
     this.AccessProfiles = new AccessProfiles( this );
     this.AccountProfiles = new AccountProfiles( this );
     this.Clusters = new Clusters( this );
@@ -70,13 +75,29 @@ var IdentityNowClient=function( config ) {
     return this;
 }
 
-IdentityNowClient.prototype.token = function( overrideconfig ) {
+IdentityNowClient.prototype.parseToken = function( token ) {
+    this.accesstoken=token;
+    // Parse out some important data. Well, some of it is important (expiry time) but some
+    // of it is just a pain to get from elsewhere (pod, tenant)
+    let decoded=jwtDecode(token);
+    this.tenant=decoded.org;
+    this.pod=decoded.pod;
+    this.jwtExpires=decoded.exp;
+
+}
+
+IdentityNowClient.prototype.token = function( overrideconfig = [] ) {
     
+    let expired=(this.jwtExpires < (Date.now()/1000));
     // Do we have a current token, and not wanting to regenerate?
-    if ( this.accesstoken!=null && (overrideconfig==null || !(true==overrideconfig.regenerate)) ) {
-                
+    if ( this.accesstoken!=null && !expired && !overrideconfig.regenerate ) {
+        
         return Promise.resolve(this.accesstoken);
         
+    }
+    
+    if ( expired ) {
+        return this.getClientToken( { refresh: true } );
     }
     
     if ( this.config.userAuthenticate ) {
@@ -86,7 +107,7 @@ IdentityNowClient.prototype.token = function( overrideconfig ) {
             if (ok) {
                 return Promise.resolve( that.accesstoken )
             }
-        }, function ( err ) {            
+        }, err => {            
             console.error('User authentication failed: '+err);
             return Promise.reject( err );
         });
@@ -99,30 +120,35 @@ IdentityNowClient.prototype.token = function( overrideconfig ) {
 }
 
 // Get the token by Client Credentials
-IdentityNowClient.prototype.getClientToken = function( overrideconfig ) {
+IdentityNowClient.prototype.getClientToken = function( overrideconfig = []) {
     
     var client_id;
     var client_secret;
-    // Make it possible to override the configured client id and secret
-    if ( overrideconfig != null ) {
-        client_id = overrideconfig.client_id;
-        client_secret = overrideconfig.client_secret;
-    } else {
-        // Check if we have a token for the default credentials; otherwise we'll need to go grab one
-        if (this.accesstoken!=null) {
-            return Promise.resolve(this.accesstoken);
-        }
-        client_id = this.config.client_id;
-        client_secret = this.config.client_secret;
+
+    // Check if we have a token for the default credentials; otherwise we'll need to go grab one
+    if (this.accesstoken!=null && !overrideconfig.refresh) {
+        return Promise.resolve(this.accesstoken);
     }
-    let url='/oauth/token?grant_type=client_credentials&client_id='+client_id+'&client_secret='+client_secret;
-    return this.client.post(url).then( function ( resp ) {
-            this.accesstoken=resp.data.access_token;
+
+    // Make it possible to override the configured client id and secret
+    client_id = overrideconfig.client_id||this.config.client_id;
+    client_secret = overrideconfig.client_secret||this.config.client_secret;
+
+    // build the URL. this could be client_credentials, or a refresh token
+    let url='/oauth/token?grant_type=';
+    url+=(overrideconfig.refresh? 'refresh_token' : 'client_credentials');
+    url+='&client_id='+client_id+'&client_secret='+client_secret;
+    if (overrideconfig.refresh) {
+        url+='&refresh_token='+this.jwtRefreshToken;
+    }
+
+    return this.client.post(url).then( resp => {
+            this.parseToken(resp.data.access_token);
             return Promise.resolve(this.accesstoken);
-        }, function (err) {
+        }, err => {
             return Promise.reject({
                 status: err.response.status,
-                statusText: this.cerr.response.statusText|err.response.data.message
+                statusText: this.cerr.response.statusText||err.response.data.message
             });
         }
     );
@@ -133,7 +159,7 @@ IdentityNowClient.prototype.getUserToken = function() {
 
     let that=this;
 
-    return this.getJWTToken().then( function ( resp ) {
+    return this.getJWTToken().then( resp => {
         that.accesstoken=resp.access_token;
         that.jwtRefreshToken=resp.refresh_token;
         that.jwtExpires=new Date();
@@ -167,12 +193,12 @@ IdentityNowClient.prototype.getJWTToken=function( callback ) {
             // go get our token
             this.client.post('/oauth/token', null, {
                 params: config
-            }).then( function ( resp ) {
+            }).then( resp => {
                 resolve( resp.data );
             }, function (err) {
                 reject({
                     status: err.response.status,
-                    statusText: this.cerr.response.statusText|err.response.data.message
+                    statusText: this.cerr.response.statusText||err.response.data.message
                 });
             });
 
@@ -260,7 +286,7 @@ IdentityNowClient.prototype.post = function( url, payload, options, retry ) {
             payload=QueryString['stringify'](payload);
         }
         return that.client.post( url, payload, headers )            
-            .then( function ( resp ) { // post success
+            .then( resp => { // post success
                 return Promise.resolve( resp );
             }, function(err) { //post failure
                 if (err.response.status==400) {                    
@@ -280,7 +306,7 @@ IdentityNowClient.prototype.post = function( url, payload, options, retry ) {
                     return Promise.reject({
                         url: url,
                         status: err.response.status,
-                        statusText: err.response.statusText|err.response.data.message
+                        statusText: err.response.statusText||err.response.data.message
                     });
                 }
             })
@@ -306,7 +332,7 @@ IdentityNowClient.prototype.put = function( url, payload, options, retry ) {
             payload=QueryString['stringify'](payload);
         }
         return that.client.put( url, payload, headers )
-            .then( function ( resp ) { // post success
+            .then( resp => { // post success
                 return Promise.resolve( resp );
             }, function(err) { //post failure
                 if (err.response.status==400) {                    
@@ -326,7 +352,7 @@ IdentityNowClient.prototype.put = function( url, payload, options, retry ) {
                     return Promise.reject({
                         url: url,
                         status: err.response.status,
-                        statusText: this.cerr.response.statusText|err.response.data.message
+                        statusText: this.cerr.response.statusText||err.response.data.message
                     });
                 }
             }

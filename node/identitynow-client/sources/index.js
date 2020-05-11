@@ -56,6 +56,25 @@ Sources.prototype.list = function list () {
 
 }
 
+// Get a Cloud Connector file from a source
+// The URL looks like this:
+// https://sppcbu-va-images.s3.amazonaws.com/cook/neil-test/connectorFiles/117767/sqljdbc4.jar
+// So we need:
+// - pod.      Get from token
+// - tenant    Get from token
+// - connector id (old CC ID)
+// - filename
+Sources.prototype.getCCFile = function getCCFile( sourceId, filename ) {
+
+    return this.get( id ).then( src => {
+        let connId=src.connectorAttributes.cloudExternalId;
+
+    }, err => {
+        return Promise.reject( err );
+    });
+    
+}
+
 Sources.prototype.getZip = function getZip( id ) {
 
     return this.get(id, {

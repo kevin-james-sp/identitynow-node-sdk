@@ -8,8 +8,44 @@ function Sources( client ) {
 
     this.client=client;
 
+    this.toZip = function( object ) {
+    
+        let zip=new JSZip();
+        let sourceFolder=zip.folder('source');
 
+        sourceFolder.file(object.source.source.name+'.json', JSON.stringify(object.source.source, null, 2));
+        if (object.schemas!=null) {
+            let schemaFolder=zip.folder('schemas');
+            object.schemas.forEach( function( schema ){
+                schemaFolder.file(schema.name+'.json', JSON.stringify(schema, null, 2));
+            });
+        }
+        if (object.accountProfiles!=null) {
+            let apFolder=zip.folder('accountProfiles');
+            object.accountProfiles.forEach( function( ap ){
+                let name=ap.name;
+                if (name.replace(/\s/g, '')!=ap.usage){
+                    name=name+'.'+ap.usage;
+                }
+                apFolder.file(name+'.json', JSON.stringify(ap, null, 2));
+            });    
+        }
+        if (object.correlationConfig!=null) {
+            let ccFolder=zip.folder('correlationConfig');
+            ccFolder.file('correlationConfig.json', JSON.stringify(object.correlationConfig, null, 2));
+        }
+        if (object.connectorFiles) {
+            let filesFolder=zip.folder('connectorFiles');
+            for (let [filename, content] of Object.entries(object.connectorFiles)) {     
+                filesFolder.file(filename, Buffer.from(content, 'base64'));
+            }
+        }
+        return zip;
+    
+    }
+    
 }
+
 
 Sources.prototype.getPage=function(off, lst) {
         
@@ -77,55 +113,24 @@ Sources.prototype.getCCFile = function getCCFile( pod, tenant, sourceId, filenam
 }
 
 Sources.prototype.getZip = function getZip( id ) {
-
-    let zipPromise;
+    
+    let that=this;
     return this.get(id, {
         clean: true,
         export: true
-    }).then( function( object ) {
-        let zip=new JSZip();
-        let sourceFolder=zip.folder('source');
-        sourceFolder.file(object.source.source.name+'.json', JSON.stringify(object.source.source, null, 2));
-        if (object.schemas!=null) {
-            let schemaFolder=zip.folder('schemas');
-            object.schemas.forEach( function( schema ){
-                schemaFolder.file(schema.name+'.json', JSON.stringify(schema, null, 2));
-            });
-        }
-        if (object.accountProfiles!=null) {
-            let apFolder=zip.folder('accountProfiles');
-            object.accountProfiles.forEach( function( ap ){
-                let name=ap.name;
-                if (name.replace(/\s/g, '')!=ap.usage){
-                    name=name+'.'+ap.usage;
-                }
-                apFolder.file(name+'.json', JSON.stringify(ap, null, 2));
-            });    
-        }
-        if (object.correlationConfig!=null) {
-            let ccFolder=zip.folder('correlationConfig');
-            ccFolder.file('correlationConfig.json', JSON.stringify(object.correlationConfig, null, 2));
-        }
-        if (object.connectorAttributes.connectorFiles) {
-            let filesFolder=zip.folder('files');
-            object.connectorAttributes.connectorFiles.split(',').forEach( filename => {
-                filesFolder.file(filename, 'x');
-            });
-            zipPromise=Promise.all(zipPromises);
-        } else {
-            zipPromise=Promise.resolve();
-        }
-        return zipPromise.then(
-            res => { return Promise.resolve( zip ) },
-            err => { return Promise.reject( err ) }
-        );
-    }, function ( err ) {
+    }).then( object => {
+        return that.toZip( object );
+    }, err => {
         return Promise.reject( err );
     });
-
 }
 
-Sources.prototype.getByName = function ( name ){
+Sources.prototype.getByName = function ( name, options ){
+
+    // TODO: This is a horrible way to do it. It does a list and then
+    // potentially another GET. 
+
+    let that=this;
     return this.list().then( function( list ){
         let source;
         if (list!=null) {
@@ -136,7 +141,13 @@ Sources.prototype.getByName = function ( name ){
                 }
             };
         }
-        if (source) return Promise.resolve(source);
+        if (source) {
+            if ( options ) {
+                return that.get( source.id, options );
+            } else {
+                return Promise.resolve( source );
+            }
+        }
         console.log(' source not found');
         return Promise.reject({
             url: 'Sources',
@@ -148,13 +159,13 @@ Sources.prototype.getByName = function ( name ){
     });
 }
 
-Sources.prototype.get = function get ( id, options ) {
+Sources.prototype.get = function get ( id, options = [] ) {
     
     let url=this.client.apiUrl+'/beta/sources/'+id;
     
     let that=this;
     return this.client.get(url)
-        .then( function (resp) {
+        .then( resp => {
             if (options==null || !options.clean) {
                 return Promise.resolve(resp.data);
             }
@@ -232,7 +243,10 @@ Sources.prototype.get = function get ( id, options ) {
             }
 
             return Promise.all(promises).then( function() {
-                return ret;
+                if (!options.zip) {
+                    return ret;
+                }
+                return that.toZip( ret );
             }, function(err) {
                 console.log('---rejected---');
                 console.log(err.response.statusText);

@@ -59,11 +59,115 @@ Once you have an authenticated client, the following actions are available
 
 **NOTE** Unless otherwise specified, all methods will return a Promise
 
+## Access Profiles ##
+
+### List ###
+`client.AccessProfiles.list( [options])`
+
+```
+  client.AccessProfiles.list().then( function ( profiles ) { 
+      ....
+  });
+```
+List all access profiles.
+
+Options:
+- useV2: Use the V2 API to list Access Profiles. The data returned by V2 is slightly different to V3
+
+Methods to directly use the V2 or V3 API are available as `listv2()` and `listv3()` respectively
+
+### Get ###
+`client.AccessProfiles.get( id [, options])`
+
+```
+  client.AccessProfiles.get( id ).then( function ( profile ) { 
+      ....
+  });
+```
+Get an Access Profile
+
+Options:
+- useV2: Use the V2 API to list Access Profiles. The data returned by V2 is slightly different to V3
+
+Methods to directly use the V2 or V3 API are available as `getv2( id )` and `getv3( id )` respectively
+
+### Create ###
+`client.AccessProfiles.create( json [, options])`
+
+```
+  client.AccessProfiles.create( json ).then( function ( response ) { 
+      ....
+  });
+```
+Create an Access Profile
+Using names for owner and source is possible; use the attributes `ownerName` and `sourceName` instead of `ownerId` or `sourceId` to have the SDK perform a lookup into the target system.
+`entitlements` must be specified as IDs (migration to value is a roadmap item)
+
+Options:
+- useV2: Use the V2 API to create Access Profiles. The data required by V2 is slightly different to V3
+
+Methods to directly use the V2 or V3 API are available as `createv2( id )` and `createv3( id )` respectively
+__NOTE__ There is currently no V3 API for this; trying to use it will return a rejected promise.
+
+## Account Profiles ##
+
+### List ###
+`client.AccountProfiles.list()`
+
+```
+  client.AccountProfiles.list().then( function ( profiles ) { 
+      ....
+  });
+```
+List all Account profiles.
+
+### Get ###
+`client.AccountProfiles.get( id )`
+
+```
+  client.AccountProfiles.get( id ).then( function ( profile ) { 
+      ....
+  });
+```
+Get an Account Profile
+
+### Update ###
+`client.AccountProfiles.update( id, json)`
+
+```
+  client.AccountProfiles.update( id, json ).then( function ( response ) { 
+      ....
+  });
+```
+Update an Account Profile
+
+## Clusters ##
+
+### List ###
+`client.Clusters.list()`
+```
+  client.Clusters.list().then( function ( clusters ) { 
+      ....
+  });
+```
+Get a list of VA Clusters
+
+### Get by name ###
+`client.Clusters.getByName( name )`
+```
+  client.Clusters.getByName( name ).then( function ( cluster ) { 
+      ....
+  });
+```
+Get a specific VA Cluster
+
+
 ## Entitlements ##
 
 ### List ###
+`client.Entitlements.list( [ options ])`
 ```
-  client.Entitlements.List().then( function ( entitlements ) { 
+  client.Entitlements.list().then( function ( entitlements ) { 
       ....
   });
 ```
@@ -74,7 +178,7 @@ Options:
 - sourceName: name of source to constrain search
 - entitlements: list of values to constrain search
 ```
-  client.Entitlements.List( {
+  client.Entitlements.list( {
       sourceName: 'Active Directory',
       entitlements: [
           'CN=All_Users,OU=Groups,DC=sailpoint,DC=com',
@@ -85,19 +189,71 @@ Options:
   });
 ```
 
+## Identities ##
+
+### List ###
+`client.Identities.list()`
+```
+  client.Identities.list().then( function ( identities ) { 
+      ....
+  });
+```
+Get a list of identities
+
+### Get ###
+`client.Identities.get( id )`
+```
+  client.Identities.get( id ).then( function ( identities ) { 
+      ....
+  });
+```
+Get an identity
+
+Options:
+- useV2: use the V2 API to retrieve the Identity
+Methods to directly use the V2 or V3 API are available as `getv2( id )` and `getv3( id )` respectively
+
+## Roles ##
+
+### List ###
+`client.Roles.list()`
+```
+  client.Roles.list().then( function ( roles ) { 
+      ....
+  });
+```
+Get a list of roles
+
+### Get ###
+`client.Roles.get( idOrName )`
+```
+  client.Identities.get( id ).then( function ( identity ) { 
+      ....
+  });
+```
+Get an identity
+
+Options:
+- clean: remove attributes that would make no sense in another target system
+    id, created, modified, synced, pod, org
 
 ## Sources ##
 
 ### List ###
+`client.Sources.list()`
 ```
   client.Sources.List().then( function ( sources ) { 
       ....
   });
 ```
 
+Get a list of sources
+
 ### Get ###
+`client.Sources.get( id [, options] )`
 
 Get a specific source by ID.
+
 ```
     client.Sources.get( 'abcdef1234' ).then( function ( source ) {
         ....
@@ -124,20 +280,32 @@ This will return something like:
         { <schema data> },
         { <schema data> }
     ]
+    ...
+    connectorFiles: {
+        <filename>:
+    }
 }
 ```
+
+Options:
+- clean: remove IDs from export
+- export: Collect sub-objects (such as Schemas) and bundle them in the response.
+- zip: return the source and related objects as a JSZip object
 
 ### Get by Name ###
 
 Get a specific source by ID.
+`client.Sources.getByName( name [, options] )`
 ```
     client.Sources.getByName( 'Active Direectory' ).then( function ( source) {
         ....
     });
 ```
+The same options as `get( id )` are available
+
 
 ### Get Zip file ###
-Get a zip of a specific source with its associated objects
+Alternative call to get a zip of a specific source with its associated objects
 ```
     client.Sources.getZip( 'abcdef1234' ).then( function ( zip ) {
         ....
@@ -156,6 +324,7 @@ client.Sources.getZip( 'abcdef1234' ).then( function (zip) {
     });
 })
 ```
+
 ### Create ###
 
 Create a new source

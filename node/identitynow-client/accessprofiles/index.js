@@ -90,8 +90,8 @@ AccessProfiles.prototype.listv2=function() {
 
 }
 
-AccessProfiles.prototype.list=function() {
-    if (this.client.SDKUtils.isv2()) {
+AccessProfiles.prototype.list=function( options ) {
+    if ( options && options.useV2 ) {
         return this.listv2();
     } else {
         return this.listv3();
@@ -100,7 +100,7 @@ AccessProfiles.prototype.list=function() {
 
 AccessProfiles.prototype.get = function get ( tagId, options ) {
 
-    if (this.client.SDKUtils.isv2()) {
+    if ( options && options.useV2 ) {
         return this.getv2( tagId, options );
     } else {
         return this.getv3( tagId, options );
@@ -216,23 +216,19 @@ AccessProfiles.prototype.getv3 = function get ( tagId, options ) {
     });
 }
 
-AccessProfiles.prototype.create = function( json ) {
+AccessProfiles.prototype.create = function( json, options = { useV2: true } ) {
 
-    if (this.client.SDKUtils.isv2()) {
+    if ( options && options.useV2 ) {
         return this.createv2( json );
     } else {
-        return Promise.reject( {
-            url: 'AccessProfiles.createv3',
-            status: -1,
-            statusText: 'AccessProfile.create not in v3 API yet'
-        })
+        return this.createv3( json );
     }
 }
 
 AccessProfiles.prototype.createv2 = function( json ) {
-
+    
     let url=this.client.apiUrl+'/v2/access-profiles';
-//TODO: Cache looked up identities
+    //TODO: Cache looked up identities
     // Sanity check
     if ( json==null ) {
         return Promise.reject({
@@ -248,11 +244,11 @@ AccessProfiles.prototype.createv2 = function( json ) {
             statusText: 'No name specified for creation'
         });
     }
-
+    
     let promise=Promise.resolve();
-
+    
     if (json.ownerId==null) {
-        promise=this.client.Identities.get( json.ownerName , { usev2: true} )
+        promise=this.client.Identities.get( json.ownerName , { useV2: true} )
         .then( identity => {
             json.ownerId=identity.id;
             return Promise.resolve();
@@ -279,7 +275,7 @@ AccessProfiles.prototype.createv2 = function( json ) {
         Object.keys(json).forEach( key => {
             // Strip out attributes that aren't in Neil's example
             if (!allowedKeys.includes( key )) {
-              delete json[key];
+                delete json[key];
             }
         });
         console.log('-- Posting to access-profiles --');
@@ -288,19 +284,15 @@ AccessProfiles.prototype.createv2 = function( json ) {
     }, err => {
         return Promise.reject( err );
     });
-
+    
 }
 
-        //   // Get the source id
-        //   if (ap.source.id==null) {
-        //     promise=promise.then( () => {
-        //       return client.Sources.get(ap.source.name).then( source => {
-        //         ap.source.id=source.id;
-        //       }, err => {
-        //         Promise.reject('Source '+ap.source.name+' for AP '+ap.name+' not found');
-        //       })
-        //     });
-        //   }
-
+AccessProfiles.prototype.createv3 = function( json ) {
+    return Promise.reject( {
+        url: 'AccessProfiles.createv3',
+        status: -1,
+        statusText: 'AccessProfile.create not in v3 API yet'
+    });
+}
 
 module.exports = AccessProfiles;

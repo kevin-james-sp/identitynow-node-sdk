@@ -88,7 +88,7 @@ IdentityNowClient.prototype.parseToken = function( token ) {
 
 IdentityNowClient.prototype.token = function( overrideconfig = [] ) {
     
-    let expired=(this.jwtExpires < (Date.now()/1000));
+    let expired=(this.jwtExpires!=null && this.jwtExpires < (Date.now()/1000));
     // Do we have a current token, and not wanting to regenerate?
     if ( this.accesstoken!=null && !expired && !overrideconfig.regenerate ) {
         
@@ -238,22 +238,42 @@ IdentityNowClient.prototype.get = function( url, retry ) {
     
     let that=this;
     
-    return this.token().then( function( resp ) {
-        return that.client.get( url, {
-            headers: {
-                Authorization: 'Bearer '+resp
+    return this.token().then( 
+        resp => {
+            return that.client.get( url, {
+                    headers: {
+                        Authorization: 'Bearer '+resp
+                    }
+                }).then( 
+                    success => {
+                        return success
+                    },
+                    err => {
+                        if ( err.response.status==404 ) {
+                            return Promise.reject({
+                                url: url,
+                                status: -1,
+                                statusText: 'URL Not found'
+                            })
+                        }
+                        return Promise.reject({
+                            url: url,
+                            status: -1,
+                            statusText: err.message
+                        })
+                    }
+                );
+        },
+        err => {
+            if (err.response.status==401 && !retry) {
+                // 401. Not a retry. Invalidate the token and try once more
+                that.accesstoken=null;
+                return get( url, true);
             }
+            console.log('------Get ERRROR-------');
+            console.log(err);
+            return Promise.reject(err);
         });
-    }, function( err ){
-        if (err.response.status==401 && !retry) {
-            // 401. Not a retry. Invalidate the token and try once more
-            that.accesstoken=null;
-            return get( url, true);
-        }
-        console.log('------Get ERRROR-------');
-        console.log(err);
-        return Promise.reject(err);
-    });
     
 }
 

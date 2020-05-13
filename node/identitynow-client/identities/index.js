@@ -63,7 +63,7 @@ Identities.prototype.list = function list () {
 }
 
 Identities.prototype.get = function get ( id, options ) {
-    if ( options && options.usev2 ) {
+    if ( options && options.useV2 ) {
         return this.getv2( id, options );
     } else {
         return this.getv3( id, options );

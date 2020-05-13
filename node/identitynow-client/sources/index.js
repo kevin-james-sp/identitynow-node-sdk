@@ -1,3 +1,5 @@
+var axios = require('axios');
+
 const JSZip=require('jszip');
 
 var client;
@@ -64,19 +66,19 @@ Sources.prototype.list = function list () {
 // - tenant    Get from token
 // - connector id (old CC ID)
 // - filename
-Sources.prototype.getCCFile = function getCCFile( sourceId, filename ) {
+Sources.prototype.getCCFile = function getCCFile( pod, tenant, sourceId, filename ) {
 
-    return this.get( id ).then( src => {
-        let connId=src.connectorAttributes.cloudExternalId;
+    let url='https://sppcbu-va-images.s3.amazonaws.com/'+pod+'/'+tenant+'/connectorFiles/'+sourceId+'/'+filename;
 
-    }, err => {
-        return Promise.reject( err );
+    return axios.get( url , {
+        responseType: 'arraybuffer'
     });
     
 }
 
 Sources.prototype.getZip = function getZip( id ) {
 
+    let zipPromise;
     return this.get(id, {
         clean: true,
         export: true
@@ -106,9 +108,17 @@ Sources.prototype.getZip = function getZip( id ) {
         }
         if (object.connectorAttributes.connectorFiles) {
             let filesFolder=zip.folder('files');
-
+            object.connectorAttributes.connectorFiles.split(',').forEach( filename => {
+                filesFolder.file(filename, 'x');
+            });
+            zipPromise=Promise.all(zipPromises);
+        } else {
+            zipPromise=Promise.resolve();
         }
-        return Promise.resolve(zip);
+        return zipPromise.then(
+            res => { return Promise.resolve( zip ) },
+            err => { return Promise.reject( err ) }
+        );
     }, function ( err ) {
         return Promise.reject( err );
     });
@@ -204,7 +214,23 @@ Sources.prototype.get = function get ( id, options ) {
                 })
             })
             );
-                    
+
+            // If we're exporting, get the Custom Connector files as base64 into the json
+            if (resp.data.connectorAttributes.connector_files) {
+                ret.connectorFiles={};
+                resp.data.connectorAttributes.connector_files.split(',').forEach( filename => {
+                    promises.push( that.getCCFile(that.client.pod, that.client.tenant, resp.data.connectorAttributes.cloudExternalId, filename )
+                                        .then( data => {
+                                            ret.connectorFiles[filename]=Buffer.from(data.data, 'binary').toString('base64');
+                                            return Promise.resolve();
+                                        }, err => {
+                                            console.log('Skipping custom connector file  '+filename+', err='+err.response.status);
+                                            return Promise.resolve();
+                                        })
+                                 );
+                });
+            }
+
             return Promise.all(promises).then( function() {
                 return ret;
             }, function(err) {
@@ -217,6 +243,16 @@ Sources.prototype.get = function get ( id, options ) {
                 });
             });
         } );
+}
+
+Sources.prototype.addFile = function( id, filename, contents ) {
+
+    return Promise.reject({
+        url: 'Upload.file',
+        status: -1,
+        statusText: 'Not yet implemented'
+    })
+
 }
 
 /* Create a new source
@@ -302,6 +338,9 @@ Sources.prototype.create = function( object ) {
     }
     var that=this;
 
+    // The above will do all the lookups of IDS etc in order to create the source. The following
+    // is to add/update all the things that require the source to first exist..
+
     return Promise.all(promises).then( function () {
 
         let url=that.client.apiUrl+'/beta/sources';
@@ -320,7 +359,7 @@ Sources.prototype.create = function( object ) {
                     // Do we need to replace an automatically generated schema?                  
                     if (resp.data.schemas!=null) {
                         let currentSchemaId=null;
-                        resp.data.schemas.forEach( function( value ) {
+                        resp.data.schemas.forEach( value => {
                             if (value.name==schema.name) {
                                 currentSchemaId=value.id;
                             }
@@ -337,7 +376,7 @@ Sources.prototype.create = function( object ) {
                             }));
                         } else {                        
                             promises.push(promise.then( 
-                                function( ok ) {
+                                ok  => {
                                     that.client.Schemas.create(appId, schema).then(
                                         function ( sch ) {
                                             console.log('sch: '+sch);
@@ -347,7 +386,7 @@ Sources.prototype.create = function( object ) {
                                             return Promise.reject(reject);
                                         }
                                     )
-                                }, function( reject ){
+                                }, reject => {
                                     console.log('reject: ');                                
                                     return Promise.reject(reject);
                                 }
@@ -358,18 +397,29 @@ Sources.prototype.create = function( object ) {
             }
             if (object.correlationConfig && object.correlationConfig.correlationConfig) {
                 console.log('Replacing Correlation Config');
+                // API returns 'null' for empty correlation config
+                // POST expects '[]' for empty correlation config
+                if (object.correlationConfig.correlationConfig.attributeAssignments==null) {
+                    object.correlationConfig.correlationConfig.attributeAssignments=[];
+                }
                 promises.push( that.client.post( that.client.apiUrl+'/cc/api/source/update/'+resp.data.connectorAttributes.cloudExternalId,
                     {
                         correlationConfig: JSON.stringify(object.correlationConfig.correlationConfig)
                     }, { formEncoded: true }
                 ).then( 
                     resolve => {
-                        return Promise.resolve( resolve )
+                        return Promise.resolve( resolve );
                     }, reject => {
-                        return Promise.reject( reject )
+                        return Promise.reject( reject );
                     }
                 )
                 );
+            }
+            if (object.connectorFiles!=null) {
+                for (let [filename, contents] of Object.entries( object.connectorFiles ) ) {
+                    that.addFile( appId, filename, contents );
+                }
+                console.log('do something with connectorFiles');
             }
             return Promise.all(promises).then( function( resp ) {
                     console.log('all promises resolved');

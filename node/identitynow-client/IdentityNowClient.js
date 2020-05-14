@@ -1,4 +1,5 @@
 var axios = require('axios');
+var FormData = require('form-data');
 var http = require('http');
 var jwtDecode = require('jwt-decode');
 var open = require('open');
@@ -291,21 +292,46 @@ IdentityNowClient.prototype.delete = function( url ) {
     
 }
 
-IdentityNowClient.prototype.post = function( url, payload, options, retry ) {
+IdentityNowClient.prototype.post = function( url, payload, options = [], retry ) {
     
     let that=this;
     
     return this.token().then( function( resp ) { // token success
-        headers={
+        config={
             headers: {
                 Authorization: 'Bearer '+resp
             }
         };
-        if (options && options.formEncoded) {
-            headers['Content-Type'] = 'application/x-www-form-urlencoded';
+        if (options.formEncoded) {
+            config.headers['Content-Type'] = 'application/x-www-form-urlencoded';
             payload=QueryString['stringify'](payload);
         }
-        return that.client.post( url, payload, headers )            
+        if (options.multipart) {
+            /*
+             Multipart data must be sent to us differently
+             Instead of sending us an object (name/value pairs), we get an array of 
+             { type, name, value, .... } objects
+             that way we can handle special cases like type=file, or any others we come across
+            */
+            var formData=new FormData();
+            payload.forEach( entry => {
+                switch ( entry.type ) {
+                    case 'file': {
+                        formData.append(entry.name, entry.value, {
+                            filename: entry.filename,
+                            contentType: 'application/octet-stream'
+                        });
+                        break;
+                    }
+                    default: {
+                        formData.append(entry.name, entry.value);
+                    }
+                }
+            });
+            payload=formData.getBuffer();
+            config.headers={...config.headers, ...formData.getHeaders()};
+        }
+        return that.client.post( url, payload, config )
             .then( resp => { // post success
                 return Promise.resolve( resp );
             }, function(err) { //post failure

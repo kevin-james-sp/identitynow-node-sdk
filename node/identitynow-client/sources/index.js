@@ -261,11 +261,31 @@ Sources.prototype.get = function get ( id, options = [] ) {
 
 Sources.prototype.addFile = function( id, filename, contents ) {
 
-    return Promise.reject({
-        url: 'Upload.file',
-        status: -1,
-        statusText: 'Not yet implemented'
-    })
+    let url;
+    return this.get( id ).then( source => {
+        let ccId=source.connectorAttributes.cloudExternalId;
+        url=this.client.apiUrl+'/cc/api/source/uploadConnectorFile/'+ccId;
+        let payload=[ {
+            type: 'file',
+            name: 'file',
+            value: contents,
+            filename: filename
+        }];
+        // I'd rather defer this to IdentityNowClient, but I don't have a good solution
+        return this.client.post( url, payload, { multipart: true }).then(
+            success => {
+                console.log('Add file Success:');
+            }, err => {
+                console.log(JSON.stringify(err, null, 2));
+                return Promise.reject({
+                    url: url,
+                    status: -1,
+                    statusText: 'Add File failed: '
+                })
+            }
+
+        );
+    });
 
 }
 

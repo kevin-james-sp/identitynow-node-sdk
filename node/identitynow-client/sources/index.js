@@ -451,7 +451,7 @@ Sources.prototype.create = function( object ) {
             }
             if (object.connectorFiles!=null) {
                 for (let [filename, contents] of Object.entries( object.connectorFiles ) ) {
-                    that.addFile( appId, filename, contents );
+                    that.addFile( appId, filename, Buffer.from(contents.data) );
                 }
                 console.log('do something with connectorFiles');
             }

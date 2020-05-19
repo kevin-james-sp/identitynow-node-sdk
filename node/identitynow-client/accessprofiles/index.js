@@ -8,7 +8,7 @@ function AccessProfiles( client ) {
 
 }
 
-AccessProfiles.prototype.getPage=function(off, lst) {
+AccessProfiles.prototype.getPage=function(off, lst, query="*") {
         
     let offset=0;
     if (off!=null) {
@@ -28,7 +28,7 @@ AccessProfiles.prototype.getPage=function(off, lst) {
     let payload={
         "queryType": "SAILPOINT",
         "query": {
-            "query": "*"
+            "query": query
         } 
     };
 
@@ -38,7 +38,7 @@ AccessProfiles.prototype.getPage=function(off, lst) {
         list=list.concat(resp.data);
         offset+=resp.data.length;
         if (list.length<count) {
-            return that.getPage(offset, list);
+            return that.getPage(offset, list, query);
         }
         return Promise.resolve(list);
     }, function ( err ) {
@@ -63,8 +63,6 @@ AccessProfiles.prototype.listv3 = function list () {
     });
 
 }
-
-
 
 AccessProfiles.prototype.listv2=function() {
         
@@ -98,10 +96,42 @@ AccessProfiles.prototype.list=function( options ) {
     }
 }
 
-AccessProfiles.prototype.get = function get ( tagId, options ) {
+AccessProfiles.prototype.search = function( name ) {
 
-    if ( options && options.useV2 ) {
-        return this.getv2( tagId, options );
+    return this.getPage( 0, [], '"'+name+'"' );
+
+}
+
+AccessProfiles.prototype.getByName = function( name, options={} ) {
+
+    let that=this;
+    return this.search( name ).then( results => {
+        if ( results.length==0 ) {
+            return null;
+        }
+        if ( results.length>1 ) {
+            return Promise.reject({
+                url: 'AccessProfiles.getByName',
+                status: -1,
+                statusText: 'Ambiguous name \''+name+'\''
+            })
+        }
+        // We did a search, which uses beta(~=v3) API. If options specified v2,
+        // we need to return a 'get'
+        if ( options.useV2 ) {
+            return that.getv2( results[0].id, options );
+        }
+        return results[0];
+    }, err => {
+        return Promise.reject( err );
+    });
+
+}
+
+AccessProfiles.prototype.get = function get ( tagId, options={} ) {
+
+    if ( options.useV2 ) {
+        return this.getByName( tagId, options ); // V2 API get is by ID; so use GetByName to to a v3 search then return v2 get
     } else {
         return this.getv3( tagId, options );
     }
@@ -126,11 +156,7 @@ AccessProfiles.prototype.getv2 = function get ( tagId, options ) {
             }
         );
     }, err => {
-        return Promise.reject({
-            url: url,
-            status: err.response.status,
-            statusText: err.response.statusText
-        })
+        return Promise.reject( err );
     });
 
     promise = promise.then( resp => {
@@ -232,23 +258,30 @@ AccessProfiles.prototype.createv2 = function( json ) {
     // Sanity check
     if ( json==null ) {
         return Promise.reject({
-            url: url,
+            url: 'AccessProfiles.createv2',
             status: -1,
             statusText: 'No Access Profile specified for creation'
         });
     }
     if ( json.name==null ) {
         return Promise.reject({
-            url: url,
+            url: 'AccessProfiles.createv2',
             status: -1,
             statusText: 'No name specified for creation'
         });
     }
-    
+    if (json.entitlements==null || json.entitlements.length==0) {
+        return Promise.reject({
+            url: 'AccessProfiles.createv2',
+            status: -1,
+            statusText: 'No entitlements in Access Profiles'
+        });
+    }
+
     let promise=Promise.resolve();
     
     if (json.ownerId==null) {
-        promise=this.client.Identities.get( json.ownerName , { useV2: true} )
+        promise=this.client.Identities.get( json.ownerName || json.owner.name , { useV2: true} ) // Export is V3
         .then( identity => {
             json.ownerId=identity.id;
             return Promise.resolve();
@@ -258,7 +291,7 @@ AccessProfiles.prototype.createv2 = function( json ) {
     }
     if (json.sourceId==null) {
         promise=promise.then( () => {
-            return this.client.Sources.getByName( json.sourceName )
+            return this.client.Sources.getByName( json.sourceName || json.source.name )
             .then( source => {
                 json.sourceId=source.connectorAttributes.cloudExternalId;
                 return Promise.resolve();
@@ -268,7 +301,8 @@ AccessProfiles.prototype.createv2 = function( json ) {
         }, err => {
             return Promise.reject( err );
         });
-    }    
+    }
+    
     return promise.then( () => {
         let allowedKeys=['name', 'description', 'ownerId', 'sourceId', 'entitlements', 'approvalSchemes',
         'revokeRequestApprovalSchemes', 'requestCommentsRequired', 'deniedCommentsRequired', 'disabled' ];
@@ -293,6 +327,64 @@ AccessProfiles.prototype.createv3 = function( json ) {
         status: -1,
         statusText: 'AccessProfile.create not in v3 API yet'
     });
+}
+
+AccessProfiles.prototype.deleteByName = function( name, options = {}) {
+
+    if (options.useV2==null) {
+        options.useV2=true;
+    }
+    let that=this;
+    this.search( name ).then( profiles => {
+        if ( profiles.length==0 ) {
+            return Promise.reject({
+                url: 'AccessProfiles.deleteByName',
+                status: -1,
+                statusText: 'AccessProfile \''+name+'\' not found'       
+            });
+        }
+        if ( profiles.length>1 && !options.multiple) {
+            return Promise.reject({
+                url: 'AccessProfiles.deleteByName',
+                status: -1,
+                statusText: 'AccessProfile name \''+name+'\' is ambiguous'       
+            });            
+        }
+        let promises=[];
+        profiles.forEach( profile => {
+            promises.push( that.delete( profile.id ));
+        });
+        return Promise.all( promises );
+    }, err => {
+        return Promise.reject( err );
+    });
+
+}
+
+
+AccessProfiles.prototype.delete = function( id, options = { useV2: true } ) {
+
+    if (options.useV2) {
+        return this.deletev2( id );
+    }
+    return this.deletev3( id );
+}
+
+AccessProfiles.prototype.deletev2 = function( id ) {
+    
+    let url=this.client.apiUrl+"/v2/access-profiles/"+id;
+    return this.client.delete( url );
+    
+}
+
+AccessProfiles.prototype.deletev3 = function( id ) {
+    
+    return Promise.reject( {
+        url: 'AccessProfiles.deletev3',
+        status: -1,
+        statusText: 'AccessProfile.delete not in v3 API yet'
+    });
+
 }
 
 module.exports = AccessProfiles;

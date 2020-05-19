@@ -62,7 +62,7 @@ Once you have an authenticated client, the following actions are available
 ## Access Profiles ##
 
 ### List ###
-`client.AccessProfiles.list( [options])`
+`client.AccessProfiles.list( [options] )`
 
 ```
   client.AccessProfiles.list().then( function ( profiles ) { 
@@ -75,6 +75,31 @@ Options:
 - useV2: Use the V2 API to list Access Profiles. The data returned by V2 is slightly different to V3
 
 Methods to directly use the V2 or V3 API are available as `listv2()` and `listv3()` respectively
+
+### Search ###
+`client.AccessProfiles.search( query )`
+
+```
+  client.AccessProfiles.search( 'AD*' ).then( function ( profiles ) { 
+      ....
+  });
+```
+Search access profiles. query can contain wildcards
+
+__NOTE__ Uses the V3 API, so to use the results with any wrapped V2 calls translation will be required
+
+### Get By Name ###
+`client.AccessProfiles.getByName( name [, options])`
+
+```
+  client.AccessProfiles.getByName( name ).then( function ( profile ) { 
+      ....
+  });
+```
+Get an Access Profile by name. This method is designed to return an error if more than one result is found. For multiple results, use AccessProfiles.search()
+
+Options:
+- useV2: Use the V2 API to get the Access Profile. The data returned by V2 is slightly different to V3
 
 ### Get ###
 `client.AccessProfiles.get( id [, options])`
@@ -90,6 +115,34 @@ Options:
 - useV2: Use the V2 API to list Access Profiles. The data returned by V2 is slightly different to V3
 
 Methods to directly use the V2 or V3 API are available as `getv2( id )` and `getv3( id )` respectively
+
+### Delete ###
+`client.AccessProfiles.delete( id [, options])`
+
+```
+  client.AccessProfiles.delete( id ).then( function ( profile ) { 
+      ....
+  });
+```
+Delete Access Profile
+
+Options:
+- useV2: Use the V2 API to delete Access Profiles
+
+Methods to directly use the V2 or V3 API are available as `deletev2( id )` and `deletev3( id )` respectively
+
+### Delete ###
+`client.AccessProfiles.deleteByName( id [, options])`
+
+```
+  client.AccessProfiles.deleteByName( id ).then( function ( profile ) { 
+      ....
+  });
+```
+Delete Access Profile (by name)
+
+Options:
+- useV2: Use the V2 API to delete Access Profiles
 
 ### Create ###
 `client.AccessProfiles.create( json [, options])`

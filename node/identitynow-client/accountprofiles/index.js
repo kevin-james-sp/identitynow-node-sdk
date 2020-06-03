@@ -7,7 +7,7 @@ function AccountProfiles( client ) {
 
 }
 
-AccountProfiles.prototype.list=function( id ) {
+AccountProfiles.prototype.list=function( id, options = {} ) {
         
     let url=this.client.apiUrl+'/cc/api/accountProfile/list/';
     let that=this;
@@ -16,6 +16,22 @@ AccountProfiles.prototype.list=function( id ) {
         
         return that.client.get(url+resp.connectorAttributes.cloudExternalId).then(
             function (resp) {
+                if (options.tokenize) {
+                    // Need to tokenize each one individually
+                    obj={};
+                    obj.object=[];
+                    obj.tokens=[];
+                    resp.data.forEach( ap=> {
+                        let apname=ap.name;
+                        if (apname.replace(/\s/g, '')!=ap.usage){
+                            apname=apname+'.'+ap.usage;
+                        }
+                        tokenAP = that.client.SDKUtils.tokenize(apname, ap, options.tokens);
+                        obj.object.push(tokenAP.object);
+                        obj.tokens = obj.tokens.concat(tokenAP.tokens);
+                    });
+                    return Promise.resolve( obj );
+                }
                 return Promise.resolve(resp.data);
             }
             , function (err) {
@@ -36,7 +52,7 @@ AccountProfiles.prototype.list=function( id ) {
         
     }
     
-AccountProfiles.prototype.get = function get ( id, usage) {
+AccountProfiles.prototype.get = function get ( id, usage, options={} ) {
         
     let that=this;
     return this.client.Sources.get( id ).then( function( resp ) {
@@ -44,7 +60,11 @@ AccountProfiles.prototype.get = function get ( id, usage) {
         let url=that.client.apiUrl+'/cc/api/accountProfile/get/'+resp.connectorAttributes.cloudExternalId+'?usage='+usage;
         return that.client.get(url).then(
             function (resp) {
-            return Promise.resolve(resp.data);
+                if (options.tokenize) {
+                    obj = that.client.SDKUtils.tokenize(name, resp.data, options.tokens);
+                    return Promise.resolve( obj );
+                }
+                return Promise.resolve(resp.data);
 
         }
         , function (err) {

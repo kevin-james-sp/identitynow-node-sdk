@@ -27,10 +27,11 @@ Schemas.prototype.list=function( id ) {
 
 }
 
-Schemas.prototype.get = function get ( appId, schemaId , options ) {
+Schemas.prototype.get = function get ( appId, schemaId , options={} ) {
     
     let url=this.client.apiUrl+'/beta/sources/'+appId+'/schemas/'+schemaId;
-    
+    let that=this;
+
     return this.client.get(url)
         .then( 
         function (resp) {
@@ -38,7 +39,11 @@ Schemas.prototype.get = function get ( appId, schemaId , options ) {
                 delete resp.data.id;
                 delete resp.data.created;
             }
-            return Promise.resolve(resp.data);
+            if (options.tokenize) {
+                obj = that.client.SDKUtils.tokenize(resp.data.name, resp.data, options.tokens);
+                return Promise.resolve( obj );
+            }
+            return Promise.resolve( resp.data );
         }
         , function (err) {
             return Promise.reject({

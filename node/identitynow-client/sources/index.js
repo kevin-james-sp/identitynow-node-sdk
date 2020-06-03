@@ -164,99 +164,128 @@ Sources.prototype.get = function get ( id, options = [] ) {
     let url=this.client.apiUrl+'/beta/sources/'+id;
     
     let that=this;
+    
     return this.client.get(url)
-        .then( resp => {
-            if (options==null || !options.clean) {
-                return Promise.resolve(resp.data);
-            }
-            // Clean the source
-            let ret={
-                source: JSON.parse(JSON.stringify(resp.data, (k,v) => 
-                ( (k === 'id') || (k === 'created') || (k === 'modified') ) ? undefined : v)
+    .then( resp => {
+        if (options==null || !options.clean) {
+            return Promise.resolve(resp.data);
+        }
+        let tokens=[];
+        
+        // Clean the source
+        let ret={
+            source: JSON.parse(JSON.stringify(resp.data, (k,v) => 
+            ( (k === 'id') || (k === 'created') || (k === 'modified') ) ? undefined : v)
             )
-            };
-            // If we aren't exporting, just return the source
-            if (!options.export) {
-                return Promise.resolve(ret.source);
-            }
-            
-            // put source into 'source' object
-            let src=ret;
-            ret={};
-            ret.source=src;
-            // array of things we need to wait for
-            promises=[];
-            // Go get the other objects
-            // Schemas
-            ret.schemas=[];
-            let sourceid=resp.data.id;
-            resp.data.schemas.forEach( function(schema) {
-                promises.push( that.client.Schemas.get( sourceid, schema.id, options ).then( function (resp) {
+        };
+        // If we aren't exporting, just return the source
+        if (!options.export) {
+            return Promise.resolve(ret.source);
+        }
+        
+        if (options.tokenize) {
+            obj = that.client.SDKUtils.tokenize(ret.source.name, ret.source, options.tokens);
+            ret.source=obj.object;
+            tokens=tokens.concat(obj.tokens);
+        }
+        
+        // put source into 'source' object
+        let src=ret;
+        ret={};
+        ret.source=src;
+        // array of things we need to wait for
+        promises=[];
+        // Go get the other objects
+        // Schemas
+        ret.schemas=[];
+        let sourceid=resp.data.id;
+        resp.data.schemas.forEach( function(schema) {
+            promises.push( that.client.Schemas.get( sourceid, schema.id, options ).then( function (resp) {
+                    if (options.tokenize) {
+                        ret.schemas.push( resp.object );
+                        tokens=tokens.concat(resp.tokens);
+                    } else {
                         ret.schemas.push(resp);
-                    })
-                );
-            })
-            //let sourceExtId=resp.data.connectorAttributes.cloudExternalId;
-            // Account Profiles
-            promises.push( that.client.AccountProfiles.list( sourceid, options ).then( function ( resp )
-                {
-                    if (resp.length>0) {
-                        ret.accountProfiles=resp;
                     }
-                }, function ( err ) {
-                    return Promise.reject({
-                        url: url,
-                        status: err.response.status,
-                        statusText: err.response.statusText
-                    });    
-                }            
-            ));
-                // Password Policies
-            // Account Correlation Config
-            let cloudExtId=resp.data.connectorAttributes.cloudExternalId;
-            promises.push( that.client.get( that.client.apiUrl + '/cc/api/source/get/'+ cloudExtId ).then( function( resp ){
-                ret.correlationConfig={};
-                ret.correlationConfig.correlationConfig=resp.data.correlationConfig;
-            }, err => {
-                return Promise.reject({
-                    url: url,
-                    status: err.response.status,
-                    statusText: err.response.statusText
+
                 })
-            })
             );
-
-            // If we're exporting, get the Custom Connector files as base64 into the json
-            if (resp.data.connectorAttributes.connector_files) {
-                ret.connectorFiles={};
-                resp.data.connectorAttributes.connector_files.split(',').forEach( filename => {
-                    promises.push( that.getCCFile(that.client.pod, that.client.tenant, resp.data.connectorAttributes.cloudExternalId, filename )
-                                        .then( data => {
-                                            ret.connectorFiles[filename]=Buffer.from(data.data, 'binary').toString('base64');
-                                            return Promise.resolve();
-                                        }, err => {
-                                            console.log('Skipping custom connector file  '+filename+', err='+err.response.status);
-                                            return Promise.resolve();
-                                        })
-                                 );
-                });
-            }
-
-            return Promise.all(promises).then( function() {
-                if (!options.zip) {
-                    return ret;
+        })
+        //let sourceExtId=resp.data.connectorAttributes.cloudExternalId;
+        // Account Profiles
+        promises.push( that.client.AccountProfiles.list( sourceid, options ).then( function ( resp )
+            {
+                if ( options.tokenize && resp.object.length>0 ) {
+                    ret.accountProfiles=[];
+                    resp.object.forEach(accountProfile => {
+                        ret.accountProfiles.push(accountProfile);
+                    });
+                    tokens=tokens.concat(resp.tokens);
+                } else if (resp.length>0) {
+                    ret.accountProfiles=resp;
                 }
-                return that.toZip( ret );
-            }, function(err) {
-                console.log('---rejected---');
-                console.log(err.response.statusText);
+            }, function ( err ) {
                 return Promise.reject({
                     url: url,
                     status: err.response.status,
                     statusText: err.response.statusText
-                });
+                });    
+            }            
+        ));
+            // Password Policies
+        // Account Correlation Config
+        let cloudExtId=resp.data.connectorAttributes.cloudExternalId;
+        promises.push( that.client.get( that.client.apiUrl + '/cc/api/source/get/'+ cloudExtId ).then( function( resp ){
+            // TODO: do tokenization here, since it's a direct call rather than another object that has its own module
+            ret.correlationConfig={};
+            ret.correlationConfig.correlationConfig=resp.data.correlationConfig;
+        }, err => {
+            return Promise.reject({
+                url: url,
+                status: err.response.status,
+                statusText: err.response.statusText
+            })
+        })
+        );
+
+        // If we're exporting, get the Custom Connector files as base64 into the json
+        if (resp.data.connectorAttributes.connector_files) {
+            ret.connectorFiles={};
+            resp.data.connectorAttributes.connector_files.split(',').forEach( filename => {
+                promises.push( that.getCCFile(that.client.pod, that.client.tenant, resp.data.connectorAttributes.cloudExternalId, filename )
+                                    .then( data => {
+                                        ret.connectorFiles[filename]=Buffer.from(data.data, 'binary').toString('base64');
+                                        return Promise.resolve();
+                                    }, err => {
+                                        console.log('Skipping custom connector file  '+filename+', err='+err.response.status);
+                                        return Promise.resolve();
+                                    })
+                                );
             });
-        } );
+        }
+
+        return Promise.all(promises).then( function() {
+            if (options.tokenize) {
+                oldret = ret;
+                ret = {};
+                ret.object = oldret;
+                ret.tokens = tokens;
+
+            }
+            if (!options.zip) {
+                return ret;
+            }
+            return that.toZip( ret );
+        }, function(err) {
+            console.log('---rejected---');
+            console.log(err.response.statusText);
+            return Promise.reject({
+                url: url,
+                status: err.response.status,
+                statusText: err.response.statusText
+            });
+        });
+    } );
 }
 
 Sources.prototype.addFile = function( id, filename, contents ) {

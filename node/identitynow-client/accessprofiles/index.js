@@ -194,6 +194,9 @@ AccessProfiles.prototype.getv2 = function get ( tagId, options ) {
                     || (k === 'sourceId') || (k === 'ownerId') ) ? undefined : v)
                 );
             }
+            if (options.tokenize) {
+                ret = that.client.SDKUtils.tokenize(ret.name, ret, options.tokens);
+            }
         }
         return Promise.resolve( ret );
     }, err => {
@@ -229,6 +232,9 @@ AccessProfiles.prototype.getv3 = function get ( tagId, options ) {
                 ret=JSON.parse(JSON.stringify(ret, (k,v) => 
                     ( (k === 'id') || (k === 'created') || (k === 'modified') ) ? undefined : v)
                 );
+            }
+            if (options.tokenize) {
+                ret = that.client.SDKUtils.tokenize(ret.name, ret, options.tokens);
             }
         }
         return Promise.resolve(ret);

@@ -7,7 +7,7 @@ var client;
 function SDKUtils( client ) {
     
     this.client=client;
-    this.surrounder='%%'; // Default symbols to denote a token
+    this.surrounder='%%'; // TODO: abstract this somewhere; // Default symbols to denote a token
    
 }
 
@@ -30,6 +30,13 @@ function SDKUtils( client ) {
  *   ]
  * }
  */
+
+SDKUtils.prototype.surrounder = function surroundToken() {
+
+    return this.surrounder;
+
+}
+
 SDKUtils.prototype.tokenize = function tokenize (objectName, object = {}, tokenDefinitions = [] ) {
 
     let tokens=[];

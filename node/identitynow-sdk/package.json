@@ -1,5 +1,5 @@
 {
-  "name": "identitynow-client",
+  "name": "identitynow-sdk",
   "version": "1.0.0",
   "description": "SDK for IdentityNow",
   "main": "index.js",

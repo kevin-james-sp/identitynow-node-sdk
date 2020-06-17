@@ -42,7 +42,7 @@ if userAuthenticate is set to true, when a call is made to IdentityNow a browser
 *ALTERNATIVELY..* If you are using the client from within a server-side Node app, where the app handles the user authentication via browser redirection, you can instantiate the client like so:
 
 ```
-const idnClient=require('identitynow-client');
+const idnClient=require('identitynow-sdk');
 
 const config={
     tenant: 'readme',
@@ -54,6 +54,106 @@ const client=idnClient.Create( config );
 
 ```
 
+### Common Options ###
+All object types support the following options:
+- clean: remove attributes that would make no sense in another target system, e.g.
+    id, created, modified, synced, pod, org
+- tokenize: flag to say whether tokenization should be applied during 'get' operations
+- tokens: JSONPath tokens to apply when `tokenize` is true
+
+### Tokenization ###
+Tokenization is the act of replacing specified values in an object with tokens. This process uses [JSONPath](https://goessner.net/articles/JsonPath/) to identify values that should be replaced.
+For example, we can replace usernames, passwords and server addresses in a source, that can be replaced with new values when importing into another tenant.
+
+To use, specify `tokenize` as `true` in the options of a `get` call, and then pass an array of tokens as `tokens` in the options.
+
+For example:
+
+A section of an exported source looks like this:
+
+```{
+  "description": "AD Access Requests",
+  "owner": {
+    "type": "IDENTITY",
+    "name": "Bob.Bobsson"
+  },
+  "cluster": {
+    "type": "CLUSTER",
+    "name": "DC1 VA Cluster"
+  },
+  .
+  .
+  "connectorAttributes": {
+    .
+    .
+    "forestSettings": [
+      "user": "DC1\Administrator"
+      .
+      .      
+    ]
+  }
+  
+```
+
+Passing in a token list like this:
+```
+[
+  {
+    path: '$.owner.name',
+      token: 'OWNER'
+  },
+  {
+      path: '$.cluster.name',
+      token: 'CLUSTER'
+  },
+  {
+      path: '$.connectorAttributes.forestSettings[0].user',
+      token: 'FOREST_USERNAME'
+  }
+]
+```
+
+Will result in the source looking like this:
+```{
+  "description": "AD Access Requests",
+  "owner": {
+    "type": "IDENTITY",
+    "name": "%%OWNER%%"
+  },
+  "cluster": {
+    "type": "CLUSTER",
+    "name": "%%CLUSTER%%"
+  },
+  .
+  .
+  "connectorAttributes": {
+    .
+    .
+    "forestSettings": [
+      "user": "%%FOREST_USERNAME%%"
+      .
+      .      
+    ]
+  }
+  
+```
+And also a tokens file that looks like this:
+```
+[
+  {
+    "token": "%%OWNER%%",
+    "value": "Bob.Bobsson"
+  },
+  {
+    "token": "%%CLUSTER%%",
+    "value": "DC1 VA Cluster"
+  },
+  {
+    "token": "%%FOREST_USERNAME%%",
+    "value": "DC1\Administrator"
+  }
+]
+```
 
 Once you have an authenticated client, the following actions are available
 
@@ -286,10 +386,6 @@ Get a list of roles
 ```
 Get an identity
 
-Options:
-- clean: remove attributes that would make no sense in another target system
-    id, created, modified, synced, pod, org
-
 ## Sources ##
 
 ### List ###
@@ -341,7 +437,6 @@ This will return something like:
 ```
 
 Options:
-- clean: remove IDs from export
 - export: Collect sub-objects (such as Schemas) and bundle them in the response.
 - zip: return the source and related objects as a JSZip object
 

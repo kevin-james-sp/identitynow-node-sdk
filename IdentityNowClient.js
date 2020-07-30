@@ -13,6 +13,7 @@ var Entitlements = require('./entitlements');
 var Identities = require('./identities');
 var IdentityProfiles = require('./identityprofiles');
 var Roles = require('./roles');
+var Rules = require('./rules');
 var Schemas = require('./schemas');
 var SDKUtils = require('./sdkUtils');
 var Sources = require('./sources');
@@ -64,6 +65,7 @@ var IdentityNowClient=function( config ) {
     this.Identities = new Identities( this );    
     this.IdentityProfiles = new IdentityProfiles( this );    
     this.Roles=new Roles( this );
+    this.Rules=new Rules( this );
     this.Schemas = new Schemas( this );
     this.SDKUtils = new SDKUtils( this );
     this.Sources = new Sources( this );
@@ -338,11 +340,11 @@ IdentityNowClient.prototype.post = function( url, payload, options = [], retry )
                 if (err.response.status==400) {                    
                     return Promise.reject({
                         url: url,
-                        detailcode: err.response.data.detailCode,
+                        detailcode: err.response.data.detailCode||err.response.data.error_code,
                         messages: err.response.data.messages,
                         trackingId: err.response.data.trackingId,
                         status: 400,
-                        statusText: err.response.data.message||err.response.data.messages[0].text
+                        statusText: err.response.data.formatted_msg||err.response.data.message
                     });
                 } else if (err.response.status==401 && !retry) {
                     // 401. Not a retry. Invalidate the token and try once more

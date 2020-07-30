@@ -107,7 +107,11 @@ AccessProfiles.prototype.getByName = function( name, options={} ) {
     let that=this;
     return this.search( name ).then( results => {
         if ( results.length==0 ) {
-            return null;
+            return Promise.reject({
+                url: 'AccessProfiles.getByName',
+                status: -1,
+                statusText: 'Access profile \''+name+'\' not found'
+            })
         }
         if ( results.length>1 ) {
             return Promise.reject({

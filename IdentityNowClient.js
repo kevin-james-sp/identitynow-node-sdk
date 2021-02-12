@@ -19,6 +19,7 @@ var SDKUtils = require('./sdkUtils');
 var Sources = require('./sources');
 var Tags = require('./tags');
 var Transforms = require('./transforms');
+var VirtualAppliances = require('./virtualappliances');
 
 var QueryString = require('querystring');
 
@@ -71,6 +72,7 @@ var IdentityNowClient=function( config ) {
     this.Sources = new Sources( this );
     this.Tags = new Tags( this );
     this.Transforms = new Transforms( this );
+    this.VirtualAppliances = new VirtualAppliances( this );
     this.client = axios.create({
         baseURL: this.apiUrl
     });
@@ -144,14 +146,15 @@ IdentityNowClient.prototype.getClientToken = function( overrideconfig = []) {
     if (overrideconfig.refresh) {
         url+='&refresh_token='+this.jwtRefreshToken;
     }
-
     return this.client.post(url).then( resp => {
             this.parseToken(resp.data.access_token);
+            console.log(this.accesstoken);
             return Promise.resolve(this.accesstoken);
         }, err => {
+            console.log(`idnclient.error: ${JSON.stringify(err)}`);
             return Promise.reject({
                 status: err.response.status,
-                statusText: this.cerr.response.statusText||err.response.data.message
+                statusText: err.message
             });
         }
     );
@@ -220,11 +223,12 @@ IdentityNowClient.prototype.getJWTToken=function( callback ) {
         let parms={
             response_type: 'code',
             client_id: this.config.client_id,
-            scope: 'read write',
+            scope: 'sp:scopes:all',
             redirect_uri: this.config.callbackURL
         }
 
         let target=this.authorizationUrl+'?'+qs.stringify(parms);
+        console.log(`target=${target}`);
         try {
             open(target);
         } catch (err) {

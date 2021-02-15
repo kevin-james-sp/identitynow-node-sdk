@@ -148,7 +148,7 @@ IdentityNowClient.prototype.getClientToken = function( overrideconfig = []) {
     }
     return this.client.post(url).then( resp => {
             this.parseToken(resp.data.access_token);
-            console.log(this.accesstoken);
+            // console.log(this.accesstoken);
             return Promise.resolve(this.accesstoken);
         }, err => {
             console.log(`idnclient.error: ${JSON.stringify(err)}`);

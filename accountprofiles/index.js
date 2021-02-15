@@ -86,18 +86,24 @@ AccountProfiles.prototype.get = function get ( id, usage, options={} ) {
 
 AccountProfiles.prototype.update = function( id, profile ) {
 
+    let that = this;
     return this.client.Sources.get( id ).then( function( resp ) {
         
-        let url=this.client.apiUrl+'/cc/api/accountProfile/update/'+resp.connectorAttributes.cloudExternalId;
-        return this.client.post(url, profile).then( function (resp) {
+        let url=that.client.apiUrl+'/cc/api/accountProfile/bulkUpdate/'+resp.connectorAttributes.cloudExternalId;
+        let name = resp.name;
+        return that.client.post(url, [profile]).then( function (resp) {
+            console.log(`Updated account profile for ${name}`);
             return Promise.resolve(resp.data);            
         }
         , function (err) {
-            return Promise.reject({
-                url: url,
-                status: err.response.status,
-                statusText: err.response.statusText
-            });
+            console.log('--AccountProfiles.update: failure--');
+            console.log(JSON.stringify(err));
+            throw err;
+            // return Promise.reject({
+            //     url: url,
+            //     status: err.response.status,
+            //     statusText: err.response.statusText
+            // });
         });
     }, function (err) {
         return Promise.reject({

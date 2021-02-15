@@ -3,7 +3,6 @@ var axios = require('axios');
 const JSZip=require('jszip');
 
 var client;
-
 function Sources( client ) {
 
     this.client=client;
@@ -285,6 +284,11 @@ Sources.prototype.get = function get ( id, options = [] ) {
                 statusText: err.response.statusText
             });
         });
+    }, reject => {
+        if (!reject.module) {
+            reject.module='Sources.get';
+        }
+        return Promise.reject( reject );
     } );
 }
 
@@ -314,6 +318,8 @@ Sources.prototype.addFile = function( id, filename, contents ) {
             }
 
         );
+    }, reject => {
+        reject.module = 'Sources.addFile';
     });
 
 }
@@ -331,9 +337,7 @@ Sources.prototype.create = function( object ) {
     // Do sanity check
     // 1. Object must contain a 'source'
     if (object==null || object.source==null) {
-        return Promise.reject({
-            errorMessage: 'Create payload must include source'
-        })
+        return Promise.reject(error('Sources.create', 'Create payload must include source'));
     }
 
     // Some notes working with the API
@@ -351,29 +355,28 @@ Sources.prototype.create = function( object ) {
     // }
     // There will be only one of these (TODO: Implement check?)
 
-    let source=Object.values(object.source)[0];
     let schemas=object.schemas;
+    let accountProfile=object.accountProfile;
 
     // 1. No IDs or create/modified dates are allowed; we will look up IDs as needed
-    JSON.stringify(source, (k,v) => {
+    let source=JSON.parse(JSON.stringify(Object.values(object.source)[0], (k,v) => {
         if ( (k === 'id') || (k === 'created') || (k === 'modified') ) {
-            return Promise.reject({
-                status: -1,
-                statusText: "invalid key '"+k+"' must be stripped out"
-            })
+            return undefined;
+        } else {
+            return v;
         }
-    });
+    }));
 
     // Do it. First the source. Prior, we need to    
     // Check for Owner; Look up the ID
     if (source.owner==null||source.owner.name==null) {
-        return Promise.reject("Source owner must be specified by name");
-    }    
+        throw(error('Sources.create', "Source owner must be specified by name"));
+    }
     let promises=[];
     promises.push(this.client.Identities.get(source.owner.name).then(
         function (identity) {
             if (identity==null) {
-                return Promise.reject("Owner '"+source.owner.name+"' not found'");
+                return Promise.reject(error('Sources.create', "Owner '"+source.owner.name+"' not found'"));
             }
             source.owner.id=identity.id;
         }, function ( reject ) {
@@ -390,7 +393,7 @@ Sources.prototype.create = function( object ) {
         promises.push(this.client.Clusters.getByName(source.cluster.name).then(
             function (cluster) {
                 if (cluster==null) {
-                    return Promise.reject("Cluster '"+source.cluster.name+"' not found'");
+                    return Promise.reject(error('Sources.create', "Cluster '"+source.cluster.name+"' not found'"));
                 }
                 source.cluster.id=cluster.configuration.clusterExternalId;
             }, function ( reject ) {
@@ -407,6 +410,7 @@ Sources.prototype.create = function( object ) {
     return Promise.all(promises).then( function () {
 
         let url=that.client.apiUrl+'/beta/sources';
+        let appId='';
         if (source.accountCorrelationConfig) {
             // If there is an accountCorrelationConfig specified on the source,
             // the POST call will return a 404 since we haven't created it yet.
@@ -415,7 +419,8 @@ Sources.prototype.create = function( object ) {
 
         };
         return that.client.post(url, source).then( function( resp ) {
-            let appId=resp.data.id;
+            appId=resp.data.id;
+            appName=resp.data.name;
             promises=[];
             if (schemas!=null) {
                 Object.values(schemas).forEach( function (schema) {
@@ -458,6 +463,9 @@ Sources.prototype.create = function( object ) {
                     }
                 });
             }
+            if (accountProfile!=null) {
+                promises.push( that.client.AccountProfiles.update(appId, accountProfile) );
+            }
             if (object.correlationConfig && object.correlationConfig.correlationConfig) {
                 console.log('Replacing Correlation Config');
                 // API returns 'null' for empty correlation config
@@ -484,19 +492,94 @@ Sources.prototype.create = function( object ) {
                 }
                 console.log('do something with connectorFiles');
             }
-            return Promise.all(promises).then( function( resp ) {
+            return Promise.all(promises).then( resp => {
                     console.log('all promises resolved');
-                    return resp;
+                    return {
+                        status: "success",
+                        name: appName,
+                        id: appId
+                    };
                 }, function( err ){
                     console.log('all.reject');
                     console.log(err);
                     return Promise.reject(err);
                 });
-            return Promise.resolve( resp );
         }, function( err ) {
             return Promise.reject(err);
         });
     });
 }
+
+function error(module, message) {
+    return {
+        status: -1,
+        statusMessage: message,
+        module: module
+    }
+}
+/**
+ * Test a source connection
+ * kmj - I don't like doing this as an async function but retries with
+ * promises gives me a headache
+ * @param {*} id 
+ */
+Sources.prototype.testConnection = async function( id ) {
+
+    let that=this;
+    let maxtries=10;
+
+    console.log('Test Connection: '+id);
+
+    let source = await this.get( id );
+    let exID = source.connectorAttributes.cloudExternalId;
+    let url = `${this.client.apiUrl}/cc/api/source/testConnection/${exID}`;
+    for (var i=0;i<maxtries;i++) {
+        try {
+            response=await this.client.post( url );        
+            if (!response.data.success) {
+                console.log(`${id}: ${response.data.message}`);
+                throw (id);
+            }
+            return response.data;
+        } catch (error) {
+            console.log(`${id}: waiting for retry`);
+            await timeout(30000);
+        }
+    }
+    throw (`${id}: test failed after ${maxtries} retries`);
+
+    ////////////////////
+    // This is the old (non-retrying, asynchronous) version
+    ////////////////////
+    // return this.get( id ).then( source => {
+    //     let exID = source.connectorAttributes.cloudExternalId;
+    //     console.log(`External ID: ${exID}`);
+    //     let url = `${this.client.apiUrl}/cc/api/source/testConnection/${exID}`;
+    //     console.log(url);
+    //     return this.client.post( url ).then( response => {
+    //         console.log('testConnection:');
+    //         console.log(JSON.stringify(response.data, null, 2));
+    //         return response.data;
+    //     }, error => {
+    //         console.log('test: error');
+    //         console.log(error);
+    //         throw (error);
+    //     });
+    // })
+
+
+}
+
+function timeout(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+const pause = (duration) => new Promise(res => setTimeout(res, duration));
+
+const backoff = (retries, fn, delay = 500) =>
+  fn().catch(err => retries > 1
+    ? pause(delay).then(() => backoff(retries - 1, fn, delay * 2))
+    : Promise.reject(err));
+
 
 module.exports = Sources;

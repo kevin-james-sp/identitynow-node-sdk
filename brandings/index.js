@@ -1,5 +1,4 @@
 const { stringify } = require( 'querystring' );
-const { log } = require( 'grunt' );
 const sortArray = require( 'sort-array' );
 const querystring = require('querystring');
 var client;
@@ -36,6 +35,7 @@ Brandings.prototype.list = function () {
 Brandings.prototype.get = function ( name ) {
 
     let url = `${this.client.apiUrl}/cc/api/branding/get?name=${encodeURI( name )}`;
+    console.log(url);
     let that = this;
 
     return this.client.get( url )
@@ -61,25 +61,35 @@ Brandings.prototype.get = function ( name ) {
  * Note: colors must be specified without the '#'
  * @param {} branding 
  */
-Brandings.prototype.update = function ( branding ) {
+Brandings.prototype.update = function ( newBranding ) {
 
-    if ( !branding.name ) {
-        throw ( 'branding name must be specified' );
+    console.log(newBranding);
+
+    if ( !newBranding.name ) {
+        console.log('updating default branding');
+        newBranding.name='default';
     }
 
     let that = this;
 
-    return this.get( branding.name ).then( oldBranding => {
-        console.log( 'Old Branding:' )
-        console.log( oldBranding );
+    return this.get( newBranding.name ).then( branding => {
 
-        let newBranding = Object.assign( oldBranding, branding );
+        Object.keys(branding).forEach( key => {
+            if (newBranding[key]) {
+                branding[key]=newBranding[key];
+            }
+        });
         console.log('--New Branding--');
-        console.log(newBranding);
+        console.log(branding);
         console.log('----------------');
-        let url = `${this.client.apiUrl}/cc/api/branding/update?${querystring.stringify(newBranding)}`;
+        let url = `${this.client.apiUrl}/cc/api/branding/update?${querystring.stringify(branding)}`;
         console.log(url);
-        return that.client.post( url );
+        // AXIOS has a bug (or maybe IDN does) that something says the response is gzipped but it's actually text
+        // so for this we turn off decompression
+
+        return that.client.post( url, null, { noDecompress: true } ).then( ok => {
+            return 'Branding updated sucessfully';
+        });
     } )
 
 }

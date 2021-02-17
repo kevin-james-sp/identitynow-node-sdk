@@ -77,7 +77,8 @@ var IdentityNowClient = function ( config ) {
     this.Transforms = new Transforms( this );
     this.VirtualAppliances = new VirtualAppliances( this );
     this.client = axios.create( {
-        baseURL: this.apiUrl
+        baseURL: this.apiUrl,
+        decompress: false
     } );
 
 
@@ -346,6 +347,9 @@ IdentityNowClient.prototype.post = function ( url, payload, options = {}, retry 
             config.headers['Content-Type'] = 'application/x-www-form-urlencoded';
             payload = QueryString['stringify']( payload );
         }
+        if ( options.noDecompress ) {
+            config.decompress = false;
+        }
         if ( options.multipart ) {
             /*
              Multipart data must be sent to us differently
@@ -375,8 +379,8 @@ IdentityNowClient.prototype.post = function ( url, payload, options = {}, retry 
         }
         return that.client.post( url, payload, config )
             .then( resp => { // post success
-                return Promise.resolve( resp );
-            }, function ( err ) { //post failure
+                return resp;
+            }, err => { //post failure
                 if ( err.response ) {
 
                     if ( err.response.status == 400 ) {

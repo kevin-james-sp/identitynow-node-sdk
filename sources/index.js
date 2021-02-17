@@ -421,9 +421,9 @@ Sources.prototype.create = function( object ) {
 
         };
         return that.client.post(url, source).then( function( resp ) {
-            appId=resp.data.id;
-            appName=resp.data.name;
-            appType=resp.data.type;
+            let appId=resp.data.id;
+            let appName=resp.data.name;
+            let appType=resp.data.type;
             promises=[];
             if (schemas!=null) {
                 Object.values(schemas).forEach( function (schema) {
@@ -526,14 +526,12 @@ Sources.prototype.testConnection = async function( id ) {
         try {
             response=await this.client.post( url );        
             if (!response.data.success) {                
-                console.log(`${id}: testConnection: ${response.data.message}`);
+                console.log(`${source.name}: testConnection: ${response.data.message}`);
                 console.log(response.data);
                 console.log('-------------------------');
                 throw (source.name);
             }
             console.log(`test connection ${source.name} ok`);
-            console.log(response.data);
-            console.log('------------------------');
             return response.data;
         } catch (error) {
             console.log(`${source.name}: testConnection: waiting for retry (${i})`);

@@ -78,8 +78,6 @@ Schemas.prototype.create = function( appId, schema ) {
     let url=this.client.apiUrl+'/beta/sources/'+appId+'/schemas';
     
     return this.client.post(url, schema).then( function (resp ) {
-        console.log('schemas.create');
-        console.log(JSON.stringify(resp.data));
         return Promise.resolve(resp.data.id);
     }
     , function ( err ) {

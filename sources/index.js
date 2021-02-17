@@ -1,7 +1,8 @@
 var axios = require('axios');
 
+const FormData = require('form-data');
 const JSZip=require('jszip');
-
+const { Readable } = require('stream');
 var client;
 function Sources( client ) {
 
@@ -385,10 +386,10 @@ Sources.prototype.create = function( object ) {
         
     ));
         
-        // Check for cluster (if specified); look up the ID
-    if (source.cluster==null||source.cluster.name==null) {
-        return Promise.reject("Source cluster must be specified by name");
-    }    
+    //     // Check for cluster (if specified); look up the ID
+    // if (source.cluster!=null||source.cluster.id) {
+    //     return Promise.reject("Source cluster must be specified by name");
+    // }    
     if (source.cluster!=null) {
         promises.push(this.client.Clusters.getByName(source.cluster.name).then(
             function (cluster) {
@@ -411,6 +412,7 @@ Sources.prototype.create = function( object ) {
 
         let url=that.client.apiUrl+'/beta/sources';
         let appId='';
+        let appType='';
         if (source.accountCorrelationConfig) {
             // If there is an accountCorrelationConfig specified on the source,
             // the POST call will return a 404 since we haven't created it yet.
@@ -421,6 +423,7 @@ Sources.prototype.create = function( object ) {
         return that.client.post(url, source).then( function( resp ) {
             appId=resp.data.id;
             appName=resp.data.name;
+            appType=resp.data.type;
             promises=[];
             if (schemas!=null) {
                 Object.values(schemas).forEach( function (schema) {
@@ -435,7 +438,6 @@ Sources.prototype.create = function( object ) {
                         
                         let promise=Promise.resolve();
                         if (currentSchemaId!=null) {
-                            console.log('replacing '+currentSchemaId);
                             promises.push(that.client.Schemas.update(appId, currentSchemaId, schema)
                             .then( resolve => { return Promise.resolve() },
                             err => {
@@ -496,6 +498,7 @@ Sources.prototype.create = function( object ) {
                     console.log('all promises resolved');
                     return {
                         status: "success",
+                        type: appType,
                         name: appName,
                         id: appId
                     };
@@ -510,43 +513,34 @@ Sources.prototype.create = function( object ) {
     });
 }
 
-function error(module, message) {
-    return {
-        status: -1,
-        statusMessage: message,
-        module: module
-    }
-}
-/**
- * Test a source connection
- * kmj - I don't like doing this as an async function but retries with
- * promises gives me a headache
- * @param {*} id 
- */
 Sources.prototype.testConnection = async function( id ) {
 
     let that=this;
-    let maxtries=10;
+    let maxtries=20;
 
-    console.log('Test Connection: '+id);
-
+    
     let source = await this.get( id );
     let exID = source.connectorAttributes.cloudExternalId;
     let url = `${this.client.apiUrl}/cc/api/source/testConnection/${exID}`;
     for (var i=0;i<maxtries;i++) {
         try {
             response=await this.client.post( url );        
-            if (!response.data.success) {
-                console.log(`${id}: ${response.data.message}`);
-                throw (id);
+            if (!response.data.success) {                
+                console.log(`${id}: testConnection: ${response.data.message}`);
+                console.log(response.data);
+                console.log('-------------------------');
+                throw (source.name);
             }
+            console.log(`test connection ${source.name} ok`);
+            console.log(response.data);
+            console.log('------------------------');
             return response.data;
         } catch (error) {
-            console.log(`${id}: waiting for retry`);
+            console.log(`${source.name}: testConnection: waiting for retry (${i})`);
             await timeout(30000);
         }
     }
-    throw (`${id}: test failed after ${maxtries} retries`);
+    throw (`${source.name}: test failed after ${maxtries} retries`);
 
     ////////////////////
     // This is the old (non-retrying, asynchronous) version
@@ -569,6 +563,62 @@ Sources.prototype.testConnection = async function( id ) {
 
 
 }
+
+Sources.prototype.aggregateOldID =  function( id, config ={} ) {
+
+    let url = `${this.client.apiUrl}/cc/api/source/loadAccounts/${id}`;
+    let parms={};
+    if (config.disableOptimization) {
+        parms.disableOptimization=config.disableOptimization;
+    }
+    return this.client.post( url , parms ); 
+}
+
+Sources.prototype.aggregateFileByName = function( name, contents ) {
+    
+    let promise = this.getByName( name );
+    
+    
+    promise = promise.then( source => {
+        let oldID = source.connectorAttributes.cloudExternalId;
+        let url = `${this.client.apiUrl}/cc/api/source/loadAccounts/${oldID}`;
+
+        let formdata=[{
+            'type': 'boolean',
+            'name': 'disableOptimization',
+            'value': 'true'
+        },
+        {
+            'type': 'file',
+            'name': 'file',
+            'filename': 'users.csv',
+            'value': contents
+        }];
+
+        return this.client.post( url, formdata, {
+          multipart: true
+        }
+        )
+    });
+
+    return promise;
+
+}
+
+
+function error(module, message) {
+    return {
+        status: -1,
+        statusMessage: message,
+        module: module
+    }
+}
+/**
+ * Test a source connection
+ * kmj - I don't like doing this as an async function but retries with
+ * promises gives me a headache
+ * @param {*} id 
+ */
 
 function timeout(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));

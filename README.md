@@ -592,3 +592,34 @@ client.AccountProfiles.get( 'abcdef1234', 'Create' ).then( function( profile ) {
 });
 ```
 Returns the account profile for the specified source and Usage
+
+## Virtual Appliances ##
+
+### Create a Cluster ###
+
+```
+client.VirtualAppliances.createCluster( { clusterName: 'My Cluster'} ).then( function( cluster ) {
+    ....
+});
+```
+
+Creates a new VA cluster. Returns the new cluster object in JSON format
+
+### Create Virtual Appliance ###
+
+```
+client.VirtualAppliances.createVA( { clusterid: <CC cluster ID>} ).then( function( vaConfig ) {
+    ....
+});
+```
+
+Creates a new VA in the specified cluster. Returns:
+
+```
+{
+  id: <VA ID>,
+  yamlSource: <VA YAML config file as a string>,
+  yamlObject: <VA config as a JSON object>
+}
+```
+

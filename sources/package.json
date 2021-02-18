@@ -1,12 +1,12 @@
 {
   "name": "identitynow-sources",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Sources API",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "author": "kevin.james@sailpoint.com",
   "license": "ISC",
   "dependencies": {
     "form-data": "4.0.0",

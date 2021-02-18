@@ -1,12 +1,12 @@
 {
-  "name": "identitynow-accessprofiles",
+  "name": "identitynow-brandings",
   "version": "1.0.0",
-  "description": "AccessProfiles API",
+  "description": "Brandings API",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "author": "kevin.james@sailpoint.com",
   "license": "ISC",
   "dependencies": {
     "url": "0.11.0"

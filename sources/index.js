@@ -148,14 +148,17 @@ Sources.prototype.getByName = function ( name, options ){
                 return Promise.resolve( source );
             }
         }
-        console.log(' source not found');
-        return Promise.reject({
+        let errMsg = `Source.getByName: source '${name}' not found`;
+        console.log(errMsg);
+        throw {
             url: 'Sources',
             status: -1,
-            statusText: 'Source not found'
-        });
-    }, function( err ){
-        return Promise.reject( err );
+            statusText: errMsg
+        };
+    }, err => {
+        console.log(`Source.getByName: source '${name}' error`);
+        console.log(err);
+        throw err;
     });
 }
 

@@ -72,7 +72,10 @@ Identities.prototype.get = function get ( id, options ) {
 
 Identities.prototype.getv2 = function getv2 ( id, options ) {
     
-    let url=this.client.apiUrl+'/v2/identities/'+id;
+    let url=this.client.apiUrl+'/v2/identities';
+    if (id) {
+        url+='/'+id;
+    }
 
     return this.client.get(url)
         .then( function (resp) {
@@ -94,32 +97,101 @@ Identities.prototype.getv3 = function getv3 ( id, options ) {
     let payload={
         "queryType": "SAILPOINT",
         "query": {
-          "query": id
+            "query": id
         }
     }
     
     return this.client.post(url, payload)
-        .then( function (resp) {
-            if (resp.data.length==0) {
-                return Promise.reject({
-                    url: url,
-                    status: -1,
-                    statusText: "Identity '"+id+"' not found"
-                });
-            }
-            if (resp.data.length>1) {
-                return Promise.reject({
-                    url: url,
-                    status: -1,
-                    statusText: "Multiple results for Identity '"+id+"'"
-                });
-            }
-            return resp.data[0];
-        },
-        function (err) {
-            return Promise.reject(err);
+    .then( function (resp) {
+        if (resp.data.length==0) {
+            return Promise.reject({
+                url: url,
+                status: -1,
+                statusText: "Identity '"+id+"' not found"
+            });
         }
-        );
+        if (resp.data.length>1) {
+            return Promise.reject({
+                url: url,
+                status: -1,
+                statusText: "Multiple results for Identity '"+id+"'"
+            });
+        }
+        return resp.data[0];
+    },
+    function (err) {
+        return Promise.reject(err);
+    }
+    );
+}
+
+/**
+ * send invites
+ * @param {} users An array of email addresses
+ */
+Identities.prototype.invite = function invite ( users ) {
+    
+    let promise = this.getv2( null, null ); // Because invite is a CC api and needs the old id
+
+    promise = promise.then( identities => {
+        let ids=[];
+        identities.forEach( identity => {
+            if (users.includes(identity.email)) {
+                ids.push(identity.id);
+            }
+        })
+        let url = this.client.apiUrl+'/cc/api/user/invite?'
+        let first=true;
+        ids.forEach( id => {
+            if (first) {
+                first=false;
+            } else {
+                url+='&'
+            }
+            url+=`ids=${id}`;
+        });
+        return this.client.post( url ).then( result => {
+            console.log(result.data);
+            return ids;
+        });
+    });
+    return promise;
+
+}
+
+/**
+ * grant Admin privileges to users
+ * @param {} users An array of email addresses
+ */
+Identities.prototype.grantAdmin = function invite ( users ) {
+    
+    let promise = this.getv2( null, null ); // Because invite is a CC api and needs the old id
+
+    promise = promise.then( identities => {
+        let ids=[];
+        identities.forEach( identity => {
+            if (users.includes(identity.email)) {
+                ids.push(identity.id);
+            }
+        })
+        let url = this.client.apiUrl+'/cc/api/user/updatePermissions?'
+        let first=true;
+        ids.forEach( id => {
+            if (first) {
+                first=false;
+            } else {
+                url+='&'
+            }
+            url+=`ids=${id}`;
+        });
+        url+='&isAdmin=1&adminType=ADMIN';
+        console.log(url);
+        return this.client.post( url ).then( result => {
+            return ids;
+        });
+    });
+    return promise;
+
 }
 
 module.exports = Identities;

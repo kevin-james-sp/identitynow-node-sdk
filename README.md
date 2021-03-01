@@ -3,7 +3,7 @@
 This is a node module for interacting with IdentityNow.
 
 ## Import ##
-`const idnClient=require('identitynow-client');`
+`const idnClient=require('identitynow-sdk');`
 
 ## Authorization ##
 
@@ -19,7 +19,7 @@ Authorization needs to be configured during instantiation. The following fields 
 This can be performed in a block like this:
 
 ```
-const idnClient=require('identitynow-client');
+const idnClient=require('identitynow-sdk');
 
 const config={
     tenant: 'readme',
@@ -33,7 +33,7 @@ const client=idnClient.Create( config );
 
 ```
 
-ClientID and Secret are generated on the Admin page Global->Security Settings->API Management. a PAT can only (currently) be generated through REST API calls. Both are outside the scope of this document.
+ClientID and Secret are generated on the Admin page Global->Security Settings->API Management. a PAT can be generated through REST API calls, or on the 'Preferences' tab of the user menu. Both are outside the scope of this document.
 
 if userAuthenticate is set to true, when a call is made to IdentityNow a browser window will be opened for the user to authenticate. If the user is already authenticated in the browser, then the window will immediately close and execution will continue.
 

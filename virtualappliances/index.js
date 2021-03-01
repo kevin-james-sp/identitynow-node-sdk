@@ -74,7 +74,7 @@ console.log(url);
     // get the YAML file from the response
     promise = promise.then( response => {
         console.log('Create VA Complete');
-        let yamlconfig = yaml.safeLoad( response.data.yamlConfig );
+        let yamlconfig = yaml.load( response.data.yamlConfig );
         // We only need to return some of the stuff we got. Add here if necessary
         return {
             id: response.data.id,

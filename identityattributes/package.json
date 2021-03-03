@@ -1,0 +1,11 @@
+{
+  "name": "identitynow-identityattributes",
+  "version": "1.2.0",
+  "description": "Identity Attributes API",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "kevin.james@sailpoint.com",
+  "license": "ISC"
+}

@@ -163,7 +163,7 @@ Identities.prototype.invite = function invite ( users ) {
  * grant Admin privileges to users
  * @param {} users An array of email addresses
  */
-Identities.prototype.grantAdmin = function invite ( users ) {
+Identities.prototype.grantAdmin = function grantAdmin ( users ) {
     
     let promise = this.getv2( null, null ); // Because invite is a CC api and needs the old id
 

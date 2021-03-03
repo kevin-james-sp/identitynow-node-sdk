@@ -12,6 +12,7 @@ var Clusters = require( './clusters' );
 var CorrelationConfigs = require( './correlationconfigs' );
 var Entitlements = require( './entitlements' );
 var Identities = require( './identities' );
+var IdentityAttributes = require( './identityattributes' );
 var IdentityProfiles = require( './identityprofiles' );
 var Roles = require( './roles' );
 var Rules = require( './rules' );

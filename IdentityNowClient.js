@@ -68,6 +68,7 @@ var IdentityNowClient = function ( config ) {
     this.CorrelationConfigs = new CorrelationConfigs( this );
     this.Entitlements = new Entitlements( this );
     this.Identities = new Identities( this );
+    this.IdentityAttributes = new IdentityAttributes( this );
     this.IdentityProfiles = new IdentityProfiles( this );
     this.Roles = new Roles( this );
     this.Rules = new Rules( this );

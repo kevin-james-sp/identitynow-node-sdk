@@ -76,7 +76,7 @@ IdentityAttributes.prototype.create = function ( attr ) {
     
     console.log( 'IdentityAttributes.create' );
     // console.log( profile );
-    if ( !profile.name ) {
+    if ( !attr.name ) {
         throw {
             url: 'IdentityAttribute.create',
             status: -1,

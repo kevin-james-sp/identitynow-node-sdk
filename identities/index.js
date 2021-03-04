@@ -140,6 +140,15 @@ Identities.prototype.invite = function invite ( users ) {
                 ids.push(identity.id);
             }
         })
+        if (ids.length==0) {
+            console.log(`Couldn't find any users to invite on list` );
+            console.log(users);
+            throw {
+                url: 'Identities.invite',
+                status: -1,
+                statusText: `Couldn't find any users to invite on list`
+            }
+        }
         let url = this.client.apiUrl+'/cc/api/user/invite?'
         let first=true;
         ids.forEach( id => {

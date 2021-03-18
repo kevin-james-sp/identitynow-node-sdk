@@ -1,6 +1,6 @@
 {
   "name": "identitynow-sdk",
-  "version": "1.2.3",
+  "version": "1.2.6",
   "description": "SDK for IdentityNow",
   "main": "index.js",
   "scripts": {

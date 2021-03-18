@@ -1,10 +1,6 @@
 {
   "name": "identitynow-sdk",
-<<<<<<< HEAD
-  "version": "1.2.5",
-=======
   "version": "1.2.6",
->>>>>>> xformwarning
   "description": "SDK for IdentityNow",
   "main": "index.js",
   "scripts": {

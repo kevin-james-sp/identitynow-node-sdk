@@ -1,6 +1,6 @@
 {
   "name": "identitynow-sources",
-  "version": "1.1.0",
+  "version": "1.2.4",
   "description": "Sources API",
   "main": "index.js",
   "scripts": {

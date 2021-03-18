@@ -519,7 +519,7 @@ Sources.prototype.create = function( object ) {
 Sources.prototype.testConnection = async function( id ) {
 
     let that=this;
-    let maxtries=20;
+    let maxtries=120; // This can take up to an hour
 
     
     let source = await this.get( id );

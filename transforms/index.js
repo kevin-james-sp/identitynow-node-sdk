@@ -81,7 +81,7 @@ Transforms.prototype.create = function ( xform ) {
     }
 
     return this.client.post( url, xform ).then( function ( resp ) {
-        return resp.id;
+        return resp.data.id;
     }, function ( err ) {
         if ( err.data.error_code == 1009 ) {
             console.log( `Warning: transform ${xform.id} already exists` );

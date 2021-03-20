@@ -38,7 +38,7 @@ IdentityProfiles.prototype.get = function get( id, options ) {
     return this.client.get( url )
         .then( function ( resp ) {
             if ( options == null || !options.clean ) {
-                return Promise.resolve( resp.data );
+                return resp.data
             }
             // Clean the source
             let ret = JSON.parse( JSON.stringify( resp.data, ( k, v ) =>
@@ -56,12 +56,17 @@ IdentityProfiles.prototype.get = function get( id, options ) {
             return ret;
         }, function ( err ) {
             console.log( '---rejected---' );
-            console.log( err.response.statusText );
-            return Promise.reject( {
-                url: url,
-                status: err.response.status,
-                statusText: err.response.statusText
-            } );
+            if ( err.response ) {
+                console.log( err.response.statusText );
+                throw {
+                    url: url,
+                    status: err.response.status,
+                    statusText: err.response.statusText
+                };
+            } else {
+                console.log( err );
+                throw ( err );
+            }
         } );
 }
 
@@ -89,7 +94,7 @@ IdentityProfiles.prototype.create = function ( profile ) {
             statusText: 'Profile must have a name'
         };
     }
-    if ( !profile.sourceName ) {
+    if ( !profile.source.name ) {
         throw {
             url: 'IdentityProfile.create',
             status: -1,
@@ -97,26 +102,39 @@ IdentityProfiles.prototype.create = function ( profile ) {
         };
     }
 
-    return this.client.Sources.getByName( profile.sourceName )
+    return this.client.Sources.getByName( profile.source.name )
         .then( source => {
             let sourceId = source.connectorAttributes.cloudExternalId;
             let newSourceId = source.id;
             console.log( `create: id=${sourceId}, newId=${newSourceId}` );
-            console.log( `create: { name: ${profile.name}, sourceId: ${sourceId} }`);
+            console.log( `create: { name: ${profile.name}, sourceId: ${sourceId} }` );
             return this.client.post( url, { name: profile.name, sourceId: sourceId }, { formEncoded: true } ).then( response => {
-                console.log(`Identity Profile created: ${profile.name}`);
+                console.log( `Identity Profile created: ${profile.name}` );
                 let newProfile = response.data; // Now we need to add the attributes in
-                if ( profile.attrs ) {
-                    profile.attrs.forEach( attr => {
-                        attr.attributes.applicationId = newSourceId;
+                if ( profile.attributeConfig ) {
+                    if (!newProfile.attributeConfig) {
+                        newProfile.attributeConfig={};
+                    }
+                    if (!newProfile.attributeConfig.attributeTransforms) {
+                        newProfile.attributeConfig.attributeTransforms=[];
+                    }
+                    profile.attributeConfig.attributeTransforms.forEach( attr => {
+                        if (attr.type=='accountAttribute') {
+                            attr.attributes.applicationId = newSourceId;
+                        } else if (attr.type=='reference') {
+                            attr.attributes.input.attributes.applicationId = newSourceId;
+                        }
+                        newProfile.attributeConfig.attributeTransforms.push(attr);
                     } );
-                    newProfile.attributeConfig.attributeTransforms = profile.attrs;
                 }
+                console.log('--newProfile==');
+                console.log(JSON.stringify(newProfile, null, 2));
+                console.log('---------------');
                 // console.log( JSON.stringify( newProfile, null, 2 ) );
                 return this.client.post( this.client.apiUrl + '/cc/api/profile/update/' + newProfile.id, newProfile ).then( ok => {
-                    console.log('ID Profile updated - refreshing');
-                    return this.client.post( this.client.apiUrl+'/cc/api/profile/refresh/'+newProfile.id);
-                });
+                    console.log( 'ID Profile updated - refreshing' );
+                    return this.client.post( this.client.apiUrl + '/cc/api/profile/refresh/' + newProfile.id );
+                } );
             } ).catch( err => {
                 console.log( 'IDProfile.create: error' );
                 console.log( err );

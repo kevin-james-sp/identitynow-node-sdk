@@ -536,9 +536,7 @@ Sources.prototype.testConnection = async function ( id ) {
         try {
             response = await this.client.post( url );
             if ( !response.data.success ) {
-                console.log( `${source.name}: testConnection: ${response.data.message}` );
-                console.log( response.data );
-                console.log( '-------------------------' );
+                console.log( `${source.name}: testConnection failed` );
                 throw ( source.name );
             }
             console.log( `test connection ${source.name} ok` );
@@ -549,26 +547,6 @@ Sources.prototype.testConnection = async function ( id ) {
         }
     }
     throw ( `${source.name}: test failed after ${maxtries} retries` );
-
-    ////////////////////
-    // This is the old (non-retrying, asynchronous) version
-    ////////////////////
-    // return this.get( id ).then( source => {
-    //     let exID = source.connectorAttributes.cloudExternalId;
-    //     console.log(`External ID: ${exID}`);
-    //     let url = `${this.client.apiUrl}/cc/api/source/testConnection/${exID}`;
-    //     console.log(url);
-    //     return this.client.post( url ).then( response => {
-    //         console.log('testConnection:');
-    //         console.log(JSON.stringify(response.data, null, 2));
-    //         return response.data;
-    //     }, error => {
-    //         console.log('test: error');
-    //         console.log(error);
-    //         throw (error);
-    //     });
-    // })
-
 
 }
 

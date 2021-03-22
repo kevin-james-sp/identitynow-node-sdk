@@ -127,10 +127,6 @@ IdentityProfiles.prototype.create = function ( profile ) {
                         newProfile.attributeConfig.attributeTransforms.push(attr);
                     } );
                 }
-                console.log('--newProfile==');
-                console.log(JSON.stringify(newProfile, null, 2));
-                console.log('---------------');
-                // console.log( JSON.stringify( newProfile, null, 2 ) );
                 return this.client.post( this.client.apiUrl + '/cc/api/profile/update/' + newProfile.id, newProfile ).then( ok => {
                     console.log( 'ID Profile updated - refreshing' );
                     return this.client.post( this.client.apiUrl + '/cc/api/profile/refresh/' + newProfile.id );

@@ -159,6 +159,7 @@ Identities.prototype.invite = function invite ( users ) {
             }
             url+=`ids=${id}`;
         });
+        console.log(url);
         return this.client.post( url ).then( result => {
             console.log(result.data);
             return ids;
@@ -174,7 +175,7 @@ Identities.prototype.invite = function invite ( users ) {
  */
 Identities.prototype.grantAdmin = function grantAdmin ( users ) {
     
-    let promise = this.getv2( null, null ); // Because invite is a CC api and needs the old id
+    let promise = this.getv2( null, null ); // Because currentState.config.threadID is a CC api and needs the old id
 
     promise = promise.then( identities => {
         let ids=[];
@@ -183,6 +184,14 @@ Identities.prototype.grantAdmin = function grantAdmin ( users ) {
                 ids.push(identity.id);
             }
         })
+        if (ids.length==0) {
+            console.log('No identities found to grant admin to');
+            console.log(`users: ${users}`);
+            identities.forEach( identity => {
+                console.log(identity.email);
+            });
+            return;
+        }
         let url = this.client.apiUrl+'/cc/api/user/updatePermissions?'
         let first=true;
         ids.forEach( id => {

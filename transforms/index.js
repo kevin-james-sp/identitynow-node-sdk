@@ -87,7 +87,6 @@ Transforms.prototype.create = function ( xform ) {
         };
     }, function ( err ) {
         if ( err.data.error_code == 1009 ) {
-            console.log( `Warning: transform ${xform.id} already exists` );
             return {
                 result: "warn",
                 message: `Transform ${xform.id} already exists`,

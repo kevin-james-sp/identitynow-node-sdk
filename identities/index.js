@@ -195,12 +195,14 @@ Identities.prototype.grantAdmin = function grantAdmin ( users ) {
         let url = this.client.apiUrl+'/cc/api/user/updatePermissions?'
         let first=true;
         ids.forEach( id => {
-            if (first) {
-                first=false;
-            } else {
-                url+='&'
+            if (id!=null) {
+                if (first) {
+                    first=false;
+                } else {
+                    url+='&'
+                }
+                url+=`ids=${id}`;
             }
-            url+=`ids=${id}`;
         });
         url+='&isAdmin=1&adminType=ADMIN';
         console.log(url);

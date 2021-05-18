@@ -139,7 +139,15 @@ Identities.prototype.invite = function invite ( users ) {
             if (users.includes(identity.email)) {
                 ids.push(identity.id);
             }
-        })
+        });
+        if (ids.includes(null)) {
+            console.log(`Identities.invite: one or more IDs is null: ${ids}` );
+            throw {
+                url: 'Identities.invite',
+                status: -1,
+                statusText: `One or more IDs is null`
+            }
+        }
         if (ids.length==0) {
             console.log(`Couldn't find any users to invite on list` );
             console.log(users);
@@ -183,14 +191,26 @@ Identities.prototype.grantAdmin = function grantAdmin ( users ) {
             if (users.includes(identity.email)) {
                 ids.push(identity.id);
             }
-        })
+        });
+        if (ids.includes(null)) {
+            console.log(`Identities.grantAdmin: one or more IDs is null: ${ids}` );
+            throw {
+                url: 'Identities.grantAdmin',
+                status: -1,
+                statusText: `One or more IDs is null`
+            }
+        }
         if (ids.length==0) {
             console.log('No identities found to grant admin to');
             console.log(`users: ${users}`);
             identities.forEach( identity => {
                 console.log(identity.email);
             });
-            return;
+            throw {
+                url: 'Identities.grantAdmin',
+                status: -1,
+                statusText: `No identities found to grant admin to`
+            }
         }
         let url = this.client.apiUrl+'/cc/api/user/updatePermissions?'
         let first=true;

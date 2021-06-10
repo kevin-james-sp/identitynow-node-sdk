@@ -394,9 +394,11 @@ Sources.prototype.create = function ( object ) {
     //     return Promise.reject("Source cluster must be specified by name");
     // }    
     if ( source.cluster != null ) {
+        console.log(`sources.create: looking for cluster ${source.cluster.name}`);
         promises.push( this.client.Clusters.getByName( source.cluster.name ).then(
-            function ( cluster ) {
+            cluster => {
                 if ( cluster == null ) {
+                    console.log('sources.create: Cluster not found');
                     return Promise.reject( error( 'Sources.create', "Cluster '" + source.cluster.name + "' not found'" ) );
                 }
                 source.cluster.id = cluster.configuration.clusterExternalId;

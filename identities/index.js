@@ -136,7 +136,7 @@ Identities.prototype.invite = function invite( users ) {
     promise = promise.then( identities => {
         let ids = [];
         identities.forEach( identity => {
-            if ( users.includes( identity.email ) ) {
+            if ( users.findIndex( item => identity.email.toLowerCase() === item.toLowerCase() ) !=-1 ) {
                 ids.push( identity.id );
             }
         } );
@@ -197,7 +197,7 @@ Identities.prototype.grantAdmin = function grantAdmin( users ) {
     promise = promise.then( identities => {
         let ids = [];
         identities.forEach( identity => {
-            if ( uniqueUsers.includes( identity.email ) ) {
+            if ( uniqueUsers.findIndex( item => identity.email.toLowerCase() === item.toLowerCase() ) != -1  ) {
                 console.log( 'found user:' + JSON.stringify( identity ) );
                 ids.push( identity.id );
             }

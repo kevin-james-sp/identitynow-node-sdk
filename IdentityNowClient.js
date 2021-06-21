@@ -452,7 +452,7 @@ IdentityNowClient.prototype.put = function ( url, payload, options, retry ) {
                     return Promise.reject( {
                         url: url,
                         status: err.response.status,
-                        statusText: this.cerr.response.statusText || err.response.data.message
+                        statusText: this.err.response.statusText || err.response.data.message
                     } );
                 }
             }

@@ -9,7 +9,7 @@ function Transforms( client ) {
 
 Transforms.prototype.list = function ( id ) {
 
-    let url = this.client.apiUrl + '/cc/api/transform/list';
+    let url = this.client.apiUrl + '/beta/transforms/list';
     let that = this;
 
     return this.client.get( url )
@@ -33,7 +33,11 @@ Transforms.prototype.list = function ( id ) {
 
 Transforms.prototype.get = function get( transformName ) {
 
-    let url = this.client.apiUrl + '/cc/api/transform/get/' + transformName;
+    if (!transformName) {
+        throw('Transform.get: name is required');
+    }
+
+    let url = `${this.client.apiUrl}/beta/transforms?name=${transformName}`;
 
     return this.client.get( url )
         .then(
@@ -52,40 +56,41 @@ Transforms.prototype.get = function get( transformName ) {
 
 Transforms.prototype.create = function ( xform ) {
 
-    let url = this.client.apiUrl + '/cc/api/transform/create';
+    let url = this.client.apiUrl + '/beta/transforms/create';
 
     // Sanity check
     if ( xform == null ) {
-        return Promise.reject( {
+        throw {
             url: url,
             module: 'Transforms.create',
             status: -1,
             statusText: 'No transform specified for creation'
-        } );
+        };
     }
-    if ( xform.id == null ) {
-        return Promise.reject( {
+    if ( xform.name == null ) {
+        throw {
             url: url,
             module: 'Transforms.create',
             status: -1,
-            statusText: 'No id specified for creation'
-        } );
+            statusText: 'No name specified for creation'
+        };
     }
     if ( xform.type == null ) {
-        return Promise.reject( {
+        throw {
             url: url,
             module: 'Transforms.create',
             status: -1,
             statusText: 'No type specified for creation'
-        } );
+        };
     }
 
-    return this.client.post( url, xform ).then( function ( resp ) {
+    return this.client.post( url, xform ).then( resp => {
         return {
             "result": "ok",
-            "name": resp.data.id
+            "id": resp.data.id,
+            "name": resp.data.name
         };
-    }, function ( err ) {
+    }, err => {
         if ( err.data.error_code == 1009 || err.data.error_code == 1005 ) {
             return {
                 result: "warn",
@@ -95,12 +100,12 @@ Transforms.prototype.create = function ( xform ) {
         }
         console.log( `Transform create failed: ${xform.id}` );
         console.log( JSON.stringify( err, null, 2 ) );
-        return Promise.reject( {
+        throw {
             url: url,
             module: 'Transforms.create',
             status: err.slpt_error_code
             // statusText: formatted_msg
-        } )
+        }
     } );
 
 }

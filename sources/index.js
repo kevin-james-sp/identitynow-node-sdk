@@ -525,7 +525,7 @@ Sources.prototype.create = function ( object ) {
     } );
 }
 
-Sources.prototype.testConnection = async function ( id ) {
+Sources.prototype.testConnection = function ( id ) {
 
     let that = this;
     let maxtries = 120; // This can take up to an hour
@@ -534,21 +534,7 @@ Sources.prototype.testConnection = async function ( id ) {
     let source = await this.get( id );
     let exID = source.connectorAttributes.cloudExternalId;
     let url = `${this.client.apiUrl}/cc/api/source/testConnection/${exID}`;
-    for ( var i = 0; i < maxtries; i++ ) {
-        try {
-            response = await this.client.post( url );
-            if ( !response.data.success ) {
-                console.log( `${source.name}: testConnection failed` );
-                throw ( source.name );
-            }
-            console.log( `test connection ${source.name} ok` );
-            return response.data;
-        } catch ( error ) {
-            console.log( `${source.name}: testConnection: waiting for retry (${i})` );
-            await timeout( 30000 );
-        }
-    }
-    throw ( `${source.name}: test failed after ${maxtries} retries` );
+    return this.client.post( url );
 
 }
 
@@ -600,16 +586,6 @@ function error( module, message ) {
         statusMessage: message,
         module: module
     }
-}
-/**
- * Test a source connection
- * kmj - I don't like doing this as an async function but retries with
- * promises gives me a headache
- * @param {*} id 
- */
-
-function timeout( ms ) {
-    return new Promise( resolve => setTimeout( resolve, ms ) );
 }
 
 const pause = ( duration ) => new Promise( res => setTimeout( res, duration ) );

@@ -56,7 +56,7 @@ Transforms.prototype.get = function get( transformName ) {
 
 Transforms.prototype.create = function ( xform ) {
 
-    let url = this.client.apiUrl + '/beta/transforms/create';
+    let url = this.client.apiUrl + '/beta/transforms';
 
     // Sanity check
     if ( xform == null ) {
@@ -91,19 +91,19 @@ Transforms.prototype.create = function ( xform ) {
             "name": resp.data.name
         };
     }, err => {
-        if ( err.data.error_code == 1009 || err.data.error_code == 1005 ) {
+        if ( err.detailcode.startsWith( '400.1.409' ) ) {
             return {
                 result: "warn",
-                message: `Transform ${xform.id} already exists`,
-                name: xform.id
+                message: `Transform ${xform.name} already exists`,
+                name: xform.name
             };
         }
-        console.log( `Transform create failed: ${xform.id}` );
+        console.log( `Transform create failed: ${xform.name}` );
         console.log( JSON.stringify( err, null, 2 ) );
         throw {
             url: url,
             module: 'Transforms.create',
-            status: err.slpt_error_code
+            status: err.detailCode
             // statusText: formatted_msg
         }
     } );

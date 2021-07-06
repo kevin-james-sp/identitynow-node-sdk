@@ -527,14 +527,15 @@ Sources.prototype.create = function ( object ) {
 
 Sources.prototype.testConnection = function ( id ) {
 
-    let that = this;
-    let maxtries = 120; // This can take up to an hour
+    return this.get( id ).then( source => {
 
-
-    let source = await this.get( id );
-    let exID = source.connectorAttributes.cloudExternalId;
-    let url = `${this.client.apiUrl}/cc/api/source/testConnection/${exID}`;
-    return this.client.post( url );
+        let externalID = source.connectorAttributes.cloudExternalId;
+        let url = `${this.client.apiUrl}/cc/api/source/testConnection/${externalID}`;
+        return this.client.post( url ).then( response => {
+            return response.data;
+        });
+        
+    });
 
 }
 

@@ -91,7 +91,8 @@ Transforms.prototype.create = function ( xform ) {
             "name": resp.data.name
         };
     }, err => {
-        if ( err.detailcode.startsWith( '400.1.409' ) ) {
+        console.log( JSON.stringify(err));
+        if ( err.detailcode && err.detailcode.startsWith( '400.1.409' ) ) {
             return {
                 result: "warn",
                 message: `Transform ${xform.name} already exists`,

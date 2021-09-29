@@ -49,9 +49,15 @@ var IdentityNowClient = function ( config ) {
 
     this.config = config;
 
-    this.apiUrl = 'https://' + this.config.tenant + '.api.identitynow.com';
-    this.webUrl = 'https://' + this.config.tenant + '.identitynow.com';
-    this.authorizationUrl = 'https://' + this.config.tenant + '.identitynow.com/oauth/authorize';
+    // Sometimes the suffix is not identitynow.com, but most of the time it will be so allow an override in the config
+    let suffix = 'identitynow.com';
+    if ( config.suffix ) {
+        suffix = config.suffix;
+    }
+
+    this.apiUrl = `https://${this.config.tenant}.api.${suffix}``;
+    this.webUrl = `https://${this.config.tenant}.${suffix}';
+    this.authorizationUrl = `https://${this.config.tenant}.${suffix}/oauth/authorize`;
     this.tokenUrl = this.apiUrl + '/oauth/token';
 
     // If we were initialized from a server NodeJS app which has already done the OAuth2 dance

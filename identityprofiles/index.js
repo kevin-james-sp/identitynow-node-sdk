@@ -11,7 +11,7 @@ function IdentityProfiles( client ) {
 
 IdentityProfiles.prototype.list = function list() {
 
-    let url = this.client.apiUrl + '/cc/api/profile/list';
+    let url = this.client.apiUrl + '/v3/identity-profiles';
     let that = this;
 
 
@@ -32,7 +32,7 @@ IdentityProfiles.prototype.list = function list() {
 
 IdentityProfiles.prototype.get = function get( id, options ) {
 
-    let url = this.client.apiUrl + '/cc/api/profile/get/' + id;
+    let url = this.client.apiUrl + '/v3/identity-profiles/' + id;
 
     let that = this;
     return this.client.get( url )
@@ -81,7 +81,7 @@ IdentityProfiles.prototype.get = function get( id, options ) {
  */
 IdentityProfiles.prototype.create = function ( profile ) {
 
-    let url = this.client.apiUrl + '/cc/api/profile/create';
+    let url = this.client.apiUrl + '/v3/identity-profiles';
     let that = this;
     // The inital (v2) create call needs a name and source ID (old format)
 
@@ -102,11 +102,10 @@ IdentityProfiles.prototype.create = function ( profile ) {
         };
     }
 
-    return this.client.Sources.getByName( profile.source.name )
+    return this.client.Sources.getByName( profile.authoritativeSource.name )
         .then( source => {
-            let sourceId = source.connectorAttributes.cloudExternalId;
-            let newSourceId = source.id;
-            console.log( `create: id=${sourceId}, newId=${newSourceId}` );
+            let sourceId = source.id;
+            console.log( `create: id=${sourceId}` );
             console.log( `create: { name: ${profile.name}, sourceId: ${sourceId} }` );
             return this.client.post( url, { name: profile.name, sourceId: sourceId }, { formEncoded: true } ).then( response => {
                 console.log( `Identity Profile created: ${profile.name}` );

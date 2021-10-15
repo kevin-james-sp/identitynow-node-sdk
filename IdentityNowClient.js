@@ -55,8 +55,8 @@ var IdentityNowClient = function ( config ) {
         suffix = config.suffix;
     }
 
-    this.apiUrl = `https://${this.config.tenant}.api.${suffix}``;
-    this.webUrl = `https://${this.config.tenant}.${suffix}';
+    this.apiUrl = `https://${this.config.tenant}.api.${suffix}`;
+    this.webUrl = `https://${this.config.tenant}.${suffix}`;
     this.authorizationUrl = `https://${this.config.tenant}.${suffix}/oauth/authorize`;
     this.tokenUrl = this.apiUrl + '/oauth/token';
 

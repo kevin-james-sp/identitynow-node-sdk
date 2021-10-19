@@ -2,6 +2,9 @@
 
 This is a node module for interacting with IdentityNow.
 
+# Breaking changes
+Version 2.0.0 introduced potentially breaking changes, due to some API calls being updated to newly available v3 APIs. Because of this, some of the objects exported may have a different format, and so existing JSON objects you have exported may not import correctly. If this is the case, revert to the latest pre-2.0 version of the library
+
 ## Import ##
 `const idnClient=require('identitynow-sdk');`
 

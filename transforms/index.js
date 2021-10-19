@@ -7,42 +7,57 @@ function Transforms( client ) {
 
 }
 
-Transforms.prototype.list = function ( id ) {
+function clean( xform ) {
+    return JSON.parse( JSON.stringify( xform, ( k, v ) => {
+        return ( ( k === 'id' ) || ( k === 'created' ) || ( k === 'modified' ) ) ? undefined : v;
+    }));
+}
 
-    let url = this.client.apiUrl + '/beta/transforms/list';
+Transforms.prototype.list = function ( options = {} ) {
+
+    let url = this.client.apiUrl + '/v3/transforms';
     let that = this;
 
-    return this.client.get( url )
-        .then(
-            function ( resp ) {
-                console.log( 'Transforms.list' );
-                console.log( JSON.stringify( resp.data, null, 2 ) );
-                return Promise.resolve( resp.data.items );
+    return this.client.get( url ).then( resp => {
+        let ret = [];
+        resp.data.forEach( xform => {
+            if ( !xform.internal || !options.excludeInternal ) {
+                if ( options.clean ) {
+                    ret.push( clean( xform ) );
+                } else {
+                    ret.push( xform );
+                }
             }
-            , function ( err ) {
-                console.log( 'Transform' );
-                console.log( JSON.stringify( err, null, 2 ) );
-                return Promise.reject( {
-                    url: url,
-                    status: err.response.status,
-                    statusText: err.response.statusText
-                } );
-            } );
+        } )
+        return ret;
+    }
+    , function ( err ) {
+        console.log( 'Transform' );
+        console.log( JSON.stringify( err, null, 2 ) );
+        throw {
+            url: url,
+            status: err.response.status,
+            statusText: err.response.statusText
+        }
+    } );
 
 }
 
-Transforms.prototype.get = function get( transformName ) {
+Transforms.prototype.get = function get( transformName, options = {} ) {
 
-    if (!transformName) {
-        throw('Transform.get: name is required');
+    if ( !transformName ) {
+        throw ( 'Transform.get: name is required' );
     }
 
-    let url = `${this.client.apiUrl}/beta/transforms?name=${transformName}`;
+    let url = `${this.client.apiUrl}/v3/transforms?name=${transformName}`;
 
     return this.client.get( url )
         .then(
             function ( resp ) {
-                return Promise.resolve( resp.data );
+                if ( options.clean ) {
+                    return clean( resp.data );
+                }
+                return resp.data;
             }
             , function ( err ) {
                 return Promise.reject( {
@@ -56,7 +71,7 @@ Transforms.prototype.get = function get( transformName ) {
 
 Transforms.prototype.create = function ( xform ) {
 
-    let url = this.client.apiUrl + '/beta/transforms';
+    let url = this.client.apiUrl + '/v3/transforms';
 
     // Sanity check
     if ( xform == null ) {
@@ -91,7 +106,7 @@ Transforms.prototype.create = function ( xform ) {
             "name": resp.data.name
         };
     }, err => {
-        console.log( JSON.stringify(err));
+        console.log( JSON.stringify( err ) );
         if ( err.detailcode && err.detailcode.startsWith( '400.1.409' ) ) {
             return {
                 result: "warn",

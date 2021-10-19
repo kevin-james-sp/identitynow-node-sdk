@@ -23,6 +23,7 @@ var SPConfig = require( './spconfig' );
 var Tags = require( './tags' );
 var Transforms = require( './transforms' );
 var VirtualAppliances = require( './virtualappliances' );
+var Workgroups = require( './workgroups' );
 
 var QueryString = require( 'querystring' );
 
@@ -86,6 +87,7 @@ var IdentityNowClient = function ( config ) {
     this.Tags = new Tags( this );
     this.Transforms = new Transforms( this );
     this.VirtualAppliances = new VirtualAppliances( this );
+    this.Workgroups = new Workgroups( this );
     this.client = axios.create( {
         baseURL: this.apiUrl,
         decompress: false

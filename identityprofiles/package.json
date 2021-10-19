@@ -1,6 +1,6 @@
 {
   "name": "identitynow-identityprofiles",
-  "version": "1.2.8",
+  "version": "2.0.0",
   "description": "Identity Profiles API",
   "main": "index.js",
   "scripts": {

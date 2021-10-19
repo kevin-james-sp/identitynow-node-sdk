@@ -61,7 +61,7 @@ Sources.prototype.getPage = function ( off, lst ) {
 
     let limit = 100;
 
-    let url = this.client.apiUrl + '/beta/sources?limit=' + limit + '&offset=' + offset + '&count=true';
+    let url = this.client.apiUrl + '/v3/sources?limit=' + limit + '&offset=' + offset + '&count=true';
     let that = this;
 
     return this.client.get( url )
@@ -164,7 +164,7 @@ Sources.prototype.getByName = function ( name, options ) {
 
 Sources.prototype.get = function get( id, options = [] ) {
 
-    let url = this.client.apiUrl + '/beta/sources/' + id;
+    let url = this.client.apiUrl + '/v3/sources/' + id;
 
     let that = this;
 
@@ -415,7 +415,7 @@ Sources.prototype.create = function ( object ) {
 
     return Promise.all( promises ).then( function () {
 
-        let url = that.client.apiUrl + '/beta/sources';
+        let url = that.client.apiUrl + '/v3/sources';
         let appId = '';
         let appType = '';
         if ( source.accountCorrelationConfig ) {

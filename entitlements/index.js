@@ -51,6 +51,31 @@ Entitlements.prototype.getPage=function( query, off, lst) {
 }
 
 
+Entitlements.prototype.get = function get ( id ) {
+
+    let query={
+        query: {
+            query: id
+        },
+        "indices": ["entitlements"],
+        "sort": ["id"]
+    }
+
+    let url=this.client.apiUrl+'/v3/search?limit='+limit+'&offset='+offset+'&count=true';
+    let that=this;
+
+    return this.client.post(url, query)
+    .then( function (resp) {
+        count=resp.headers['x-total-count'];
+        if ( count>1 ) {
+            throw "Entitlements.get returns multiple results"
+        }
+        return resp.data[0];
+        
+    });
+
+}
+
 Entitlements.prototype.list = function list ( parms ) {
 
     let query={

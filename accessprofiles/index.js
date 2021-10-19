@@ -8,7 +8,7 @@ function AccessProfiles( client ) {
 
 }
 
-AccessProfiles.prototype.getPage=function(off, lst, query="*") {
+AccessProfiles.prototype.getPage=function(off, lst, query="*", options={} ) {
         
     let offset=0;
     if (off!=null) {
@@ -22,15 +22,19 @@ AccessProfiles.prototype.getPage=function(off, lst, query="*") {
     
     let limit=100;
 
-    let url=this.client.apiUrl+'/beta/search/accessprofiles?limit='+limit+'&offset='+offset+'&count=true';
+    let url=this.client.apiUrl+'/v3/search?limit='+limit+'&offset='+offset+'&count=true';
     let that=this;
     
     let payload={
-        "queryType": "SAILPOINT",
         "query": {
-            "query": query
-        } 
+            "query": query,
+        },        
+        "indices": [ "accessprofiles" ]        
     };
+
+    if (options.includeNested) {
+        payload.includeNested = options.includeNested;
+    }
 
     return this.client.post(url, payload)
         .then( function (resp) {
@@ -214,32 +218,33 @@ AccessProfiles.prototype.getv2 = function get ( tagId, options ) {
     return promise;
 }
 
-AccessProfiles.prototype.getv3 = function get ( tagId, options ) {
+AccessProfiles.prototype.getv3 = function get ( tagId, options={} ) {
     
     // let url=this.client.apiUrl+'/v2/access-profiles/'+tagId;
-    let url=this.client.apiUrl+'/beta/search/accessprofiles';
+    let url=this.client.apiUrl+'/v3/search';
     let payload={
-        queryType: "SAILPOINT",
         query: {
             query: tagId
-        } 
+        },
+        "indices": [ "accessprofiles" ]
     };
+    if (options.includeNested) {
+        payload.includeNested = options.includeNested;
+    }
     
     var that=this;
     return this.client.post(url, payload)
     .then( function (resp) {
         let ret=resp.data[0];
         let promise=Promise.resolve();
-        if (options!=null){
-            // Clean the source
-            if (options.clean) {
-                ret=JSON.parse(JSON.stringify(ret, (k,v) => 
-                    ( (k === 'id') || (k === 'created') || (k === 'modified') ) ? undefined : v)
-                );
-            }
-            if (options.tokenize) {
-                ret = that.client.SDKUtils.tokenize(ret.name, ret, options.tokens);
-            }
+        // Clean the source
+        if (options.clean) {
+            ret=JSON.parse(JSON.stringify(ret, (k,v) => 
+                ( (k === 'id') || (k === 'created') || (k === 'modified') ) ? undefined : v)
+            );
+        }
+        if (options.tokenize) {
+            ret = that.client.SDKUtils.tokenize(ret.name, ret, options.tokens);
         }
         return Promise.resolve(ret);
     },

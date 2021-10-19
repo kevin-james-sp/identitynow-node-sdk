@@ -1,6 +1,6 @@
 {
   "name": "identitynow-entitlements",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Entitlements API",
   "main": "index.js",
   "scripts": {

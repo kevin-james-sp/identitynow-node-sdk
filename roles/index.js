@@ -4,12 +4,12 @@ var client;
 function Roles( client ) {
     
     this.client=client;
-    this.attributesToExclude=['id', 'created', 'modified', 'synced', 'pod', 'org'];
+    this.attributesToExclude=['id', 'created', 'modified', 'synced', 'pod', 'org', 'email', 'accessProfileCount', 'segmentCount'];
 
 
 }
 
-Roles.prototype.getPage=function(off, lst) {
+Roles.prototype.getPage=function( off, lst, options ) {
         
     let offset=0;
     if (off!=null) {
@@ -24,17 +24,18 @@ Roles.prototype.getPage=function(off, lst) {
     let limit=100;
     console.log()
 
-    let url=this.client.apiUrl+'/v3/search/roles?limit='+limit+'&offset='+offset+'&count=true';
+    let url=this.client.apiUrl+'/v3/search?limit='+limit+'&offset='+offset+'&count=true';
     let payload={
         queryType: "SAILPOINT",
+        indices: [ "roles" ],
         query: {
-          query: "*"
+            query: "*"
         }
     }
     let that=this;
-
+    
     return this.client.post(url, payload)
-        .then( function (resp) {
+    .then( function (resp) {
         count=resp.headers['x-total-count'];
         resp.data.forEach( function( itm ) {
             list.push(itm);
@@ -47,49 +48,63 @@ Roles.prototype.getPage=function(off, lst) {
     }, function (err) {
         console.log('getPage.reject');
         console.log(err);
-        return Promise.reject({
+        throw{
             url: url,
-            status: err.response.status,
-            statusText: err.response.statusText
-        });
+            status: err.status,
+            statusText: err.statusText || err.detailcode
+        };
     });
-
-
+    
+    
 }
 
 
-Roles.prototype.list = function list () {
-
-    return this.getPage();
-
+Roles.prototype.list = function list ( options ) {
+    
+    return this.getPage().then( results => {
+        if (options && options.clean ) {
+            let ret=[];
+            results.forEach( result => {
+                ret.push(
+                    JSON.parse(JSON.stringify(result, (k,v) => 
+                        ( this.attributesToExclude.includes(k) ? undefined : v) )
+                    )
+                )
+            });
+            return ret;
+        }
+        return results;
+    })
+    
 }
 
 Roles.prototype.get = function get ( id, options ) {
     
-    let url=this. client.apiUrl+'/v3/search/roles';
+    let url=this. client.apiUrl+'/v3/search';
     let payload={
         "queryType": "SAILPOINT",
+        "indices": "roles",
         "query": {
-          "query": id
+            "query": id
         }
     }
     
     var that=this;
     return this.client.post(url, payload)
-        .then( function (resp) {
-            if (resp.data.length==0) {
-                return Promise.reject({
-                    url: url,
-                    status: -1,
-                    statusText: "Role '"+id+"' not found"
-                });
+    .then( function (resp) {
+        if (resp.data.length==0) {
+            throw {
+                url: url,
+                status: -1,
+                statusText: "Role '"+id+"' not found"
+                };
             }
             if (resp.data.length>1) {
-                return Promise.reject({
+                throw {
                     url: url,
                     status: -1,
                     statusText: "Multiple results for Role '"+id+"'"
-                });
+                };
             }
             let ret=resp.data[0];
             if (options!=null){

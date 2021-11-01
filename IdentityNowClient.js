@@ -29,6 +29,8 @@ var QueryString = require( 'querystring' );
 
 var url = require( 'url' );
 
+const { version } = require( './package.json');
+
 var config;
 
 // This will be in the format 'https://<tenant>.api.identitynow.com'
@@ -47,6 +49,8 @@ var tenant;
 var client;
 
 var IdentityNowClient = function ( config ) {
+
+    console.log(`IdentityNowClient: ${version}`);
 
     this.config = config;
 
@@ -355,6 +359,9 @@ IdentityNowClient.prototype.post = function ( url, payload, options = {}, retry 
                 Authorization: 'Bearer ' + resp
             }
         };
+        if ( options.contentType ) {
+            config.headers['Content-Type']=options.contentType;
+        }
         if ( options.formEncoded ) {
             config.headers['Content-Type'] = 'application/x-www-form-urlencoded';
             payload = QueryString['stringify']( payload );

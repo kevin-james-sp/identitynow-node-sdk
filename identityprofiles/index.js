@@ -7,8 +7,8 @@ function IdentityProfiles( client ) {
 
 }
 
-function getSourceId( name ) {
-    return this.client.Sources.getByName( name ).then( src => {
+function getSourceId( client, name ) {
+    return client.Sources.getByName( name ).then( src => {
         return Promise.resolve(src.id);
     })
 }
@@ -16,12 +16,13 @@ function getSourceId( name ) {
 // Iterate through an object. If we find a sourceName attribute, create or assign a corresponding sourceId object
 // Wanted to put promises straight in the object, but apparently that doesn't work
 
-function iterateSourceNames( sourceMap, promiseMap, obj ) {
+function iterateSourceNames( client, sourceMap, promiseMap, obj ) {
 
     if (obj.sourceName) {
         if (!promiseMap[obj.sourceName]) {
             let src = obj.sourceName;
-            promiseMap[src] = getSourceId(src).then( id => {
+            promiseMap[src] = getSourceId( client, src ).then( id => {
+                console.log(`gotSourceID: ${id}`)
                 sourceMap[src] = id;
             });
         }
@@ -30,7 +31,7 @@ function iterateSourceNames( sourceMap, promiseMap, obj ) {
     Object.keys(obj).forEach(key => {
 
         if (typeof obj[key] === 'object') {
-            iterateSourceNames( sourceMap, promiseMap, obj[key] );
+            iterateSourceNames( client, sourceMap, promiseMap, obj[key] );
         }
     })
 }
@@ -144,9 +145,12 @@ IdentityProfiles.prototype.get = function get( id, options ) {
  * do a refresh.
  * 
  */
-IdentityProfiles.prototype.create = function ( profile ) {
+IdentityProfiles.prototype.create = function ( profile, options={} ) {
 
     let url = this.client.apiUrl + '/v3/identity-profiles';
+    if ( options.useV2 ) {
+        return this.createOld( profile, options );
+    }
     let that = this;
 
     if ( !profile.name ) {
@@ -173,7 +177,7 @@ IdentityProfiles.prototype.create = function ( profile ) {
     let promiseMap = {};
 
     if ( profile.identityAttributeConfig.attributeTransforms ) {
-        iterateSourceNames( sourceMap, promiseMap, profile.identityAttributeConfig.attributeTransforms );
+        iterateSourceNames( this.client, sourceMap, promiseMap, profile.identityAttributeConfig.attributeTransforms );
     }
 
     let prom = Promise.all( Object.values(promiseMap) ).then( result => {     
@@ -193,9 +197,11 @@ IdentityProfiles.prototype.create = function ( profile ) {
 
     prom = prom.then( profile => {
 
-        return that.client.post( url, profile ).then( newprofile => {
+        return that.client.post( url, profile ).then( response => {
+            let newprofile = response.data;
             console.log( 'ID Profile updated - refreshing' );
-            return this.client.post( `${url}/${newProfile.id}/refresh-identities`);
+            // Was getting a 405 response with no content type set
+            return this.client.post( `${url}/${newprofile.id}/refresh-identities`, null, { contentType: "application/json" } );
         }).catch( error => {
             console.log('----------Failed');
             console.log(error);

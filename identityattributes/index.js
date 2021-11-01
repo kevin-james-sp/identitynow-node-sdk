@@ -19,6 +19,10 @@ IdentityAttributes.prototype.list = function list() {
         .then( function ( resp ) {
             let list = [];
             resp.data.forEach( function ( itm ) {
+                delete itm.extendedNumber; // presumably a search index like IIQ; anyway, import doesn't like it
+                if (itm.targets.length==0) {
+                    delete itm.targets;
+                }
                 list.push( itm );
             } );
             return Promise.resolve( list );
@@ -69,7 +73,7 @@ IdentityAttributes.prototype.list = function list() {
  * Creates a new Identity Attribute
  * 
  */
-IdentityAttributes.prototype.create = function ( attr ) {
+IdentityAttributes.prototype.create = function ( attr, options = {} ) {
 
     let url = this.client.apiUrl + '/cc/api/identityAttribute/create';
     let that = this;
@@ -86,6 +90,21 @@ IdentityAttributes.prototype.create = function ( attr ) {
     return this.client.post( url, attr ).then( response => {
         console.log(`Identity Attribute created: ${attr.name}`);
         return response;
+    }).catch( error => {
+
+        if ( error.statusText && error.statusText.includes( 'already an attribute' ) ) {
+            if ( options.failOnExists ) {
+                throw( {
+                    statusText: `Attribute ${attr.name} already exists`
+                });
+            }
+            console.log( `Skipping existing attribute ${attr.name}` );
+            return;
+        }
+
+        console.log(`Identity Attribute (${attr.name}) creation failed`);
+        console.log(JSON.stringify(error, null, 2));
+        throw error;
     });
        
 }

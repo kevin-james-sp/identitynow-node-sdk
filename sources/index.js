@@ -507,7 +507,8 @@ Sources.prototype.create = function ( object ) {
                 let ipPromises = [];
                 if (identityProfiles) {
                     identityProfiles.forEach( identityProfile => {
-                        ipPromises.push( that.client.IdentityProfiles.create( identityProfile ) );
+                        console.log(`Sources: creating Identity Profile ${identityProfile.name}`);
+                        ipPromises.push( that.client.IdentityProfiles.create( identityProfile, { useV2: true } ) );
                     })
                 }
                 return Promise.all(ipPromises);

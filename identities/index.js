@@ -78,26 +78,31 @@ Identities.prototype.getv2 = function getv2( id, options ) {
     }
 
     return this.client.get( url )
-        .then( function ( resp ) {
+        .then( resp => {
             return resp.data;
-        },
-            function ( err ) {
-                return Promise.reject( {
-                    url: url,
-                    status: -1,
-                    statusText: err.response.data.message
-                } );
+        } ).catch( err => {
+            if ( err.status ) {
+                throw err; // we already converted the error
             }
-        );
+            let message = 'unknown message';
+            if ( err.response && err.response.data ) {
+                message = err.response.data.message;
+            }
+
+            throw {
+                url: url,
+                status: -1,
+                statusText: message
+            }
+        } );
 }
 
 Identities.prototype.getv3 = function getv3( id, options ) {
 
     let url = this.client.apiUrl + '/v3/search/identities';
     let payload = {
-        "queryType": "SAILPOINT",
         "query": {
-            "query": id
+            "query": `id:${id} OR name:${id}`
         }
     }
 
@@ -106,7 +111,7 @@ Identities.prototype.getv3 = function getv3( id, options ) {
             if ( resp.data.length == 0 ) {
                 return Promise.reject( {
                     url: url,
-                    status: -1,
+                    status: 404,
                     statusText: "Identity '" + id + "' not found"
                 } );
             }
@@ -136,7 +141,7 @@ Identities.prototype.invite = function invite( users ) {
     promise = promise.then( identities => {
         let ids = [];
         identities.forEach( identity => {
-            if ( users.findIndex( item => identity.email.toLowerCase() === item.toLowerCase() ) !=-1 ) {
+            if ( users.findIndex( item => identity.email.toLowerCase() === item.toLowerCase() ) != -1 ) {
                 ids.push( identity.id );
             }
         } );
@@ -197,7 +202,7 @@ Identities.prototype.grantAdmin = function grantAdmin( users ) {
     promise = promise.then( identities => {
         let ids = [];
         identities.forEach( identity => {
-            if ( uniqueUsers.findIndex( item => identity.email.toLowerCase() === item.toLowerCase() ) != -1  ) {
+            if ( uniqueUsers.findIndex( item => identity.email.toLowerCase() === item.toLowerCase() ) != -1 ) {
                 console.log( 'found user:' + JSON.stringify( identity ) );
                 ids.push( identity.id );
             }

@@ -76,6 +76,21 @@ Entitlements.prototype.get = function get ( id ) {
 
 }
 
+Entitlements.prototype.aggregateOldID = function get ( id ) {
+
+    if (!id) {
+        throw {
+            url: 'Entitlements',
+            status: -1,
+            statusText: 'AggreagateOldID: ID of source is required'
+        };
+    }
+    let url=`${this.client.apiUrl}/cc/api/source/loadEntitlements/${id}`;
+    let that=this;
+
+    return this.client.post(url);
+}
+
 Entitlements.prototype.list = function list ( parms ) {
 
     let query={

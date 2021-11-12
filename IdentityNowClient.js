@@ -14,6 +14,7 @@ var Entitlements = require( './entitlements' );
 var Identities = require( './identities' );
 var IdentityAttributes = require( './identityattributes' );
 var IdentityProfiles = require( './identityprofiles' );
+var NELM = require( './nelm' );
 var Roles = require( './roles' );
 var Rules = require( './rules' );
 var Schemas = require( './schemas' );
@@ -29,7 +30,7 @@ var QueryString = require( 'querystring' );
 
 var url = require( 'url' );
 
-const { version } = require( './package.json');
+const { version } = require( './package.json' );
 
 var config;
 
@@ -48,12 +49,17 @@ var tenant;
 
 var client;
 
+var rateLimiting;
+var waitUntil;
+
+const delay = time => new Promise(resolve => setTimeout(resolve, time));
+
 var IdentityNowClient = function ( config ) {
 
-    console.log(`IdentityNowClient: ${version}`);
+    console.log( `IdentityNowClient: ${version}` );
 
     this.config = config;
-
+    this.rateLimiting = false;
     // Sometimes the suffix is not identitynow.com, but most of the time it will be so allow an override in the config
     let suffix = 'identitynow.com';
     if ( config.suffix ) {
@@ -82,6 +88,7 @@ var IdentityNowClient = function ( config ) {
     this.Identities = new Identities( this );
     this.IdentityAttributes = new IdentityAttributes( this );
     this.IdentityProfiles = new IdentityProfiles( this );
+    this.NELM = new NELM( this );
     this.Roles = new Roles( this );
     this.Rules = new Rules( this );
     this.Schemas = new Schemas( this );
@@ -106,18 +113,18 @@ var IdentityNowClient = function ( config ) {
     //         ...x.headers[x.method],
     //         ...x.headers
     //     };
-    
+
     //     ['common','get', 'post', 'head', 'put', 'patch', 'delete'].forEach(header => {
     //         delete headers[header]
     //     })
-    
+
     //     const printable = `${new Date()}
     //     Request: ${x.method.toUpperCase()} ${x.url}
     //     ${ JSON.stringify(headers, null, 2)}
     //     ${ JSON.stringify( x.data) }`
     //     console.log(printable);
     //     console.log('-------------\n\n\n\n\n');
-    
+
     //     return x;
     // })
 
@@ -201,7 +208,7 @@ IdentityNowClient.prototype.getClientToken = function ( overrideconfig = [] ) {
         // console.log(this.accesstoken);
         return Promise.resolve( this.accesstoken );
     }, err => {
-        console.log(err);
+        console.log( err );
         console.log( `idnclient.error: ${JSON.stringify( err )}` );
         return Promise.reject( {
             status: err.response.status,
@@ -296,42 +303,78 @@ IdentityNowClient.prototype.get = function ( url, retry ) {
 
     let that = this;
 
-    return this.token().then(
-        resp => {
-            return that.client.get( url, {
-                headers: {
-                    Authorization: 'Bearer ' + resp
-                }
-            } ).then(
-                success => {
-                    return success
-                },
-                err => {
-                    if ( err.response.status == 404 ) {
-                        return Promise.reject( {
-                            url: url,
-                            status: -1,
-                            statusText: 'URL Not found'
-                        } )
-                    }
-                    return Promise.reject( {
-                        url: url,
-                        status: -1,
-                        statusText: err.message
-                    } )
-                }
-            );
-        },
-        err => {
-            if ( err.response.status == 401 && !retry ) {
-                // 401. Not a retry. Invalidate the token and try once more
-                that.accesstoken = null;
-                return get( url, true );
+    // if ( this.rateLimiting ) {
+    //     let wait = this.waitUntil - new Date();
+    //     if ( wait < 0 ) {
+    //         console.log( 'RateLimiting finished' );
+    //         this.rateLimiting = false;
+    //         this.waitUntil = null;
+    //     } else {
+    //         console.log( `RateLimiting: waiting for ${wait} ms` );
+    //         return new Promise( resolve => setTimeout( resolve, wait ) ).then( paused => {
+    //             return that.get( url, retry );
+    //         } );
+    //     }
+    // }
+
+    return this.token().then( resp => {
+        return that.client.get( url, {
+            headers: {
+                Authorization: 'Bearer ' + resp
             }
-            console.log( err );
-            console.log( '------Get ERRROR-------' );
-            return Promise.reject( err );
-        } );
+        } ).then( success => {
+            return success
+        }
+        ).catch( err => {
+            if ( err.response.status == 404 ) {
+                throw {
+                    url: url,
+                    status: 404,
+                    statusText: 'URL Not found'
+                }
+            } else if ( err.response.status == 429 ) {
+                let waitingTime = err.response.headers['retry-after'];
+                if ( !waitingTime ) {
+                    console.log( 'no waiting header' );
+                    console.log( JSON.stringify( err.response.headers ) );
+                    waitingTime = "30";
+                }
+                console.log( `client.get:  Too many requests - retry after ${waitingTime}` );
+                // let limitEndTime = new Date();
+                // console.log( `Now: ${limitEndTime}` );
+                // limitEndTime.setSeconds( limitEndTime.getSeconds() + parseInt( waitingTime ) );
+                // console.log( `Until: ${limitEndTime}` );
+                // this.waitUntil = limitEndTime;
+                // this.rateLimiting = true;
+                return delay(1000 * parseInt( waitingTime ) ).then( paused => {
+                    // console.log(`waited - retrying ${url}`);
+                    return that.get( url, retry );
+                } );
+            }
+            console.log( `Something went wrong with client.get( ${url} ): ${JSON.stringify( err.response )}` );
+            throw {
+                url: url,
+                status: -1,
+                statusText: err.message
+            }
+        }
+        );
+    } ).catch( err => {
+        if ( err.response && err.response.status == 401 && !retry ) {
+            // 401. Not a retry. Invalidate the token and try once more
+            that.accesstoken = null;
+            return get( url, true );
+        }
+        // if ( err.status == 404 ) {
+        //     console.log(`404 - ${url}`);
+        // } else {
+        //     console.log( `client.get failed: err = ${err}` );
+        //     console.log( `client.get failed: json = ${JSON.stringify( err )}` );
+        //     console.log( `client.get failed: response = ${JSON.stringify( err.response )}` );
+        //     console.log( '------Get ERRROR-------' );
+        // }
+        throw err;
+    } );
 
 }
 
@@ -360,7 +403,7 @@ IdentityNowClient.prototype.post = function ( url, payload, options = {}, retry 
             }
         };
         if ( options.contentType ) {
-            config.headers['Content-Type']=options.contentType;
+            config.headers['Content-Type'] = options.contentType;
         }
         if ( options.formEncoded ) {
             config.headers['Content-Type'] = 'application/x-www-form-urlencoded';
@@ -393,7 +436,7 @@ IdentityNowClient.prototype.post = function ( url, payload, options = {}, retry 
             } );
             payload = formData.getBuffer();
             config.headers = { ...config.headers };
-            config.headers['Content-Type']=formData.getHeaders()['content-type'];
+            config.headers['Content-Type'] = formData.getHeaders()['content-type'];
 
         }
         return that.client.post( url, payload, config )
@@ -415,6 +458,24 @@ IdentityNowClient.prototype.post = function ( url, payload, options = {}, retry 
                         // 401. Not a retry. Invalidate the token and try once more
                         that.accesstoken = null;
                         return post( url, payload, options, true );
+                    }  else if ( err.response.status == 429 ) {
+                        let waitingTime = err.response.headers['retry-after'];
+                        if ( !waitingTime ) {
+                            console.log( 'no waiting header' );
+                            console.log( JSON.stringify( err.response.headers ) );
+                            waitingTime = "30";
+                        }
+                        console.log( `client.post:  Too many requests - retry after ${waitingTime}` );
+                        // let limitEndTime = new Date();
+                        // console.log( `Now: ${limitEndTime}` );
+                        // limitEndTime.setSeconds( limitEndTime.getSeconds() + parseInt( waitingTime ) );
+                        // console.log( `Until: ${limitEndTime}` );
+                        // this.waitUntil = limitEndTime;
+                        // this.rateLimiting = true;
+                        return delay(1000 * parseInt( waitingTime ) ).then( paused => {
+                            // console.log(`waited - retrying ${url}`);
+                            return that.post( url, payload, options );
+                        } );
                     } else {
                         throw {
                             url: url,

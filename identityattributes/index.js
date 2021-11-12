@@ -78,7 +78,6 @@ IdentityAttributes.prototype.create = function ( attr, options = {} ) {
     let url = this.client.apiUrl + '/cc/api/identityAttribute/create';
     let that = this;
     
-    console.log( 'IdentityAttributes.create' );
     // console.log( profile );
     if ( !attr.name ) {
         throw {

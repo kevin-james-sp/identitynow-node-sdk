@@ -106,7 +106,6 @@ Transforms.prototype.create = function ( xform ) {
             "name": resp.data.name
         };
     }, err => {
-        console.log( JSON.stringify( err ) );
         if ( err.detailcode && err.detailcode.startsWith( '400.1.409' ) ) {
             return {
                 result: "warn",
@@ -115,7 +114,7 @@ Transforms.prototype.create = function ( xform ) {
             };
         }
         console.log( `Transform create failed: ${xform.name}` );
-        console.log( JSON.stringify( err, null, 2 ) );
+        console.log( JSON.stringify( err ) );
         throw {
             url: url,
             module: 'Transforms.create',

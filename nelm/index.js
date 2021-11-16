@@ -284,7 +284,7 @@ NELM.prototype.get = function get( id, options = {} ) {
  * }
  */
 
-NELM.prototype.create = function ( nelmDefinition ) {
+NELM.prototype.create = function ( nelmDefinition, options = {} ) {
 
     // Do sanity check
     // 1. Object must contain a 'source'
@@ -373,10 +373,14 @@ NELM.prototype.create = function ( nelmDefinition ) {
     return setOwnerPromise.then( ok => {
         return Promise.all( promises ).then( ok => {
 
-            console.log( `newApprovers=${JSON.stringify( newApprovers, null, 2 )}` );
+            if ( options.debug ) {
+                console.log( `newApprovers=${JSON.stringify( newApprovers, null, 2 )}` );
+            }
             source.approvers = newApprovers;
 
-            console.log( `newAccountManagers=${JSON.stringify( newAccountManagers, null, 2 )}` );
+            if ( options.debug ) {
+                console.log( `newAccountManagers=${JSON.stringify( newAccountManagers, null, 2 )}` );
+            }
             source.accountManagers = newAccountManagers;
 
             // create the nelm source
@@ -388,7 +392,11 @@ NELM.prototype.create = function ( nelmDefinition ) {
             let nelmSource;
             let appSource;
 
-            console.log( `Creating Source: ${JSON.stringify( source, null, 2 )}` );
+            if ( options.debug ) {
+                console.log( `Creating Source: ${JSON.stringify( source, null, 2 )}` );
+            } else {
+                console.log( `Creating Source: ${source.name}` );
+            }
             return that.client.post( url, source ).then( resp => {
                 nelmSource=resp.data;
                 appId = nelmSource.sourceId;
@@ -444,7 +452,9 @@ NELM.prototype.create = function ( nelmDefinition ) {
                     stageTwoPromises.push( that.client.AccountProfiles.update( appId, accountProfile ) );
                 }
                 if ( nelmDefinition.correlationConfig && nelmDefinition.correlationConfig.correlationConfig ) {
-                    console.log( 'Replacing Correlation Config' );
+                    if ( options.debug ) {
+                        console.log( 'Replacing Correlation Config' );
+                    }
                     // API returns 'null' for empty correlation config
                     // POST expects '[]' for empty correlation config
                     if ( nelmDefinition.correlationConfig.correlationConfig.attributeAssignments == null ) {
@@ -471,7 +481,9 @@ NELM.prototype.create = function ( nelmDefinition ) {
                     let ipPromises = [];
                     if ( identityProfiles ) {
                         identityProfiles.forEach( identityProfile => {
-                            console.log( `NELM: creating Identity Profile ${identityProfile.name}` );
+                            if ( options.debug ) {
+                                console.log( `NELM: creating Identity Profile ${identityProfile.name}` );
+                            }
                             ipPromises.push( that.client.IdentityProfiles.create( identityProfile, { useV2: true } ) );
                         } )
                     }

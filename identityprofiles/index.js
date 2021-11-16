@@ -58,7 +58,6 @@ async function createProfileWithRetries( client, name, id ) {
                 throw err;
             }
         } );
-        console.log(`${i} ${name} - newProfile=${JSON.stringify(newProfile)}`);
         if (newProfile) return newProfile;
         console.log(`${i} ${name} - waiting..`);
         await timeout( 30000 );
@@ -405,7 +404,9 @@ IdentityProfiles.prototype.createV2 = function ( profile, options = {} ) {
         sourceNames = getSourceNames( sourceNames, xform );
     }
 
-    console.log( `${profile.name} - : sourceNames list = ${JSON.stringify( sourceNames )}` );
+    if ( options.debug ) {
+        console.log( `${profile.name} - : sourceNames list = ${JSON.stringify( sourceNames )}` );
+    }
 
     for ( sourceName of sourceNames ) {
         // get source ID
@@ -417,17 +418,19 @@ IdentityProfiles.prototype.createV2 = function ( profile, options = {} ) {
     }
 
     return Promise.all( sourcePromises ).then( ok => {
-        console.log( `${profile.name} - source IDs:` );
-        console.log( `${profile.name} - ${JSON.stringify( sources )}` );
-
+        if ( options.debug ) {
+            console.log( `${profile.name} - source IDs:` );
+            console.log( `${profile.name} - ${JSON.stringify( sources )}` );
+        }
         return this.client.Sources.getByName( profile.source.name )
             .then( source => {
                 let sourceId = source.connectorAttributes.cloudExternalId;
                 let newSourceId = source.id;
-                console.log( `${profile.name} -  id=${sourceId}, newId=${newSourceId}` );
-                console.log( `${profile.name} - { name: ${profile.name}, sourceId: ${sourceId} }` );
-
-                console.log( `---------------\nProfile: ${JSON.stringify( profile )}\n---------------` );
+                if ( options.debug ) {
+                    console.log( `${profile.name} -  id=${sourceId}, newId=${newSourceId}` );
+                    console.log( `${profile.name} - { name: ${profile.name}, sourceId: ${sourceId} }` );
+                    console.log( `---------------\nProfile: ${JSON.stringify( profile )}\n---------------` );
+                }
                 return createProfileWithRetries( that.client, profile.name, sourceId ).then( newProfile => {
                     console.log( `${profile.name} - Identity Profile created` );
                     console.log( JSON.stringify( newProfile ) );
@@ -467,8 +470,10 @@ IdentityProfiles.prototype.createV2 = function ( profile, options = {} ) {
                     }
                     return Promise.all( rulePromises ).then( rules => {
 
-                        console.log( `${profile.name} - Updating profile with:` )
-                        console.log( `${profile.name} - ${JSON.stringify( newProfile )}` );
+                        if ( options.debug ) {
+                            console.log( `${profile.name} - Updating profile with:` )
+                            console.log( `${profile.name} - ${JSON.stringify( newProfile )}` );
+                        }
                         delete newProfile.priority;
                         return this.client.post( this.client.apiUrl + '/cc/api/profile/update/' + newProfile.id, newProfile ).then( ok => {
                             console.log( `${profile.name} - ID Profile updated - refreshing` );

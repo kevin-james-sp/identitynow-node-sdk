@@ -266,7 +266,7 @@ AccessProfiles.prototype.create = function( json, defaultOwner, options = { useV
     }
 }
 
-AccessProfiles.prototype.createv2 = function( json, defaultOwner ) {
+AccessProfiles.prototype.createv2 = function( json, defaultOwner, options = {} ) {
     
     let url=this.client.apiUrl+'/v2/access-profiles';
     //TODO: Cache looked up identities
@@ -310,7 +310,9 @@ AccessProfiles.prototype.createv2 = function( json, defaultOwner ) {
             return Promise.resolve();
         }).catch( err => {
             if ( err.status==404) {
-                console.log(`Access profile owner ${json.ownerName || json.owner.name} not found - falling back to ${defaultOwner}`);
+                if ( options.debug ) {
+                    console.log(`Access profile owner ${json.ownerName || json.owner.name} not found - falling back to ${defaultOwner}`);
+                }
                 return this.client.Identities.get( defaultOwner ).then( defaultIdentity => {
                     // console.log(`found default identity ${JSON.stringify(defaultIdentity)}`);
                     json.ownerId = defaultIdentity.id;
@@ -368,6 +370,7 @@ AccessProfiles.prototype.createv2 = function( json, defaultOwner ) {
         // console.log(`Query: ${JSON.stringify(query)}`);
         return this.client.post(this.client.apiUrl+'/v3/search', query).then( entitlements => {
             
+            console.log(`query ${JSON.stringify(query)} returns ${JSON.stringify(entitlements.data)}`);
             let entitlementIDs=[];
 
             entitlements.data.forEach( entitlement => {

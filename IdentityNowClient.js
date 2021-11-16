@@ -299,7 +299,7 @@ IdentityNowClient.prototype.getJWTToken = function ( callback ) {
     } );
 }
 
-IdentityNowClient.prototype.get = function ( url, retry ) {
+IdentityNowClient.prototype.get = function ( url, retry, options = {} ) {
 
     let that = this;
 
@@ -339,7 +339,9 @@ IdentityNowClient.prototype.get = function ( url, retry ) {
                     console.log( JSON.stringify( err.response.headers ) );
                     waitingTime = "30";
                 }
-                console.log( `client.get:  Too many requests - retry after ${waitingTime}` );
+                if ( options.debug ) {
+                    console.log( `client.get:  Too many requests - retry after ${waitingTime}` );
+                }
                 // let limitEndTime = new Date();
                 // console.log( `Now: ${limitEndTime}` );
                 // limitEndTime.setSeconds( limitEndTime.getSeconds() + parseInt( waitingTime ) );
@@ -461,11 +463,15 @@ IdentityNowClient.prototype.post = function ( url, payload, options = {}, retry 
                     }  else if ( err.response.status == 429 ) {
                         let waitingTime = err.response.headers['retry-after'];
                         if ( !waitingTime ) {
-                            console.log( 'no waiting header' );
-                            console.log( JSON.stringify( err.response.headers ) );
+                            if ( options.debug ) {
+                                console.log( 'no waiting header' );
+                                console.log( JSON.stringify( err.response.headers ) );
+                            }
                             waitingTime = "30";
                         }
-                        console.log( `client.post:  Too many requests - retry after ${waitingTime}` );
+                        if ( options.debug ) {
+                            console.log( `client.post:  Too many requests - retry after ${waitingTime}` );
+                        }
                         // let limitEndTime = new Date();
                         // console.log( `Now: ${limitEndTime}` );
                         // limitEndTime.setSeconds( limitEndTime.getSeconds() + parseInt( waitingTime ) );
@@ -474,7 +480,12 @@ IdentityNowClient.prototype.post = function ( url, payload, options = {}, retry 
                         // this.rateLimiting = true;
                         return delay(1000 * parseInt( waitingTime ) ).then( paused => {
                             // console.log(`waited - retrying ${url}`);
-                            return that.post( url, payload, options );
+                            return that.post( url, payload, options ).then( response => {
+                                if ( options.debug ) {
+                                    console.log(`delayed response: ${JSON.stringify(response.data)}`);
+                                }
+                                return response;
+                            });
                         } );
                     } else {
                         throw {
@@ -496,9 +507,9 @@ IdentityNowClient.prototype.post = function ( url, payload, options = {}, retry 
 }
 
 IdentityNowClient.prototype.put = function ( url, payload, options, retry ) {
-
+    
     let that = this;
-
+    
     return this.token().then( function ( resp ) { // token success
         headers = {
             headers: {
@@ -510,36 +521,79 @@ IdentityNowClient.prototype.put = function ( url, payload, options, retry ) {
             payload = QueryString['stringify']( payload );
         }
         return that.client.put( url, payload, headers )
-            .then( resp => { // post success
-                return Promise.resolve( resp );
-            }, function ( err ) { //post failure
-                if ( err.response.status == 400 ) {
-                    return Promise.reject( {
-                        url: url,
-                        detailcode: err.response.data.detailCode,
-                        messages: err.response.data.messages,
-                        trackingId: err.response.data.trackingId,
-                        status: 400,
-                        statusText: err.response.data.messages[0].text
-                    } );
-                } else if ( err.response.status == 401 && !retry ) {
-                    // 401. Not a retry. Invalidate the token and try once more
-                    that.accesstoken = null;
-                    return put( url, payload, options, true );
+        .then( resp => { // post success
+            return Promise.resolve( resp );
+        }, function ( err ) { //post failure
+            if ( err.response.status == 400 ) {
+                return Promise.reject( {
+                    url: url,
+                    detailcode: err.response.data.detailCode,
+                    messages: err.response.data.messages,
+                    trackingId: err.response.data.trackingId,
+                    status: 400,
+                    statusText: err.response.data.messages[0].text
+                } );
+            } else if ( err.response.status == 401 && !retry ) {
+                // 401. Not a retry. Invalidate the token and try once more
+                that.accesstoken = null;
+                return put( url, payload, options, true );
+            } else {
+                return Promise.reject( {
+                    url: url,
+                    status: err.response.status,
+                    statusText: err.response.statusText || err.response.data.message
+                } );
+            }
+        }
+        );
+    }
+    , function ( err ) { // token failure
+        return Promise.reject( err );
+    } );
+    
+}
+
+IdentityNowClient.prototype.waitForTask = function ( taskId, options = {} ) {
+
+    let that = this;
+    if ( !options.iteration ) {
+        options.iteration=1;
+    }
+    
+    return this.token().then( resp=> { // token success
+
+        return that.client.get( `${that.apiUrl}/cc/api/taskResult/get/${taskId}`, {
+            headers: {
+                Authorization: 'Bearer ' + resp
+            }
+        }).then( resp => {
+            let taskResult = resp.data;
+            if (taskResult.completed!=null) {
+                console.log(`task ${taskResult.name} completed`);
+                return taskResult;
+            } else {
+                if ( options.debug ) {
+                    console.log(`${options.iteration}: ${JSON.stringify(taskResult)}`);
+                }
+                if ( options.iteration <20 ) {
+                    if ( options.debug ) {
+                        console.log(`(${options.iteration}) Task ${taskId} not finished.. waiting 30 seconds`);
+                    }
+                    return delay( 30000 ).then( delayed=> {
+                        options.iteration++;
+                        return that.waitForTask (taskId, options );
+                    });
                 } else {
-                    return Promise.reject( {
-                        url: url,
-                        status: err.response.status,
-                        statusText: err.response.statusText || err.response.data.message
-                    } );
+                    console.log(`Task ${taskId} - timeout waiting for completion`);
+                    throw {
+                        url: `waitForTask ${taskResult.name} (${taskResult.id})`,
+                        status: 404,
+                        statusText: `Task ${taskId} - timeout waiting for completion`
+                    }
                 }
             }
-            );
-    }
-        , function ( err ) { // token failure
-            return Promise.reject( err );
-        } );
-
+        })
+    });
 }
 
 module.exports = IdentityNowClient;

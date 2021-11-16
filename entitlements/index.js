@@ -76,7 +76,7 @@ Entitlements.prototype.get = function get ( id ) {
 
 }
 
-Entitlements.prototype.aggregateOldID = function get ( id ) {
+Entitlements.prototype.aggregateOldID = function get ( id, options = {} ) {
 
     if (!id) {
         throw {
@@ -88,7 +88,14 @@ Entitlements.prototype.aggregateOldID = function get ( id ) {
     let url=`${this.client.apiUrl}/cc/api/source/loadEntitlements/${id}`;
     let that=this;
 
-    return this.client.post(url);
+    return this.client.post(url).then( resp => {
+        let started = resp.data;
+        console.log(`EntAgg Started: ${JSON.stringify(started)}`);
+        if (!options.waitForCompletion) {
+            return started;
+        }
+        return that.client.waitForTask( started.task.id );
+    });
 }
 
 Entitlements.prototype.list = function list ( parms ) {

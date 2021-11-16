@@ -58,6 +58,31 @@ function mergeSchema( originalSchema, newSchema ) {
         modified: false
     }
 
+    if ( originalSchema.identityAttribute != newSchema.identityAttribute ) {
+        originalSchema.identityAttribute = newSchema.identityAttribute;
+        retval.modified=true;
+    }
+    
+    if ( originalSchema.displayAttribute != newSchema.displayAttribute ) {
+        originalSchema.displayAttribute = newSchema.displayAttribute;
+        retval.modified=true;
+    }
+    
+    if ( originalSchema.hierarchyAttribute != newSchema.hierarchyAttribute ) {
+        originalSchema.hierarchyAttribute = newSchema.hierarchyAttribute;
+        retval.modified=true;
+    }
+    
+    if ( originalSchema.includePermissions != newSchema.includePermissions ) {
+        originalSchema.includePermissions = newSchema.includePermissions;
+        retval.modified=true;
+    }
+    
+    if ( originalSchema.features != newSchema.features ) {
+        originalSchema.features = newSchema.features;
+        retval.modified=true;
+    }
+
     // currentSchemaId = value.id;
 
     // For now, assume only the attributes will be different. If things like identityAttribute,
@@ -473,11 +498,11 @@ Sources.prototype.create = function ( object ) {
                 Object.values( schemas ).forEach( function ( schema ) {
                     // Do we need to replace an automatically generated schema?                  
                     if ( resp.data.schemas != null ) {
-                        let newSchema=false;
+                        let newSchema = false;
                         resp.data.schemas.forEach( destSchema => {
                             if ( destSchema.name == schema.name ) {
-                                newSchema=true;
-                                stageTwoPromises.push( that.client.Schemas.get( appId, destSchema.id ).then( 
+                                newSchema = true;
+                                stageTwoPromises.push( that.client.Schemas.get( appId, destSchema.id ).then(
                                     foundSchema => {
                                         let retSchema = mergeSchema( foundSchema, schema );
                                         console.log( `schema ${schema.name} modified: ${retSchema.modified}` );
@@ -485,9 +510,9 @@ Sources.prototype.create = function ( object ) {
                                             return that.client.Schemas.update( appId, retSchema.schema.id, retSchema.schema );
                                         }
                                         return "unmodified";
-                                    }).catch( err => {
-                                        console.log(`Error updating schema ${schema.name}`)
-                                    })
+                                    } ).catch( err => {
+                                        console.log( `Error updating schema ${schema.name}` )
+                                    } )
                                 );
                             }
                         } );
@@ -582,7 +607,15 @@ Sources.prototype.aggregateOldID = function ( id, config = {} ) {
     if ( config.disableOptimization ) {
         parms.disableOptimization = config.disableOptimization;
     }
-    return this.client.post( url, parms );
+    let that = this;
+    return this.client.post( url, parms ).then( resp => {
+        let started = resp.data;
+        console.log( `SrcAgg Started: ${JSON.stringify( started )}` );
+        if ( !config.waitForCompletion ) {
+            return started;
+        }
+        return that.client.waitForTask( started.task.id );
+    } )
 }
 
 Sources.prototype.aggregateFileByName = function ( name, contents ) {

@@ -9,7 +9,7 @@ function Schemas( client ) {
 
 Schemas.prototype.list=function( id ) {
         
-    let url=this.client.apiUrl+'/beta/sources/'+id+'/schemas';
+    let url=this.client.apiUrl+'/v3/sources/'+id+'/schemas';
     let that=this;
 
     return this.client.get(url)
@@ -29,7 +29,15 @@ Schemas.prototype.list=function( id ) {
 
 Schemas.prototype.get = function get ( appId, schemaId , options={} ) {
     
-    let url=this.client.apiUrl+'/beta/sources/'+appId+'/schemas/'+schemaId;
+    if (!appId) {
+        throw "Schemas.get: source ID must be provided"
+    }
+
+    if (!schemaId) {
+        throw "Schemas.get: schema ID must be provided"
+    }
+
+    let url=this.client.apiUrl+'/v3/sources/'+appId+'/schemas/'+schemaId;
     let that=this;
 
     return this.client.get(url)
@@ -46,11 +54,15 @@ Schemas.prototype.get = function get ( appId, schemaId , options={} ) {
             return Promise.resolve( resp.data );
         }
         , function (err) {
-            return Promise.reject({
-                url: url,
-                status: err.response.status,
-                statusText: err.response.statusText
-            })
+            if (err.response) {
+                return Promise.reject({
+                    url: url,
+                    status: err.response.status,
+                    statusText: err.response.statusText
+                })
+            } else {
+                console.log( `Schemas.get failed: ${JSON.stringify(err)}`);
+            }
         }
         );
 }
@@ -75,7 +87,7 @@ Schemas.prototype.create = function( appId, schema ) {
 
     }
 
-    let url=this.client.apiUrl+'/beta/sources/'+appId+'/schemas';
+    let url=this.client.apiUrl+'/v3/sources/'+appId+'/schemas';
     
     return this.client.post(url, schema).then( function (resp ) {
         return Promise.resolve(resp.data.id);
@@ -87,8 +99,7 @@ Schemas.prototype.create = function( appId, schema ) {
 }
 
 Schemas.prototype.update = function get ( appId, schemaId, newSchema, options ) {
-    let url=this.client.apiUrl+'/beta/sources/'+appId+'/schemas/'+schemaId;
-    // POST needs id *in* schema as well as in URL
+    let url=this.client.apiUrl+'/v3/sources/'+appId+'/schemas/'+schemaId;
     newSchema.id=schemaId;
     return this.client.put( url, newSchema )
     .then(
@@ -103,7 +114,7 @@ Schemas.prototype.update = function get ( appId, schemaId, newSchema, options ) 
 
 Schemas.prototype.delete = function get ( appId, schemaId ) {
     
-    let url=this.client.apiUrl+'/beta/sources/'+appId+'/schemas/'+schemaId;
+    let url=this.client.apiUrl+'/v3/sources/'+appId+'/schemas/'+schemaId;
     
     return this.client.delete(url)
         .then( 

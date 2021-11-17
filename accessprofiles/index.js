@@ -8,7 +8,7 @@ function AccessProfiles( client ) {
 
 }
 
-AccessProfiles.prototype.getPage=function(off, lst, query="*") {
+AccessProfiles.prototype.getPage=function(off, lst, query="*", options={} ) {
         
     let offset=0;
     if (off!=null) {
@@ -22,15 +22,19 @@ AccessProfiles.prototype.getPage=function(off, lst, query="*") {
     
     let limit=100;
 
-    let url=this.client.apiUrl+'/beta/search/accessprofiles?limit='+limit+'&offset='+offset+'&count=true';
+    let url=this.client.apiUrl+'/v3/search?limit='+limit+'&offset='+offset+'&count=true';
     let that=this;
     
     let payload={
-        "queryType": "SAILPOINT",
         "query": {
-            "query": query
-        } 
+            "query": query,
+        },        
+        "indices": [ "accessprofiles" ]        
     };
+
+    if (options.includeNested) {
+        payload.includeNested = options.includeNested;
+    }
 
     return this.client.post(url, payload)
         .then( function (resp) {
@@ -214,32 +218,33 @@ AccessProfiles.prototype.getv2 = function get ( tagId, options ) {
     return promise;
 }
 
-AccessProfiles.prototype.getv3 = function get ( tagId, options ) {
+AccessProfiles.prototype.getv3 = function get ( tagId, options={} ) {
     
     // let url=this.client.apiUrl+'/v2/access-profiles/'+tagId;
-    let url=this.client.apiUrl+'/beta/search/accessprofiles';
+    let url=this.client.apiUrl+'/v3/search';
     let payload={
-        queryType: "SAILPOINT",
         query: {
             query: tagId
-        } 
+        },
+        "indices": [ "accessprofiles" ]
     };
+    if (options.includeNested) {
+        payload.includeNested = options.includeNested;
+    }
     
     var that=this;
     return this.client.post(url, payload)
     .then( function (resp) {
         let ret=resp.data[0];
         let promise=Promise.resolve();
-        if (options!=null){
-            // Clean the source
-            if (options.clean) {
-                ret=JSON.parse(JSON.stringify(ret, (k,v) => 
-                    ( (k === 'id') || (k === 'created') || (k === 'modified') ) ? undefined : v)
-                );
-            }
-            if (options.tokenize) {
-                ret = that.client.SDKUtils.tokenize(ret.name, ret, options.tokens);
-            }
+        // Clean the source
+        if (options.clean) {
+            ret=JSON.parse(JSON.stringify(ret, (k,v) => 
+                ( (k === 'id') || (k === 'created') || (k === 'modified') ) ? undefined : v)
+            );
+        }
+        if (options.tokenize) {
+            ret = that.client.SDKUtils.tokenize(ret.name, ret, options.tokens);
         }
         return Promise.resolve(ret);
     },
@@ -252,16 +257,16 @@ AccessProfiles.prototype.getv3 = function get ( tagId, options ) {
     });
 }
 
-AccessProfiles.prototype.create = function( json, options = { useV2: true } ) {
+AccessProfiles.prototype.create = function( json, defaultOwner, options = { useV2: true } ) {
 
     if ( options && options.useV2 ) {
-        return this.createv2( json );
+        return this.createv2( json, defaultOwner );
     } else {
-        return this.createv3( json );
+        return this.createv3( json, defaultOwner );
     }
 }
 
-AccessProfiles.prototype.createv2 = function( json ) {
+AccessProfiles.prototype.createv2 = function( json, defaultOwner, options = {} ) {
     
     let url=this.client.apiUrl+'/v2/access-profiles';
     //TODO: Cache looked up identities
@@ -273,6 +278,13 @@ AccessProfiles.prototype.createv2 = function( json ) {
             statusText: 'No Access Profile specified for creation'
         });
     }
+    if ( defaultOwner==null ) {
+        return Promise.reject({
+            url: 'AccessProfiles.createv2',
+            status: -1,
+            statusText: 'No Default Owner specified'
+        });
+    }
     if ( json.name==null ) {
         return Promise.reject({
             url: 'AccessProfiles.createv2',
@@ -281,10 +293,11 @@ AccessProfiles.prototype.createv2 = function( json ) {
         });
     }
     if (json.entitlements==null || json.entitlements.length==0) {
+        console.log(`no entitlements in ${JSON.stringify(json)}`);
         return Promise.reject({
             url: 'AccessProfiles.createv2',
-            status: -1,
-            statusText: 'No entitlements in Access Profiles'
+            status: 100,
+            statusText: `WARN: Skipping Access Profile ${json.name}, no entitlements specified`
         });
     }
 
@@ -295,12 +308,26 @@ AccessProfiles.prototype.createv2 = function( json ) {
         .then( identity => {
             json.ownerId=identity.id;
             return Promise.resolve();
-        }, err => {
-            return Promise.reject( err );
+        }).catch( err => {
+            if ( err.status==404) {
+                if ( options.debug ) {
+                    console.log(`Access profile owner ${json.ownerName || json.owner.name} not found - falling back to ${defaultOwner}`);
+                }
+                return this.client.Identities.get( defaultOwner ).then( defaultIdentity => {
+                    // console.log(`found default identity ${JSON.stringify(defaultIdentity)}`);
+                    json.ownerId = defaultIdentity.id;
+                }).catch ( err => {
+                    console.log(`Couldn't find default owner ${defaultOwner}`);
+                    throw err;
+                });
+            } else {
+                console.log('non-404 error looking for owner');
+                throw err;
+            }
         });
     }
     if (json.sourceId==null) {
-        promise=promise.then( () => {
+        promise=promise.then( ok => {
             return this.client.Sources.getByName( json.sourceName || json.source.name )
             .then( source => {
                 json.sourceId=source.connectorAttributes.cloudExternalId;
@@ -312,6 +339,46 @@ AccessProfiles.prototype.createv2 = function( json ) {
             return Promise.reject( err );
         });
     }
+
+    promise = promise.then( ok => {
+        // convert entitlements to IDs
+        let entitlementlist="";
+        let first = true;
+        json.entitlements.forEach(entitlement=> {
+            if (first) {
+                first=false;
+            } else {
+                entitlementlist+=" OR ";
+            }
+            entitlementlist+=`\"${entitlement.value}\"`;
+        });
+        let query = {
+            "query": {
+                "query": `source.name:\"${json.source.name}\" AND (${entitlementlist})`
+            },
+            "queryResultFilter": {
+                "includes": [
+                    "id",
+                    "value"
+                ]
+            },
+            "indices": [
+                "entitlements"
+            ],
+            "includeNested": false
+        }
+        // console.log(`Query: ${JSON.stringify(query)}`);
+        return this.client.post(this.client.apiUrl+'/v3/search', query).then( entitlements => {
+            
+            console.log(`query ${JSON.stringify(query)} returns ${JSON.stringify(entitlements.data)}`);
+            let entitlementIDs=[];
+
+            entitlements.data.forEach( entitlement => {
+                entitlementIDs.push(entitlement.id);    
+            } );
+            json.entitlements=entitlementIDs;
+        } );
+    })
     
     return promise.then( () => {
         let allowedKeys=['name', 'description', 'ownerId', 'sourceId', 'entitlements', 'approvalSchemes',
@@ -322,21 +389,33 @@ AccessProfiles.prototype.createv2 = function( json ) {
                 delete json[key];
             }
         });
-        console.log('-- Posting to access-profiles --');
-        console.log(JSON.stringify(json, null, 2));
-        return this.client.post(url, json);
+        if ( json.entitlements.length==0 ) {
+            console.log(`WARN: Skipping Access Profile ${json.name}, no entitlements found`);
+            throw {
+                url: 'AccessProfiles.createv2',
+                status: 100,
+                statusText: `WARN: Skipping Access Profile ${json.name}, no entitlements resolved`
+            };
+        }
+        return this.client.post(url, json).then( resp => {
+            return {
+                result: "ok",
+                message: resp.data
+            }
+        });
     }, err => {
-        return Promise.reject( err );
+        console.log(`Error creating Access profile ${json.name}: ${JSON.stringify(err)}`);
+        throw err;
     });
     
 }
 
-AccessProfiles.prototype.createv3 = function( json ) {
-    return Promise.reject( {
+AccessProfiles.prototype.createv3 = function( json, defaultOwner ) {
+    throw {
         url: 'AccessProfiles.createv3',
         status: -1,
         statusText: 'AccessProfile.create not in v3 API yet'
-    });
+    }
 }
 
 AccessProfiles.prototype.deleteByName = function( name, options = {}) {
@@ -366,7 +445,8 @@ AccessProfiles.prototype.deleteByName = function( name, options = {}) {
         });
         return Promise.all( promises );
     }, err => {
-        return Promise.reject( err );
+        console.log(`Error deleting Access profile ${name}: ${err}`);
+        throw err;
     });
 
 }
@@ -389,11 +469,11 @@ AccessProfiles.prototype.deletev2 = function( id ) {
 
 AccessProfiles.prototype.deletev3 = function( id ) {
     
-    return Promise.reject( {
+    throw {
         url: 'AccessProfiles.deletev3',
         status: -1,
         statusText: 'AccessProfile.delete not in v3 API yet'
-    });
+    }
 
 }
 

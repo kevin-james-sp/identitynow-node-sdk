@@ -51,6 +51,53 @@ Entitlements.prototype.getPage=function( query, off, lst) {
 }
 
 
+Entitlements.prototype.get = function get ( id ) {
+
+    let query={
+        query: {
+            query: id
+        },
+        "indices": ["entitlements"],
+        "sort": ["id"]
+    }
+
+    let url=this.client.apiUrl+'/v3/search?limit='+limit+'&offset='+offset+'&count=true';
+    let that=this;
+
+    return this.client.post(url, query)
+    .then( function (resp) {
+        count=resp.headers['x-total-count'];
+        if ( count>1 ) {
+            throw "Entitlements.get returns multiple results"
+        }
+        return resp.data[0];
+        
+    });
+
+}
+
+Entitlements.prototype.aggregateOldID = function get ( id, options = {} ) {
+
+    if (!id) {
+        throw {
+            url: 'Entitlements',
+            status: -1,
+            statusText: 'AggreagateOldID: ID of source is required'
+        };
+    }
+    let url=`${this.client.apiUrl}/cc/api/source/loadEntitlements/${id}`;
+    let that=this;
+
+    return this.client.post(url).then( resp => {
+        let started = resp.data;
+        console.log(`EntAgg Started: ${JSON.stringify(started)}`);
+        if (!options.waitForCompletion) {
+            return started;
+        }
+        return that.client.waitForTask( started.task.id );
+    });
+}
+
 Entitlements.prototype.list = function list ( parms ) {
 
     let query={

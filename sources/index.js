@@ -46,6 +46,74 @@ function Sources( client ) {
 
 }
 
+/** Turns out, things can get added to the default schema as time moves on
+ * So, it could be that an old export that is being deployed has an out of date schema
+ * which leads to the update failing, because attributes are effectively getting removed
+ * when we do an update. What we need to do is take the current schema, and overlay the
+ * new schema. 
+*/
+function mergeSchema( originalSchema, newSchema ) {
+
+    let retval = {
+        modified: false
+    }
+
+    if ( originalSchema.identityAttribute != newSchema.identityAttribute ) {
+        originalSchema.identityAttribute = newSchema.identityAttribute;
+        retval.modified=true;
+    }
+    
+    if ( originalSchema.displayAttribute != newSchema.displayAttribute ) {
+        originalSchema.displayAttribute = newSchema.displayAttribute;
+        retval.modified=true;
+    }
+    
+    if ( originalSchema.hierarchyAttribute != newSchema.hierarchyAttribute ) {
+        originalSchema.hierarchyAttribute = newSchema.hierarchyAttribute;
+        retval.modified=true;
+    }
+    
+    if ( originalSchema.includePermissions != newSchema.includePermissions ) {
+        originalSchema.includePermissions = newSchema.includePermissions;
+        retval.modified=true;
+    }
+    
+    if ( originalSchema.features != newSchema.features ) {
+        originalSchema.features = newSchema.features;
+        retval.modified=true;
+    }
+
+    // currentSchemaId = value.id;
+
+    // For now, assume only the attributes will be different. If things like identityAttribute,
+    // displayAttribute, hierarchyAttribute etc. are expected to change we would need to do that here
+
+    // Oh, and we're going to assume attribute definitions don't change. So if we find one in the original
+    // schema that is also in the new schema, we're not going to replace it, just skip it. All we're looking
+    // for here are attributes that were added to the schema in the config bundle, that need to be added to
+    // the default schema
+
+    for ( newSchemaAttribute of newSchema.attributes ) {
+
+        let found = false;
+        for ( originalSchemaAttribute of originalSchema.attributes ) {
+            if ( originalSchemaAttribute.name == newSchemaAttribute.name ) {
+                found = true;
+                break;
+            }
+        }
+        if ( !found ) {
+            originalSchema.attributes.push( newSchemaAttribute );
+            retval.modified = true;
+        }
+
+    }
+    if ( retval.modified ) {
+        retval.schema = originalSchema;
+    }
+    return retval;
+}
+
 
 Sources.prototype.getPage = function ( off, lst ) {
 
@@ -61,7 +129,7 @@ Sources.prototype.getPage = function ( off, lst ) {
 
     let limit = 100;
 
-    let url = this.client.apiUrl + '/beta/sources?limit=' + limit + '&offset=' + offset + '&count=true';
+    let url = this.client.apiUrl + '/v3/sources?limit=' + limit + '&offset=' + offset + '&count=true';
     let that = this;
 
     return this.client.get( url )
@@ -77,11 +145,7 @@ Sources.prototype.getPage = function ( off, lst ) {
             console.log( 'getPage.reject' );
             console.log( url );
             console.log( err );
-            return Promise.reject( {
-                url: url,
-                status: err.response.status,
-                statusText: err.response.statusText
-            } );
+            throw err;
         } );
 
 
@@ -164,7 +228,7 @@ Sources.prototype.getByName = function ( name, options ) {
 
 Sources.prototype.get = function get( id, options = [] ) {
 
-    let url = this.client.apiUrl + '/beta/sources/' + id;
+    let url = this.client.apiUrl + '/v3/sources/' + id;
 
     let that = this;
 
@@ -394,11 +458,11 @@ Sources.prototype.create = function ( object ) {
     //     return Promise.reject("Source cluster must be specified by name");
     // }    
     if ( source.cluster != null ) {
-        console.log(`sources.create: looking for cluster ${source.cluster.name}`);
+        console.log( `sources.create: looking for cluster ${source.cluster.name}` );
         promises.push( this.client.Clusters.getByName( source.cluster.name ).then(
             cluster => {
                 if ( cluster == null ) {
-                    console.log('sources.create: Cluster not found');
+                    console.log( 'sources.create: Cluster not found' );
                     return Promise.reject( error( 'Sources.create', "Cluster '" + source.cluster.name + "' not found'" ) );
                 }
                 source.cluster.id = cluster.configuration.clusterExternalId;
@@ -415,7 +479,7 @@ Sources.prototype.create = function ( object ) {
 
     return Promise.all( promises ).then( function () {
 
-        let url = that.client.apiUrl + '/beta/sources';
+        let url = that.client.apiUrl + '/v3/sources';
         let appId = '';
         let appType = '';
         if ( source.accountCorrelationConfig ) {
@@ -425,7 +489,7 @@ Sources.prototype.create = function ( object ) {
             source.accountCorrelationConfig = null;
 
         };
-        return that.client.post( url, source ).then( function ( resp ) {
+        return that.client.post( url, source ).then( resp => {
             let appId = resp.data.id;
             let appName = resp.data.name;
             let appType = resp.data.type;
@@ -434,38 +498,34 @@ Sources.prototype.create = function ( object ) {
                 Object.values( schemas ).forEach( function ( schema ) {
                     // Do we need to replace an automatically generated schema?                  
                     if ( resp.data.schemas != null ) {
-                        let currentSchemaId = null;
-                        resp.data.schemas.forEach( value => {
-                            if ( value.name == schema.name ) {
-                                currentSchemaId = value.id;
+                        let newSchema = false;
+                        resp.data.schemas.forEach( destSchema => {
+                            if ( destSchema.name == schema.name ) {
+                                newSchema = true;
+                                stageTwoPromises.push( that.client.Schemas.get( appId, destSchema.id ).then(
+                                    foundSchema => {
+                                        let retSchema = mergeSchema( foundSchema, schema );
+                                        console.log( `schema ${schema.name} modified: ${retSchema.modified}` );
+                                        if ( retSchema.modified ) {
+                                            return that.client.Schemas.update( appId, retSchema.schema.id, retSchema.schema );
+                                        }
+                                        return "unmodified";
+                                    } ).catch( err => {
+                                        console.log( `Error updating schema ${schema.name}` )
+                                    } )
+                                );
                             }
                         } );
-
-                        let promise = Promise.resolve();
-                        if ( currentSchemaId != null ) {
-                            stageTwoPromises.push( that.client.Schemas.update( appId, currentSchemaId, schema )
-                                .then( resolve => { return Promise.resolve() },
-                                    err => {
-                                        console.log( JSON.stringify( err, null, 2 ) );
-                                        return Promise.reject( err );
-                                    } ) );
-                        } else {
-                            stageTwoPromises.push( promise.then(
-                                ok => {
-                                    that.client.Schemas.create( appId, schema ).then(
-                                        function ( sch ) {
-                                            console.log( 'sch: ' + sch );
-                                            return Promise.resolve( sch );
-                                        }, function ( reject ) {
-                                            console.log( reject );
-                                            return Promise.reject( reject );
-                                        }
-                                    )
-                                }, reject => {
-                                    console.log( 'reject: ' );
-                                    return Promise.reject( reject );
-                                }
-                            ) );
+                        if ( !newSchema ) {
+                            stageTwoPromises.push( that.client.Schemas.create( appId, schema ).then(
+                                sch => {
+                                    console.log( 'sch: ' + sch );
+                                    return sch;
+                                } ).catch( err => {
+                                    console.log( `create schema: error ${err}` );
+                                    throw err;
+                                } )
+                            );
                         }
                     }
                 } );
@@ -505,12 +565,13 @@ Sources.prototype.create = function ( object ) {
             } ).then( resp => {
                 // check for Identity profiles
                 let ipPromises = [];
-                if (identityProfiles) {
+                if ( identityProfiles ) {
                     identityProfiles.forEach( identityProfile => {
-                        ipPromises.push( that.client.IdentityProfiles.create( identityProfile ) );
-                    })
+                        console.log( `Sources: creating Identity Profile ${identityProfile.name}` );
+                        ipPromises.push( that.client.IdentityProfiles.create( identityProfile, { useV2: true } ) );
+                    } )
                 }
-                return Promise.all(ipPromises);
+                return Promise.all( ipPromises );
             } ).then( resp => {
                 return {
                     status: "success",
@@ -533,9 +594,9 @@ Sources.prototype.testConnection = function ( id ) {
         let url = `${this.client.apiUrl}/cc/api/source/testConnection/${externalID}`;
         return this.client.post( url ).then( response => {
             return response.data;
-        });
-        
-    });
+        } );
+
+    } );
 
 }
 
@@ -546,7 +607,15 @@ Sources.prototype.aggregateOldID = function ( id, config = {} ) {
     if ( config.disableOptimization ) {
         parms.disableOptimization = config.disableOptimization;
     }
-    return this.client.post( url, parms );
+    let that = this;
+    return this.client.post( url, parms ).then( resp => {
+        let started = resp.data;
+        console.log( `SrcAgg Started: ${JSON.stringify( started )}` );
+        if ( !config.waitForCompletion ) {
+            return started;
+        }
+        return that.client.waitForTask( started.task.id );
+    } )
 }
 
 Sources.prototype.aggregateFileByName = function ( name, contents ) {

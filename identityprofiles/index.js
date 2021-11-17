@@ -248,8 +248,6 @@ IdentityProfiles.prototype.get = function get( id, options = {} ) {
 
 IdentityProfiles.prototype.getV2 = function get( id, options ) {
 
-    console.log( 'getV2' );
-
     let url = `${this.client.apiUrl}/cc/api/profile/get/${id}`;
 
     let that = this;

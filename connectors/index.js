@@ -1,3 +1,5 @@
+const JSZip=require('jszip');
+
 var client;
 
 function Connectors( client ) {
@@ -61,8 +63,26 @@ Connectors.prototype.export=function( id ) {
     
     return this.get( id )
     .then( connector => {
-        return that.client.get( `${url}/${connector.id}`).then( resp => {            
-            return resp.data;
+        return that.client.get( `${url}/${connector.id}`, null, { responseType: 'arraybuffer'} ).then( resp => {    
+            // We need to clean the account-correlation-config.xml file in the zip
+
+            let zipfile = new JSZip();
+            return zipfile.loadAsync( resp.data ).then( zip => {
+                // get the file from the zip
+                return zip.file( "scim-pam/account-correlation-config.xml").async("string").then( file =>{
+                    // remove id="xxxx"
+                    let newfile = file.replace(/id=\"[0-9a-f]*\"/g, '');console.log(`file=\n${file}`);
+                    zip.file( "scim-pam/account-correlation-config.xml", newfile);
+                    return zip.generateAsync({
+                        type:'uint8array',
+                        compression: "DEFLATE",
+                        compressionOptions: {
+                            level: 9
+                        }
+                    });
+                })
+            })
+
         });
     }).catch( err => {
         throw err;
@@ -74,6 +94,8 @@ Connectors.prototype.import=function( filename, contents ) {
 
     let url=this.client.apiUrl+'/cc/api/connector/import';
     let that=this;
+
+    console.log(`contents: ${typeof contents}`);
 
     if (!filename) {
         throw {
@@ -101,6 +123,7 @@ Connectors.prototype.import=function( filename, contents ) {
     return this.client.post( url, payload, { multipart: true } ).then(
         success => {
             console.log( 'Import connector Success:' );
+            console.log( JSON.stringify(success.data) );
         }, err => {
             console.log( `Import connector failed: ${JSON.stringify( err )}` );
             return Promise.reject( {

@@ -320,11 +320,17 @@ IdentityNowClient.prototype.get = function ( url, retry, options = {} ) {
     // }
 
     return this.token().then( resp => {
-        return that.client.get( url, {
+
+        let getOptions = {
             headers: {
                 Authorization: 'Bearer ' + resp
-            }
-        } ).then( success => {
+            }    
+        }
+        if ( options.responseType ) {
+            getOptions.responseType = options.responseType;
+        }
+
+        return that.client.get( url, getOptions ).then( success => {
             return success
         }
         ).catch( err => {

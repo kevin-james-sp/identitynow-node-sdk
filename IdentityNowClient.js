@@ -213,7 +213,7 @@ IdentityNowClient.prototype.getClientToken = function ( overrideconfig = [] ) {
         console.log( err );
         console.log( `idnclient.error: ${JSON.stringify( err )}` );
         return Promise.reject( {
-            status: err.response.status,
+            status: err.response?.status ?? '',
             statusText: err.message
         } );
     }
@@ -320,11 +320,17 @@ IdentityNowClient.prototype.get = function ( url, retry, options = {} ) {
     // }
 
     return this.token().then( resp => {
-        return that.client.get( url, {
+
+        let getOptions = {
             headers: {
                 Authorization: 'Bearer ' + resp
-            }
-        } ).then( success => {
+            }    
+        }
+        if ( options.responseType ) {
+            getOptions.responseType = options.responseType;
+        }
+
+        return that.client.get( url, getOptions ).then( success => {
             return success
         }
         ).catch( err => {

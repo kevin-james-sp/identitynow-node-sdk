@@ -312,7 +312,7 @@ NELM.prototype.create = function ( nelmDefinition, options = {} ) {
     let identityProfiles = nelmDefinition.identityProfiles;
 
     // 1. No IDs or create/modified dates are allowed; we will look up IDs as needed
-    let source = JSON.parse( JSON.stringify( Object.values( nelmDefinition.source )[0], ( k, v ) => {
+    let source = JSON.parse( JSON.stringify( nelmDefinition.source, ( k, v ) => {
         if ( ( k === 'id' ) || ( k === 'created' ) || ( k === 'modified' ) ) {
             return undefined;
         } else {

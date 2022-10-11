@@ -381,14 +381,33 @@ Methods to directly use the V2 or V3 API are available as `getv2( id )` and `get
 Get a list of roles
 
 ### Get ###
-`client.Roles.get( idOrName )`
+`client.Roles.get( id )`
 ```
-  client.Identities.get( id ).then( function ( identity ) { 
+  client.Roles.get( id, options ).then( function ( role ) { 
       ....
   });
 ```
-Get an identity
+Get a role
+Available options:
+`useV3`: use V3 APIs (search). Note this will produce output incompatible with V2 APIs
+- This becomes important when exporting with `get` and importing with `create`. Currently `create` relies on CC APIs which use the V2 JSON syntax
+`dereferenceAccessProfiles`: (default: true) whether or not to convert AccessProfile ids to names on output. If so, stored in the `accessProfileNames` property
+#### Also available: client.Roles.getv2 and client.Roles.getv3 ####
 
+### GetByName ###
+`client.Roles.getByName( roleName)`
+
+Same as `get` but uses role name to get the role
+
+### Create ###
+`client.Roles.create( json )`
+```
+  client.Roles.create( json ).then( function ( role ) {
+    console.log( 'created role' );
+    console.log( JSON.stringify( role, null, 2 ) );
+  })
+```
+Create a role. Uses a JSON object in the format returned by `get` or `getByName`. Access Profile names in the `accessProfileNames` property will be translated to IDs in `accessProfileIds` as required by the underlying API.
 ## Sources ##
 
 ### List ###

@@ -318,9 +318,10 @@ Roles.prototype.create = function create( json, defaultOwner, options = {} ) {
         for ( let i=0; i<json.accessProfileNames.length; i++ ) {
             promises.push( this.client.AccessProfiles.getByName( json.accessProfileNames[i] ).then( profile => {
                 json.accessProfileIds.push( profile.id );
-            }), err=> {
+            }).catch( err=> {
                 console.log(`Warning: access profile ${json.accessProfileNames[i]} not found for role ${json.displayName}`);
-            });
+            })
+            );
         };
         delete json.accessProfileNames;
     }

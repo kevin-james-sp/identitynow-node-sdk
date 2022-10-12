@@ -24,6 +24,9 @@ Roles.prototype.getPage=function( off, lst, query='*', options ) {
     let limit=100;
 
     let url=this.client.apiUrl+'/v3/search?limit='+limit+'&offset='+offset+'&count=true';
+    if (options?.exact) {
+        query = `name.exact:"${query}"`
+    }
     let payload={
         queryType: "SAILPOINT",
         indices: [ "roles" ],
@@ -32,6 +35,7 @@ Roles.prototype.getPage=function( off, lst, query='*', options ) {
         }
     }
     let that=this;
+    console.log(JSON.stringify(payload));
     
     return this.client.post(url, payload)
     .then( resp => {
@@ -135,15 +139,16 @@ Roles.prototype.get = function get( id, options ) {
     }
 }
 
-Roles.prototype.search = function( name ) {
+Roles.prototype.search = function( name, options ) {
 
-    return this.getPage( 0, [], '"'+name+'"' );
+    return this.getPage( 0, [], name, options );
 
 }
 Roles.prototype.getByName = function( name, options={} ) {
 
     let that=this;
-    return this.search( name ).then( results => {
+    return this.search( name, { exact: true } ).then( results => {
+        console.log(JSON.stringify(results));
         if ( results.length==0 ) {
             return Promise.reject({
                 url: 'Roles.getByName',
@@ -223,7 +228,7 @@ Roles.prototype.getv3 = function get ( id, options ) {
         "queryType": "SAILPOINT",
         "indices": "roles",
         "query": {
-            "query": id
+            "query": `name.exact:"${id}"`
         }
     }
     

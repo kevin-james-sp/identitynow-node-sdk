@@ -25,6 +25,10 @@ AccessProfiles.prototype.getPage=function(off, lst, query="*", options={} ) {
     let url=this.client.apiUrl+'/v3/search?limit='+limit+'&offset='+offset+'&count=true';
     let that=this;
     
+    if (options?.exact) {
+        query = `name.exact:"${query}"`
+    }
+    
     let payload={
         "query": {
             "query": query,
@@ -100,16 +104,16 @@ AccessProfiles.prototype.list=function( options ) {
     }
 }
 
-AccessProfiles.prototype.search = function( name ) {
+AccessProfiles.prototype.search = function( name, options ) {
 
-    return this.getPage( 0, [], '"'+name+'"' );
+    return this.getPage( 0, [], name, options );
 
 }
 
 AccessProfiles.prototype.getByName = function( name, options={} ) {
 
     let that=this;
-    return this.search( name ).then( results => {
+    return this.search( name, { ...options, ...{ exact: true } } ).then( results => {
         if ( results.length==0 ) {
             return Promise.reject({
                 url: 'AccessProfiles.getByName',

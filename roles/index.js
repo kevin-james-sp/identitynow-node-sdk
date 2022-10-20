@@ -159,7 +159,7 @@ Roles.prototype.getByName = function( name, options={} ) {
         if ( results.length>1 ) {
             return Promise.reject({
                 url: 'Roles.getByName',
-                status: -1,
+                status: -2,
                 statusText: 'Ambiguous name \''+name+'\''
             })
         }
@@ -193,7 +193,7 @@ Roles.prototype.getv2 = function get ( id, options ) {
         } else {
             return Promise.reject({
                 url: 'Roles.getv2',
-                status: -1,
+                status: -3,
                 statusText: `Role with id '${id}' not found`
             });
         }
@@ -238,14 +238,14 @@ Roles.prototype.getv3 = function get ( id, options ) {
         if (resp.data.length==0) {
             throw {
             url: url,
-            status: -1,
+            status: -41,
             statusText: "Role '"+id+"' not found"
             };
         }
         if (resp.data.length>1) {
             throw {
                 url: url,
-                status: -1,
+                status: -5,
                 statusText: "Multiple results for Role '"+id+"'"
             };
         }
@@ -279,14 +279,14 @@ Roles.prototype.create = function create( json, defaultOwner, options = {} ) {
     if ( json==null ) {
         return Promise.reject({
             url: 'Roles.create',
-            status: -1,
+            status: -6,
             statusText: 'No Access Profile specified for creation'
         });
     }
     if ( defaultOwner==null ) {
         return Promise.reject({
             url: 'Roles.create',
-            status: -1,
+            status: -7,
             statusText: 'No Default Owner specified'
         });
     }
@@ -294,7 +294,7 @@ Roles.prototype.create = function create( json, defaultOwner, options = {} ) {
     if ( json.displayName==null ) {
         return Promise.reject({
             url: 'Roles.create',
-            status: -1,
+            status: -8,
             statusText: 'No displayName specified for creation'
         });
     }
@@ -306,10 +306,14 @@ Roles.prototype.create = function create( json, defaultOwner, options = {} ) {
     ).then( response=> {
         return response.data
     }).catch( err => {
+        if (!err.statusText) {
+            console.log('err with no statusText calling cc/api/role/create');
+            console.log(err);
+        }
         return Promise.reject({
             url: 'Roles.create',
-            status: -1,
-            statusText: err.statusText
+            status: -9,
+            statusText: err.statusText || err.exception_message
         });
     })
     );
@@ -347,10 +351,14 @@ Roles.prototype.create = function create( json, defaultOwner, options = {} ) {
         }
         return updated.data;
     }).catch( err => {
+        if (!err.statusText) {
+            console.log('err with no statusText calling cc/api/role/update');
+            console.log(err);
+        }
         return Promise.reject({
             url: 'Roles.create',
-            status: -1,
-            statusText: err.statusText
+            status: -10,
+            statusText: err.statusText || err.exception_message
         });
     });
 }

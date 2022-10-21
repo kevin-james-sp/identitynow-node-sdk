@@ -327,15 +327,16 @@ Roles.prototype.create = function create( json, defaultOwner, options = {} ) {
             })
             );
         };
-        delete json.accessProfileNames;
     }
     
     return Promise.all( promises ).then( result => {
         let newRole = result[0]; // Only promise in the array that returns a result (the new role created);
-
+        
         // merge old role over new role, with caveats
         // keep the new 'name'
         delete json.name;
+        // also, delete the access profile names since we now have their IDs
+        delete json.accessProfileNames;
 
         newRole = { ...newRole, ...json };
 

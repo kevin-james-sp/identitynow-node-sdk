@@ -109,7 +109,7 @@ Certification.prototype.createCampaign = function (object) {
     // check if object has required items (name, description, type)
     let check = this.checkCampaign(object);
 
-    if (check) {
+    if (check == true) {
         const url = `${this. client.apiUrl}/beta/campaigns`;
         const options = {
             contentType: 'application/json',

@@ -1,13 +1,7 @@
 var client;
 
-
 function Certification( client ) {
-    
     this.client=client;
-    console.log(this.client);
-    //this.attributesToExclude=['id', 'created', 'modified', 'synced', 'pod', 'org', 'email', 'accessProfileCount', 'segmentCount'];
-
-
 }
 // This is a 'Perform Search' API v3. 
 Certification.prototype.getPage=function( payload, off, lst) {
@@ -116,22 +110,23 @@ Certification.prototype.createCampaign = function (object) {
             formEncoded: false,
         }
     
-        // AXIOS POST return promises, store promise in 'result' variable
-        let result = this.client.post(url, object, options)
-            .then(resp => {
-                return resp.data;
-            }).catch( err => {
-                if (!err.statusText) {
-                    console.log('err with no statusText calling certification.create /beta/campaigns');
-                    console.log(err);
-                }
-                return Promise.reject({
-                    url: 'Certification.createCampaign',
-                    status: -9,
-                    statusText: err.statusText || err.exception_message
-                });
-            })
+    // AXIOS POST return promises, store promise in 'result' variable
+    let result = this.client.post(url, object, options)
+        .then(resp => {
+            return resp.data;
+        }).catch( err => {
+            if (!err.statusText) {
+                console.log('err with no statusText calling certification.create /beta/campaigns');
+                console.log(err);
+            }
+            return Promise.reject({
+                url: 'Certification.createCampaign',
+                status: -9,
+                statusText: err.statusText || err.exception_message
+            });
+        })
         return result;
+
     } else {
         return check;
     }
@@ -186,22 +181,22 @@ Certification.prototype.createTemplate = function (object) {
             formEncoded: false,
         }
     
-        // AXIOS POST return promises
-        let result = this.client.post(url, object, options)
-            .then(resp => {
-                return resp.data;
-            }).catch( err => {
-                if (!err.statusText) {
-                    console.log('err with no statusText calling certification.createTemplate /beta/campaign-template');
-                    console.log(err);
-                }
-                return Promise.reject({
-                    url: 'Certification.createTemplate',
-                    status: -9,
-                    statusText: err.statusText || err.exception_message
-                });
-            })
-            return result;
+    // AXIOS POST return promises
+    let result = this.client.post(url, object, options)
+        .then(resp => {
+            return resp.data;
+        }).catch( err => {
+            if (!err.statusText) {
+                console.log('err with no statusText calling certification.createTemplate /beta/campaign-template');
+                console.log(err);
+            }
+            return Promise.reject({
+                url: 'Certification.createTemplate',
+                status: -9,
+                statusText: err.statusText || err.exception_message
+            });
+        })
+        return result;
     } else {
         return check;
     }
@@ -242,8 +237,6 @@ Certification.prototype.listTemplate = function() {
                 statusText: err.statusText || err.exception_message
             });
         })
-
-
     return result;
 }
 
